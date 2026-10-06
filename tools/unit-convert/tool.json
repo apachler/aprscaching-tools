@@ -15,5 +15,8 @@
   ],
   "remote": true,
   "description": "/conv <value> <from> <to> — km/mi/m/ft/yd/kn/kmh/nm + c/f.",
-  "entry": "tool.js"
+  "entry": "tool.js",
+  "entrySha256": "tdCZGdzQf0FEQo7T9wFg50bSqEQ9b1aqyu6aPMsNgSc=",
+  "pubkey": "uibFUCjcBnxAe8mRQ1v2neJd0fPV_7Vs0Y59K5vH5Oc",
+  "signature": "WQsSJxmzipoEH5MnkvGGy1NvTPiEcVHwR+dK4EDeCsDMPvzPwDzfeI9grWpi1V6Vs1HmgQAW5kFn0nQF76kdDQ=="
 }

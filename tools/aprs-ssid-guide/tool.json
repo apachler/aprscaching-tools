@@ -13,5 +13,8 @@
     "bbs"
   ],
   "description": "A quick reference of the conventional APRS -SSID assignments.",
-  "entry": "tool.js"
+  "entry": "tool.js",
+  "entrySha256": "rBhpKmJAjXMwiZ90PYMVaTPeFDKSH/5kkbipMJ6HJVc=",
+  "pubkey": "uibFUCjcBnxAe8mRQ1v2neJd0fPV_7Vs0Y59K5vH5Oc",
+  "signature": "ssbE+O7WaZUEiBHr+m/zM7bQ+7wYYrLzf+cnBxgm8PE5IeqaU9beyeQoC+ioRIJl09i8uJdVEpIUj6bUBxFiBQ=="
 }

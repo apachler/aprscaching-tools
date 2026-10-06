@@ -16,5 +16,8 @@
     "node"
   ],
   "description": "/gpauto <steps> — run/schedule a connect/waitfor/send/disconnect batch (GP GPAUTO).",
-  "entry": "tool.js"
+  "entry": "tool.js",
+  "entrySha256": "rS2onuKQANzF9EalU/mi6CZdt0DIU3MT6NVsQIPjb04=",
+  "pubkey": "uibFUCjcBnxAe8mRQ1v2neJd0fPV_7Vs0Y59K5vH5Oc",
+  "signature": "Bqb7eetS/FuWjg6bT35TtWlvBilvrWOMiJyhG3TMWOHGxQS454MVLEo0/9jJIDC0LeJeGVnzjlZ2JIViTl7VAA=="
 }

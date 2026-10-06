@@ -14,5 +14,8 @@
     "node"
   ],
   "description": "Rolling round-trip-time to the connected station (GP rtt).",
-  "entry": "tool.js"
+  "entry": "tool.js",
+  "entrySha256": "hTEIYLcfn+4ECVU40bsjfih0HhIsCmiQJ2/2v5thBZQ=",
+  "pubkey": "uibFUCjcBnxAe8mRQ1v2neJd0fPV_7Vs0Y59K5vH5Oc",
+  "signature": "1lTIEjSoaCcKKdNZYUcY4g7mzPbKm9TBAgm50NUAPnUaM1JhL9swgKJP6uQKaOm2ytKG4y0iAHrEf0nv7qvJCw=="
 }
