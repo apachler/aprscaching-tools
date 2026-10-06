@@ -14,6 +14,10 @@ A release branch is cut from `dev`, signed, and merged into `main` as a merge co
 `main`: a fast-forward push when nothing has landed on `dev` since the release branch was cut, which is the one push
 to `dev` outside a pull request, or a pull request from `main` merged as a merge commit when something has.
 
+Rulesets hold both branches to this. `main` takes a pull request only as a merge commit, `dev` as a squash or a
+merge commit, and both only with the `check` and `verify` checks passing. Repository admins bypass the `dev`
+ruleset, which is what lets the fast-forward push through.
+
 ```mermaid
 flowchart LR
   F["Feature PRs<br/>squash-merged into dev<br/>(unsigned)"] --> R["release/vX.Y.Z from dev:<br/>sign-all, CHANGELOG"]
