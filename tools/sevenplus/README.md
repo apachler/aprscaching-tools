@@ -1,6 +1,6 @@
 # 7PLUS reassembler
 
-Reads pasted 7PLUS parts, the packet-BBS way to move binary files as text, and reports the file, the part and whether the block is complete, so scattered parts can be collected. It does not rebuild the file.
+Reads pasted 7PLUS parts, the packet-BBS way to move binary files as text, and reports the file, the parts found and the parts still missing, so scattered parts can be collected. It does not rebuild the file.
 
 ## Use it
 

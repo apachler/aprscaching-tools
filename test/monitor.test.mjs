@@ -155,7 +155,7 @@ describe("station-db and info-responder", () => {
       "APRScaching shack station. Type MENU for commands. 73!",
     ]);
     expect(await info.run("menu", "", { remote: true })).toEqual([
-      "Commands: INFO  MENU  WHOIS <call>  GRID <loc> [loc]  CONV <n> <from> <to>",
+      "Commands: INFO  MENU  WHOIS <call>",
     ]);
     expect(await info.run("setinfo", "hax", { remote: true })).toBeNull();
     expect(await info.run("setinfo", "QRV on 2m")).toEqual(["Info text updated."]);

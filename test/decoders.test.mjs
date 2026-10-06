@@ -9,9 +9,22 @@ describe("sevenplus", () => {
   it("summarises a 7PLUS block", async () => {
     const t = loadTool("sevenplus");
     const out = await t.decode("7plus", "file.zip part 1 of 3\ngo_7+. abcd\nQUJD\nstop_7+");
-    expect(out).toMatch(/part 1 of 3/);
-    expect(out).toMatch(/incomplete/);
+    expect(out).toMatch(/part\(s\) 1 of 3/);
+    expect(out).toMatch(/missing part\(s\) 2, 3/);
     expect(await t.decode("7plus", "nothing here")).toMatch(/No 7plus block/);
+  });
+
+  it("reads real part headers and collects every pasted part", () => {
+    const part = (n, of) => ` go_7+. ${String(n).padStart(3, "0")} of ${String(of).padStart(3, "0")} TEST.ZIP 0012345 FFFF (7PLUS v2.2)\nQUJD\n stop_7+. (TEST.P0${n}/7F)`;
+    const one = decode7plus(part(1, 2));
+    expect(one).toMatch(/part\(s\) 1 of 2/);
+    expect(one).toMatch(/file: TEST\.ZIP/);
+    expect(one).toMatch(/missing part\(s\) 2/);
+    expect(decode7plus(part(3, 3))).toMatch(/missing part\(s\) 1, 2/); // the last part alone is not the file
+    const both = decode7plus(`${part(1, 2)}\n${part(2, 2)}`);
+    expect(both).toMatch(/part\(s\) 1, 2 of 2/);
+    expect(both).toMatch(/status: complete/);
+    expect(decode7plus(" go_7+. 001 of 001 A.ZIP\nQUJD")).toMatch(/no stop_7\+ line/);
   });
 });
 
@@ -35,7 +48,7 @@ describe("the 7PLUS file name scan", () => {
   });
   it("keeps the file-name semantics", () => {
     const file = (s) => /file: (.*)/.exec(decode7plus(s))[1];
-    expect(file(" go_7+. 001 of 002 TEST.ZIP 0012345 FFFF (7PLUS v2.2)")).toBe("(unknown)");
+    expect(file(" go_7+. 001 of 002 TEST.ZIP 0012345 FFFF (7PLUS v2.2)")).toBe("TEST.ZIP");
     expect(file("my-file.zip go_7+. part 1 of 1")).toBe("my-file.zip");
     expect(file("x.y.zip go_7+.")).toBe("y.zip");
     expect(file("a.toolong go_7+.")).toBe("(unknown)");
@@ -55,6 +68,7 @@ describe("digimode-decoders", () => {
     expect(await t.decode("cw", "-.-. --.-  -.. .")).toBe("CQ DE");
     expect(await t.decode("psk31", encodeVaricode("cq de oe8apr 73"))).toBe("cq de oe8apr 73");
     expect(t.state.decoderMeta.every((d) => d.placeholder)).toBe(true);
+    expect(await t.decode("cw", t.state.decoderMeta[0].placeholder)).toBe("HELLO"); // the example decodes
   });
 });
 

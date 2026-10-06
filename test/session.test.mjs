@@ -83,14 +83,33 @@ describe("sched-query", () => {
     const t = loadTool("sched-query", { bus });
     expect(t.panel.nodes[0].text).toMatch(/^Idle/);
     expect((await t.run("gpauto", "every 2 connect HB9W-8; disconnect"))[0]).toBe(
-      "Scheduled every 2 min. Running 2 steps…",
+      "Scheduled every 10 min. Running 2 steps…", // 10 minutes at the least
     );
-    for (let i = 0; i < 4; i++) await t.dispatch("on_tick");
-    expect(runs).toBe(3); // at once, then on ticks 2 and 4
+    for (let i = 0; i < 20; i++) await t.dispatch("on_tick");
+    expect(runs).toBe(3); // at once, then on ticks 10 and 20
+    expect(t.state.logs).toEqual(["scheduled run: Running 2 steps…", "scheduled run: Running 2 steps…"]);
     bus.emit("session.progress", { status: "done", step: 2, total: 2, captured: ["DX de OE8APR"], note: "ok" }, "(host)");
     expect(t.panel.nodes[0]).toEqual({ kind: "kv", key: "Status", value: "done (2/2)", tone: "ok" });
     expect(t.panel.nodes.at(-1)).toEqual({ kind: "text", text: "DX de OE8APR" });
     expect(await t.run("gpauto", "off")).toEqual(["Scheduled query off."]);
+  });
+
+  it("logs a scheduled run the terminal refuses, and arms no schedule without steps", async () => {
+    const bus = createBus();
+    let refuse = false;
+    bus.provide("session.script", () => {
+      if (refuse) throw new Error("over the transmit budget");
+      return { ok: true };
+    });
+    const t = loadTool("sched-query", { bus });
+    expect((await t.run("gpauto", "every 10"))[0]).toMatch(/^No steps/);
+    expect((await t.run("gpauto", "every 10 bogus"))[0]).toMatch(/^No steps/);
+    for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
+    expect(t.state.logs).toEqual([]);
+    await t.run("gpauto", "every 10 connect HB9W-8");
+    refuse = true;
+    for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
+    expect(t.state.logs).toEqual(["scheduled run: Refused: over the transmit budget"]);
   });
 });
 

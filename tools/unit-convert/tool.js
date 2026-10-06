@@ -15,6 +15,7 @@
     "m>yd": 1.09361,
     "yd>m": 0.9144
   };
+  var unit = (u) => (u ?? "").toLowerCase().replace("km/h", "kmh");
   register({
     commands: {
       conv: {
@@ -22,8 +23,8 @@
         run: (args) => {
           const [nS, from, to] = args.trim().split(/\s+/);
           const n = Number(nS);
-          const f = (from ?? "").toLowerCase();
-          const t = (to ?? "").toLowerCase();
+          const f = unit(from);
+          const t = unit(to);
           if (!isFinite(n) || !f || !t) return ["Usage: /conv <value> <from> <to>   e.g.  /conv 100 km mi  |  /conv 20 c f"];
           if (f === "c" && t === "f") return [`${n} C = ${(n * 9 / 5 + 32).toFixed(1)} F`];
           if (f === "f" && t === "c") return [`${n} F = ${((n - 32) * 5 / 9).toFixed(1)} C`];

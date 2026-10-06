@@ -35,6 +35,7 @@ describe("unit-convert", () => {
     expect((await t.run("conv", "100 km mi"))[0]).toMatch(/62\.14 mi/);
     expect((await t.run("conv", "0 c f"))[0]).toMatch(/32\.0 F/);
     expect((await t.run("conv", "212 f c", { remote: true }))[0]).toBe("212 F = 100.0 C");
+    expect((await t.run("conv", "10 kn km/h"))[0]).toBe("10 kn = 18.52 kmh");
     expect((await t.run("conv", "1 km parsec"))[0]).toMatch(/^Can't convert km -> parsec/);
     expect((await t.run("conv", "x"))[0]).toMatch(/^Usage/);
   });

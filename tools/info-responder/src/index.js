@@ -21,7 +21,7 @@ function panel() {
 register({
   commands: {
     info: { remote: true, run: () => [info()] },
-    menu: { remote: true, run: () => ["Commands: INFO  MENU  WHOIS <call>  GRID <loc> [loc]  CONV <n> <from> <to>"] },
+    menu: { remote: true, run: () => ["Commands: INFO  MENU  WHOIS <call>"] },
     whois: { remote: true, run: async (args) => {
       const c = args.trim().toUpperCase();
       if (!c) return ["Usage: WHOIS <CALL>"];

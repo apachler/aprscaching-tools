@@ -157,7 +157,7 @@
   // tools/digimode-decoders/src/index.js
   register({
     decoders: [
-      { id: "cw", label: "CW (Morse)", kind: "cw", decode: decodeMorse, placeholder: "…. . .-.. .-.. ---" },
+      { id: "cw", label: "CW (Morse)", kind: "cw", decode: decodeMorse, placeholder: ".... . .-.. .-.. ---" },
       { id: "psk31", label: "PSK31", kind: "psk31", decode: decodeVaricode, placeholder: "00…11…00 varicode bits" }
     ]
   });
