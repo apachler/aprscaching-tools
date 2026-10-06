@@ -1,8 +1,8 @@
-# aprscaching tools
+# APRScaching tools
 
-This site documents the project's tool registry for aprscaching 1.x: the tools it lists, how to write a tool, the
+This site documents the project's tool registry for APRScaching 1.x: the tools it lists, how to write a tool, the
 tool API and how to publish a registry of your own. It is for tool authors, registry publishers and the registry's
-maintainers. Players and sysops find their side in the [aprscaching manual](https://apachler.github.io/aprscaching/).
+maintainers. Players and sysops find their side in the [APRScaching manual](https://apachler.github.io/aprscaching/).
 
 ## What the registry is
 
@@ -28,7 +28,7 @@ flowchart LR
 
 ## How an instance gets it
 
-- **Bundled.** Each aprscaching release carries a tagged release of this registry, so every instance lists the
+- **Bundled.** Each APRScaching release carries a tagged release of this registry, so every instance lists the
   project's tools with no setup. The instance serves the copy from its own address, and it works offline.
 - **Added by address.** A sysop adds `github:apachler/aprscaching-tools@vX.Y.Z` in **Instance settings → Tools**
   to follow a newer tag than the bundled one; a player may add the same address in their own **Tools** settings
@@ -51,7 +51,7 @@ The app shows a registry's key as a fingerprint when someone adds it. This key's
 <!-- authority-fingerprint -->
 ```
 
-The key is in the repository's `authority.pub`, in `registry.json` as `authority`, and pinned in the aprscaching
+The key is in the repository's `authority.pub`, in `registry.json` as `authority`, and pinned in the APRScaching
 app as the project registry's key. Compare the fingerprint the app shows with this one before you confirm the
 registry, and compare the key in all three places before you trust a copy of it.
 
@@ -65,8 +65,8 @@ registry, and compare the key in all three places before you trust a copy of it.
 | Publish a registry of your own | [How registries work](publish/index.md) |
 | List a tool in the project registry | [Contribute a tool](project/contribute.md) |
 | Sign and release the project registry | [Maintain the registry](project/maintain.md) |
-| Install and use tools as a player | [Tools and plugins](https://apachler.github.io/aprscaching/shack/tools/) in the aprscaching manual |
-| Choose an instance's registries as a sysop | [Tool registries](https://apachler.github.io/aprscaching/run/day-to-day/instance-settings/#tool-registries) in the aprscaching manual |
+| Install and use tools as a player | [Tools and plugins](https://apachler.github.io/aprscaching/shack/tools/) in the APRScaching manual |
+| Choose an instance's registries as a sysop | [Tool registries](https://apachler.github.io/aprscaching/run/day-to-day/instance-settings/#tool-registries) in the APRScaching manual |
 
 ## Next
 

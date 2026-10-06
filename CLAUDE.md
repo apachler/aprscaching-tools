@@ -1,6 +1,6 @@
 # CLAUDE.md — aprscaching-tools
 
-The signed tool registry for aprscaching: `registry.json`, the tools under `tools/<name>/`, their build and the
+The signed tool registry for APRScaching: `registry.json`, the tools under `tools/<name>/`, their build and the
 signing scripts. Tools run sandboxed in the player's browser; the app is https://github.com/apachler/aprscaching.
 
 ## Branches and pull requests
@@ -21,7 +21,7 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
   `main` and release tags run `verify.mjs --strict`.
 - A release: a `release/vX.Y.Z` branch from `dev` where the maintainer runs `sign-all` and updates CHANGELOG.md,
   a PR into `dev`, the `dev` → `main` PR, then the maintainer tags `vX.Y.Z` on `main`; the tag becomes a GitHub
-  Release. An aprscaching release bundles a tag with its `tools/toolkey/bundle-registry.mjs`.
+  Release. An APRScaching release bundles a tag with its `tools/toolkey/bundle-registry.mjs`.
 - `scripts/release.mjs <X.Y.Z>` runs that flow step by step and resumes where it stopped; `/release <X.Y.Z>`
   (`.claude/skills/release/`) drives it. An agent never reads, prints or passes the key files, never runs the `sign`
   step (the user runs it with `!`), and never merges into `main` without the user's go-ahead in the conversation.
@@ -39,5 +39,12 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 
 ## Docs and comments
 Present tense, what the code is and why, no history. Licence MIT unless a tool declares otherwise in its SPDX line.
-The documentation site is `docs/` (MkDocs, `mkdocs.yml`, published from `main`); it follows the aprscaching manual's
+The documentation site is `docs/` (MkDocs, `mkdocs.yml`, published from `main`); it follows the APRScaching manual's
 style guide, and `mkdocs build --strict` plus Vale gate it. A new tool needs its page `docs/catalogue/<folder>.md`.
+
+The wordmark is **APRScaching**, never `aprscaching`, `Aprscaching` or `APRS caching`. That covers prose
+everywhere: docs, READMEs, CHANGELOG, comments, log and error text, commit messages, PR titles and bodies, and the
+GitHub description. The lowercase name stays only where it is an identifier: a repository (`apachler/aprscaching`,
+`aprscaching-tools`), a path (`vendor/aprscaching/`), a URL or domain, a package (`@aprscaching/…`), or code. Vale
+(`APRScaching.Terms`) checks `docs/`, and `test/wordmark.test.mjs` checks every Markdown file. The build banner in each
+`tool.js` keeps its lowercase text, because the signatures cover it.

@@ -13,7 +13,7 @@ You paste a TNC2 monitor line or an APRS-IS line. The decoder answers with a one
 - every APRS field: position (plain, compressed or Mic-E), course, speed, altitude, objects and items, messages
   with acknowledgements, bulletins, status, weather and telemetry.
 
-It runs the same parser the aprscaching gateway ingests with: the MIT APRS library at the commit `lib.lock` pins.
+It runs the same parser the APRScaching gateway ingests with: the MIT APRS library at the commit `lib.lock` pins.
 
 ## Use it
 

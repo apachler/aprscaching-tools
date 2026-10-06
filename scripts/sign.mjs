@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Sign a tool.json manifest OR a tool registry with a TOOL_PRIVATE_KEY (from genkey.mjs). The canonical
-// bytes match the aprscaching app's verifier (packages/tools/src/registry.ts in apachler/aprscaching)
+// bytes match the APRScaching app's verifier (packages/tools/src/registry.ts in apachler/aprscaching)
 // EXACTLY (stableStringify; manifest omits `signature`, registry signs `{ format, entries }`) so the app verifies
 // what this signs.
 //

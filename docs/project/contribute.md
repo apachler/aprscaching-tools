@@ -1,6 +1,6 @@
 # Contribute a tool
 
-This page shows you how to propose a tool for the project registry, which every aprscaching instance bundles. It is
+This page shows you how to propose a tool for the project registry, which every APRScaching instance bundles. It is
 for tool authors with a working, tested tool. At the end your pull request is open and holds everything the review
 checks.
 
@@ -111,7 +111,7 @@ as `feat(tools): add cw-trainer`, and carry no tool attribution lines.
 - **The tests pass**, and cover the tool's commands and events.
 
 The pull request is squash-merged into `dev`. Your tool is signed into the registry with the next release, and
-reaches instances when an aprscaching release bundles that tag, or when a sysop adds the tag by address.
+reaches instances when an APRScaching release bundles that tag, or when a sysop adds the tag by address.
 
 A new version is a new pull request with the signed `tool.json` and script. A new author key needs the same proof as
 the first.

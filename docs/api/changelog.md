@@ -1,20 +1,20 @@
 # API changelog
 
-This page lists each version of the tool API and of the registry format, and which aprscaching releases implement
+This page lists each version of the tool API and of the registry format, and which APRScaching releases implement
 them. It is for tool authors choosing the `api` to declare, and for sysops checking what their instance runs.
 
 ## App releases and versions
 
-| aprscaching | Tool API | Registry format | Project registry tags |
+| APRScaching | Tool API | Registry format | Project registry tags |
 |---|---|---|---|
 | 1.0 | 1.0 | 1 | `v1.x.y` |
 
-Each aprscaching release bundles one `v1.x.y` tag of the project registry. Any 1.x instance may add a newer tag by
+Each APRScaching release bundles one `v1.x.y` tag of the project registry. Any 1.x instance may add a newer tag by
 address, as long as its tools declare a tool API the instance implements.
 
 ## Tool API 1.0
 
-Implemented by aprscaching 1.0. The first version of the tool API.
+Implemented by APRScaching 1.0. The first version of the tool API.
 
 - **Manifest**: `name`, `title`, `author`, `version`, `api`, `permissions`, `surfaces`, `remote`, `description`,
   `entry`, `entrySha256`, `connect`, `pubkey`, `signature`.
@@ -34,7 +34,7 @@ Implemented by aprscaching 1.0. The first version of the tool API.
 
 ## Registry format 1
 
-Read by aprscaching 1.0. `{ format, entries, authority, sig }`, with the authority's Ed25519 signature over
+Read by APRScaching 1.0. `{ format, entries, authority, sig }`, with the authority's Ed25519 signature over
 `{ format, entries }` serialised with object keys sorted ([The registry file](../publish/registry-file.md)).
 
 ## How an entry reads

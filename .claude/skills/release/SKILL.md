@@ -80,7 +80,7 @@ Work in the repository root. `$V` is the version without the `v`.
 10. **Tag.** Ask, then run `node scripts/release.mjs $V --step tag --yes`. It tags `origin/main`, pushes the tag and
     watches the Release workflow; report the release URL.
 11. **Hand over.** Run `node scripts/release.mjs $V --step handover` and give the user its commands: in the
-    aprscaching repository, `/bundle-tools v$V` takes the tag into the app.
+    APRScaching repository, `/bundle-tools v$V` takes the tag into the app.
 
 ## When something goes wrong
 

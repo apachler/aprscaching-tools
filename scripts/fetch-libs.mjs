@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
 // Fetch the MIT libraries the tools bundle (the APRS parser, the station-type registry, the panel model, the Morse
-// and PSK31 decoders, the session-script parser) from the aprscaching repository at the commit lib.lock pins, into
+// and PSK31 decoders, the session-script parser) from the APRScaching repository at the commit lib.lock pins, into
 // vendor/aprscaching, which git ignores. Only the paths lib.lock lists are fetched, and every file must carry an
 // `SPDX-License-Identifier: MIT` line, so code under another licence never enters a tool.
 //

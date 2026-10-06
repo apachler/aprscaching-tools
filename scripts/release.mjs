@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Release a registry tag, step by step, on the computer that holds the signing keys:
 //
-//   node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <name> [--yes]] [--source <aprscaching clone>]
+//   node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <name> [--yes]] [--source <APRScaching clone>]
 //
 // The steps, in order:
 //   check      the tree is clean, gh is signed in, the version is new semver, CHANGELOG.md's Unreleased section has
@@ -13,7 +13,7 @@
 //   pr-dev     commit with a sign-off, push, a PR into dev, wait for its checks, squash-merge;
 //   pr-main    a PR from dev into main, wait for the strict checks, merge as a merge commit;
 //   tag        tag origin/main as vX.Y.Z, push the tag, wait for the Release workflow;
-//   handover   print the aprscaching command that bundles the tag.
+//   handover   print the APRScaching command that bundles the tag.
 //
 // Every step checks its precondition and says what it will do, and asks y/N before anything that changes git or
 // GitHub. A rerun finds which steps are done (the branch, a strict verify, the dated section on origin/dev and
@@ -323,7 +323,7 @@ steps.prepare = async (ctx, s) => {
   const source =
     ctx.source ?? ctx.env.APRSCACHING_SOURCE ?? path.join(ctx.env.HOME ?? "", "Development", "github", "aprscaching");
   const local = source && fs.existsSync(path.join(source, ".git"));
-  ctx.log(local ? `fetch the libraries from ${source}` : "fetch the libraries from GitHub (no local aprscaching clone)");
+  ctx.log(local ? `fetch the libraries from ${source}` : "fetch the libraries from GitHub (no local APRScaching clone)");
   const fl = ctx.run(ctx.node, ["scripts/fetch-libs.mjs", ...(local ? ["--source", source] : [])], { inherit: true });
   if (fl.status !== 0)
     throw new StepError(
@@ -488,9 +488,9 @@ steps.tag = async (ctx, s) => {
 };
 
 steps.handover = async (ctx) => {
-  ctx.log(`${ctx.tag} is released. Bundle it into aprscaching, on a branch cut from its dev:`);
+  ctx.log(`${ctx.tag} is released. Bundle it into APRScaching, on a branch cut from its dev:`);
   ctx.log("");
-  ctx.log(`  /bundle-tools ${ctx.tag}                     (the Claude skill in the aprscaching repository), or by hand:`);
+  ctx.log(`  /bundle-tools ${ctx.tag}                     (the Claude skill in the APRScaching repository), or by hand:`);
   ctx.log(`  git -C ${ctx.root} worktree add /tmp/aprscaching-tools-${ctx.tag} ${ctx.tag}`);
   ctx.log(`  node tools/toolkey/bundle-registry.mjs ${ctx.tag} --source /tmp/aprscaching-tools-${ctx.tag}`);
   ctx.log("");
@@ -502,7 +502,7 @@ const PLAN = {
   check: () => ["clean tree, gh auth, version, Unreleased, key files"],
   prepare: (ctx) => [
     `git switch --no-track -c ${ctx.branch} origin/dev (or switch to it)`,
-    "pnpm install --frozen-lockfile --ignore-scripts; fetch-libs --source <aprscaching>; build --check",
+    "pnpm install --frozen-lockfile --ignore-scripts; fetch-libs --source <APRScaching>; build --check",
   ],
   sign: () => ["sign-all with the author and authority key files, then verify --strict"],
   changelog: (ctx) => [`## [Unreleased] → ## [${ctx.version}] - ${ctx.today}; package.json version`],

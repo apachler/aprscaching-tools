@@ -1,6 +1,6 @@
-# aprscaching tools
+# APRScaching tools
 
-The project's tool registry for aprscaching 1.x: a signed list of tools for the Shack's **Tools** app, and the
+The project's tool registry for APRScaching 1.x: a signed list of tools for the Shack's **Tools** app, and the
 tools it lists. The app ships no tools of its own: every tool, the project's first-party ones included, comes from
 a registry, is installed by the player on demand and runs in the app's sandbox.
 
@@ -8,7 +8,7 @@ a registry, is installed by the player on demand and runs in the app's sandbox.
   authority key signs the list.
 - `tools/<name>/` holds one tool: its `tool.json`, its script (`tool.js`) and a `README.md` that explains its
   permissions and declares its licence. A tool built here also has its source in `src/`.
-- `lib/` holds helpers the project's tools share; `lib.lock` pins the aprscaching commit whose MIT libraries
+- `lib/` holds helpers the project's tools share; `lib.lock` pins the APRScaching commit whose MIT libraries
   (the APRS parser, the station-type registry, the panel model, the Morse and PSK31 decoders, the session-script
   parser) the tools bundle.
 - `scripts/` holds `fetch-libs.mjs` and `build.mjs` to build the tools, `new-tool.mjs` to start one, `genkey.mjs`,
@@ -54,7 +54,7 @@ fresh build.
 
 ```bash
 corepack enable && pnpm install --frozen-lockfile --ignore-scripts
-node scripts/fetch-libs.mjs        # or: --source <a local aprscaching clone>
+node scripts/fetch-libs.mjs        # or: --source <a local APRScaching clone>
 node scripts/build.mjs             # writes each tools/<name>/tool.js
 pnpm test                          # runs every built tool in a stand-in for the sandbox
 node scripts/build.mjs --check     # what CI runs: the committed scripts match their sources
@@ -74,7 +74,7 @@ lists.
 
 ## How instances use it
 
-- **Bundled.** Each aprscaching release ships a tagged release of this registry, so every instance shows it with
+- **Bundled.** Each APRScaching release ships a tagged release of this registry, so every instance shows it with
   no setup.
 - **Added by source.** A sysop adds `github:apachler/aprscaching-tools@<tag>` under **Instance settings → Tools**
   to follow a newer tag than the bundled one. Players add the same source in their own **Tools** settings.
@@ -90,7 +90,7 @@ The registry is signed by this Ed25519 public key (base64url):
 22usQMnB0VLUKlwA176NK2EZwqcSxcgx0M_rS2jNWp0
 ```
 
-It is in `authority.pub`, in `registry.json` as `authority`, and in the aprscaching app as the default
+It is in `authority.pub`, in `registry.json` as `authority`, and in the APRScaching app as the default
 `VITE_TOOL_REGISTRY_AUTHORITY`. Compare all three before you trust a copy of this registry. Check a checkout
 yourself:
 
@@ -116,7 +116,7 @@ The documentation site, https://apachler.github.io/aprscaching-tools/, is built 
   [tool API versions](https://apachler.github.io/aprscaching-tools/api/)
 - [Publish a registry](https://apachler.github.io/aprscaching-tools/publish/) of your own
 
-Players and sysops find the Tools app in the [aprscaching manual](https://apachler.github.io/aprscaching/). To build
+Players and sysops find the Tools app in the [APRScaching manual](https://apachler.github.io/aprscaching/). To build
 the site locally:
 
 ```bash

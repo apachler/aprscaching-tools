@@ -1,7 +1,7 @@
 # Build with the shared libraries
 
 This page shows you how to build a tool from sources with this repository's build, which bundles your code, the
-helpers in `lib/` and the aprscaching MIT libraries into one readable `tool.js`. It is for tool authors whose tool
+helpers in `lib/` and the APRScaching MIT libraries into one readable `tool.js`. It is for tool authors whose tool
 needs more than one file, or the APRS parser. At the end your tool's script is a reproducible build CI can check.
 
 ## Before you start
@@ -20,9 +20,9 @@ needs more than one file, or the APRS parser. At the end your tool's script is a
 |---|---|---|
 | Your tool's own modules | `tools/<name>/src/`, starting at `src/index.js` | `import { x } from "./x.js"` |
 | The helpers the project's tools share | `lib/`: `aprs-decode.js` (the packet decoder's text form), `geo.js` (Maidenhead locators, distance and bearing), `sevenplus.js` (the 7PLUS parser), `text.js` (small text helpers) | `import { gridToLatLon } from "../../../lib/geo.js"` |
-| The aprscaching MIT libraries | `vendor/aprscaching/`, fetched at the commit `lib.lock` pins | `import { parseScript } from "aprscaching/packages/tools/src/session-script.ts"` |
+| The APRScaching MIT libraries | `vendor/aprscaching/`, fetched at the commit `lib.lock` pins | `import { parseScript } from "aprscaching/packages/tools/src/session-script.ts"` |
 
-`lib.lock` names the aprscaching commit and the paths fetched from it:
+`lib.lock` names the APRScaching commit and the paths fetched from it:
 
 | Path | What it is |
 |---|---|
@@ -62,7 +62,7 @@ tool. Nothing from `node_modules` or elsewhere on the computer may enter a bundl
     node scripts/fetch-libs.mjs
     ```
 
-    With `--source <a local aprscaching clone>` it reads the commit from the clone instead of GitHub.
+    With `--source <a local APRScaching clone>` it reads the commit from the clone instead of GitHub.
 
 3. Build:
 
@@ -101,7 +101,7 @@ version give the same bytes on any computer.
 
 ## Move `lib.lock` to a new commit
 
-1. Set `ref` in `lib.lock` to a full commit that exists on GitHub, such as an aprscaching release tag's commit.
+1. Set `ref` in `lib.lock` to a full commit that exists on GitHub, such as an APRScaching release tag's commit.
 2. Fetch and check:
 
     ```bash

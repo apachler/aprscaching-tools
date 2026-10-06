@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Fetch Mermaid's browser build for the documentation site into docs/assets/vendor/, which git ignores. The site
 // draws its diagrams with this copy, so a reader's browser fetches nothing from a CDN. The version is the one the
-// aprscaching web app locks, and the tarball must match the npm registry's SHA-512 integrity pinned here.
+// APRScaching web app locks, and the tarball must match the npm registry's SHA-512 integrity pinned here.
 //
 //   node scripts/fetch-mermaid.mjs
 //

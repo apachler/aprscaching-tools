@@ -1,4 +1,4 @@
-/* The aprscaching app's design tokens, as its manual uses them (docs/stylesheets/tokens.gen.css in
+/* The APRScaching app's design tokens, as its manual uses them (docs/stylesheets/tokens.gen.css in
    apachler/aprscaching, made by tools/dev/docs-theme.mjs from apps/web/src/styles/tokens.css and fonts.css). The
    app's Dark and Light themes are Material's slate and default schemes; its Phosphor theme is the phosphor scheme
    at the end. Take a token change from the app's generated file, so the two sites keep one look. */

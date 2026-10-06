@@ -1,7 +1,7 @@
 # Write your first tool
 
 This tutorial takes you from a copy of the Station log example to your own signed tool, running in a local
-aprscaching app and covered by a test. It is for developers who know some JavaScript. At the end your tool is ready
+APRScaching app and covered by a test. It is for developers who know some JavaScript. At the end your tool is ready
 to host, or to propose for the project registry.
 
 ## Before you start
@@ -10,7 +10,7 @@ to host, or to propose for the project registry.
 - Your fork of [apachler/aprscaching-tools](https://github.com/apachler/aprscaching-tools), cloned.
 - A checkout of [apachler/aprscaching](https://github.com/apachler/aprscaching) with `pnpm install` run once, for
   the local app ([Run from source](https://apachler.github.io/aprscaching/contribute/run-from-source/) in the
-  aprscaching manual).
+  APRScaching manual).
 - A Chromium-based browser, Firefox or Safari.
 - [The sandbox API](sandbox-api.md) open beside you: it lists every call this page uses.
 
@@ -25,7 +25,7 @@ to host, or to propose for the project registry.
     node scripts/fetch-libs.mjs
     ```
 
-    `fetch-libs` writes the aprscaching MIT libraries at the `lib.lock` commit into `vendor/aprscaching/`.
+    `fetch-libs` writes the APRScaching MIT libraries at the `lib.lock` commit into `vendor/aprscaching/`.
 
 2. Copy the Station log example to a folder of your own:
 
@@ -56,7 +56,7 @@ Open `tools/my-station-log/tool.json`, give the tool its own name, title and aut
 ```
 
 - `name` is the tool's identity: lower case, 2 to 40 characters of `a-z`, `0-9` and `-`.
-- `api` is the tool API the tool needs. `1.0` runs on every aprscaching 1.x instance.
+- `api` is the tool API the tool needs. `1.0` runs on every APRScaching 1.x instance.
 - `permissions` is everything the tool asks the player for: a command, a panel and the tool bus.
 - `surfaces` puts the panel in the **Tools** app and the packet terminal.
 
@@ -127,7 +127,7 @@ Keep the key file out of the repository: `.gitignore` excludes `*.key`. [Sign a 
     It prints `serving … at http://127.0.0.1:8790/tool.json` and sends the CORS header the app needs to read the
     files.
 
-2. In the aprscaching checkout, start the web app:
+2. In the APRScaching checkout, start the web app:
 
     ```bash
     pnpm dev:web
@@ -154,7 +154,7 @@ again and runs the new script once its hash matches the signed manifest.
 - After `/whois OE6XRR-9`, the panel's first row shows `OE6XRR-9` with its type, or `not heard`.
 
 The demo data never hears a new station, so the station table stays empty there. Against a gateway that hears
-stations (`pnpm dev --ingest` in the aprscaching checkout), with **Live stations** switched on, the table fills.
+stations (`pnpm dev --ingest` in the APRScaching checkout), with **Live stations** switched on, the table fills.
 
 ## Test it
 

@@ -4,7 +4,7 @@ This catalogue lists every tool in the project registry, grouped by the job it d
 does, its commands, the permissions it asks for and why, and its version and tool API.
 
 Players install these tools in the Shack's **Tools** app; [Tools and plugins](https://apachler.github.io/aprscaching/shack/tools/)
-in the aprscaching manual shows how. A tool runs in the player's browser, in a sandbox, with only the permissions
+in the APRScaching manual shows how. A tool runs in the player's browser, in a sandbox, with only the permissions
 the player approves.
 
 ## Decoders

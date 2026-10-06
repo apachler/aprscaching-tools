@@ -14,7 +14,7 @@ The house style that Vale cannot see is checked here, as warnings, which `mkdocs
 failures:
 
 - every page ends with a `## Next` section;
-- no process codes or story framing (docs-and-comments rule of the aprscaching repository);
+- no process codes or story framing (docs-and-comments rule of the APRScaching repository);
 - no box-drawing diagrams in fenced blocks: diagrams are Mermaid;
 - a list starts after a blank line, or MkDocs renders its items as paragraph text;
 - every tool directory has its catalogue page, listed in the catalogue index, and a catalogue page's

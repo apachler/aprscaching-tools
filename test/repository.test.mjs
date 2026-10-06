@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// What the review checks, for every tool in the repository: a manifest the aprscaching app accepts, a registry entry
+// What the review checks, for every tool in the repository: a manifest the APRScaching app accepts, a registry entry
 // that agrees with it, a README that explains each permission and declares the licence, and an MIT script.
 //
 // The maintainer adds a tool's registry entry when it is reviewed, so on dev a tool folder without one is a warning.

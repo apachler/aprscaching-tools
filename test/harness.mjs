@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// A stand-in for the aprscaching sandbox, for the tests: it runs a built tools/<name>/tool.js exactly as the
+// A stand-in for the APRScaching sandbox, for the tests: it runs a built tools/<name>/tool.js exactly as the
 // sandbox's worker does (the body of a function of `register`, `ipc` and `tool`), with the API the tool reference
 // documents and the same permission checks, and records what the tool asks of the host. Values cross the boundary
 // through structuredClone, as postMessage copies them. Several tools can share one bus.

@@ -2,7 +2,7 @@
 /* global register, tool */
 // Packet decoder: paste a raw TNC2 or APRS-IS line and see every field it carries. The decoder answers with a short
 // summary, and the panel shows the decode as fields: the AX.25 header, how the line arrived, the packet type and
-// each APRS field. It runs the same pure parser the aprscaching gateway ingests with, so it decodes offline.
+// each APRS field. It runs the same pure parser the APRScaching gateway ingests with, so it decodes offline.
 import { aprsFields, decodeAprsLine, PACKET_SAMPLE } from "../../../lib/aprs-decode.js";
 
 const VIA = {
