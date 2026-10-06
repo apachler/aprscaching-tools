@@ -97,8 +97,8 @@ checks, and records what the tool asks of the app. Values cross the boundary thr
 - a README with a row for every permission and a **Licence** section, and an `SPDX-License-Identifier: MIT` first
   line in the script and its source.
 
-A new tool has no registry entry until the maintainer adds it, so `is listed in the registry` fails for it until
-then; run your own test file meanwhile.
+A new tool has no registry entry until the maintainer adds it. Until then the check prints a warning and passes; with
+`STRICT=1`, which CI sets on `main` and on release tags, it fails.
 
 ## Check that it worked
 

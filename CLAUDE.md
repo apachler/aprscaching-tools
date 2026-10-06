@@ -19,6 +19,15 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 - A release: a `release/vX.Y.Z` branch from `dev` where the maintainer runs `sign-all` and updates CHANGELOG.md,
   a PR into `dev`, the `dev` → `main` PR, then the maintainer tags `vX.Y.Z` on `main`; the tag becomes a GitHub
   Release. An aprscaching release bundles a tag with its `tools/toolkey/bundle-registry.mjs`.
+- `scripts/release.mjs <X.Y.Z>` runs that flow step by step and resumes where it stopped; `/release <X.Y.Z>`
+  (`.claude/skills/release/`) drives it. An agent never reads, prints or passes the key files, never runs the `sign`
+  step (the user runs it with `!`), and never merges into `main` without the user's go-ahead in the conversation.
+- `scripts/doctor.mjs` checks the computer (Node, pnpm, gh, remote, vendor/, lockfile, key files by public key only).
+
+## Tools and checks
+- `scripts/new-tool.mjs <name>` scaffolds a tool that builds and passes every check; `/new-tool` guides the rest.
+- On `dev` a tool folder without a registry entry is a test warning (the maintainer lists it at review); `STRICT=1`,
+  set on `main`, PRs into it and release tags, makes it a failure.
 
 ## Tool API
 - A manifest declares `"api": "MAJOR.MINOR"`, the tool API it needs. Within a major only additions happen (minor);
