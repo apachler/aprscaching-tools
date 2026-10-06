@@ -6,3 +6,8 @@ node_modules/
 
 # Libraries fetched at the lib.lock ref by scripts/fetch-libs.mjs.
 vendor/
+
+# Mermaid for the documentation site, fetched by scripts/fetch-mermaid.mjs; the built site.
+docs/assets/vendor/
+site/
+.venv/
