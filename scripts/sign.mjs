@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Sign a tool.json manifest OR a tool registry with a TOOL_PRIVATE_KEY (from genkey.mjs). The canonical
 // bytes match the aprscaching app's verifier (packages/tools/src/registry.ts in apachler/aprscaching)
-// EXACTLY (stableStringify; manifest omits `signature`, registry signs its `entries`) so the app verifies
+// EXACTLY (stableStringify; manifest omits `signature`, registry signs `{ format, entries }`) so the app verifies
 // what this signs.
 //
 //   TOOL_PRIVATE_KEY=... node scripts/sign.mjs manifest path/to/tool.json
@@ -48,7 +48,9 @@ if (kind === "manifest") {
     console.error("registry file must be an entries[] array or { entries }");
     process.exit(2);
   }
-  out = { entries, authority: pub, sig: await signB64(enc(stable(entries))) };
+  // the registry format (1) is signed with the entries, so a reader can tell a newer format from a forged file
+  const format = 1;
+  out = { format, entries, authority: pub, sig: await signB64(enc(stable({ format, entries }))) };
 } else {
   console.error("kind must be 'manifest' or 'registry'");
   process.exit(2);

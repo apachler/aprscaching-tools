@@ -1,0 +1,33 @@
+# Beacon scheduler
+
+Transmits a status beacon at a fixed interval. The host sends it over the browser radio link as an APRS status (`>comment`), only with a control-verified callsign and the transmit consent given to this tab, and lists each beacon in Recent transmissions.
+
+## Use it
+
+- `/beacon <minutes> <comment>` — every so many minutes, 10 or more (default 30, comment `APRScaching`)
+- `/beacon off` — stop
+
+It shows on: terminal.
+
+**What it transmits:** one APRS status packet with your comment, from your callsign, every interval you set and never more often than every 10 minutes. It transmits only after you run `/beacon`, and stops on `/beacon off`, when the tool is switched off, or when the tab closes.
+
+## Permissions
+
+| Permission | Why |
+|---|---|
+| `command` | Registers `/beacon` |
+| `beacon` | Schedules the beacon; the host gates it on the verified callsign and the tab's consent |
+
+## Source
+
+`src/index.js` is the source. `tool.js` is built from it, from `lib/` and from the MIT libraries of the aprscaching
+repository at the commit `lib.lock` pins (`node scripts/build.mjs`); CI checks that the committed `tool.js` matches a
+fresh build.
+
+## Signature
+
+Unsigned until the maintainer signs `tool.json` with the author key; the registry lists it once it is signed.
+
+## Licence
+
+MIT, as the `SPDX-License-Identifier` line in each file states.

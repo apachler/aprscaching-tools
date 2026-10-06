@@ -8,21 +8,28 @@ capabilities and the sandbox.
 ## Open a pull request
 
 1. Fork this repository and add a directory `tools/<name>/`, where `<name>` is your manifest's `name`:
-    - `tool.json`, with `entry` relative to it (`"entry": "tool.js"`);
+    - `tool.json`, with `entry` relative to it (`"entry": "tool.js"`) and `api`, the tool API version it needs
+      (`"api": "1.0"`);
     - the script;
     - `README.md`: what the tool does, each permission and why it needs it, and a **Licence** section.
-2. Put an `SPDX-License-Identifier` line at the top of the script, matching the README.
+2. Put an `SPDX-License-Identifier` line at the top of the script, matching the README. A tool may instead keep
+   its source in `src/index.js` and use this repository's build (README, **Build**), which bundles `lib/` and the
+   aprscaching MIT libraries into a readable `tool.js`; commit both, built with `node scripts/build.mjs`.
 3. Make an author key once, on a computer you trust, and keep the private value offline:
 
     ```bash
-    node scripts/genkey.mjs
+    node scripts/genkey.mjs --raw > ~/my-tool-author.key && chmod 600 ~/my-tool-author.key
+    node -e "console.log(JSON.parse(Buffer.from(require('fs').readFileSync(process.argv[1], 'utf8'), 'base64')).pub)" ~/my-tool-author.key
     ```
+
+    The second line prints your public key. The file holds the private value; reading it with `"$(cat …)"` keeps
+    the value out of your shell history.
 
 4. Sign the manifest. The signature also covers your script: `sign.mjs` writes its SHA-256 into `entrySha256`.
    Sign again after every change to `tool.json` or to the script:
 
     ```bash
-    TOOL_PRIVATE_KEY=<your private value> node scripts/sign.mjs manifest tools/<name>/tool.json
+    TOOL_PRIVATE_KEY="$(cat <your key file>)" node scripts/sign.mjs manifest tools/<name>/tool.json
     ```
 
 5. Run `node scripts/verify.mjs`. Your tool shows as `signed by <your key>, not listed in the registry`.
@@ -43,7 +50,7 @@ the files. The server must send `Access-Control-Allow-Origin: *`.
 - **No `tx` without a clear purpose.** A tool that transmits says what, when and how often, and never transmits
   without the operator asking.
 - The script does what the description says and nothing else: no obfuscated or minified code, no code loaded at
-  run time.
+  run time. A built `tool.js` must match a fresh build of its sources; CI checks it.
 
 A new version is a new pull request with the signed `tool.json` and script. A new author key needs the same proof
 as the first.

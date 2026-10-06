@@ -1,0 +1,30 @@
+name: Release
+
+# A pushed v* tag on main becomes a GitHub Release. The tag is made by the maintainer after the signed release
+# merged into main; the notes come from CHANGELOG.md's section for that version.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: The tag is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Verify every signature at the tag
+        run: node scripts/verify.mjs --strict
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          notes="$(awk -v v="${TAG#v}" '$0 ~ "^## \\[?"v"[] ]" {on=1; next} /^## / && on {exit} on' CHANGELOG.md 2>/dev/null)"
+          [ -n "$notes" ] || notes="Registry $TAG."
+          gh release create "$TAG" --title "$TAG" --notes "$notes" --verify-tag

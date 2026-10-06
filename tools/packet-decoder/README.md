@@ -1,0 +1,30 @@
+# Packet decoder
+
+Paste a raw TNC2 monitor line or an APRS-IS line and see every field it carries: the AX.25 header, how the line arrived (heard on RF or entered over APRS-IS, with the IGate), the packet type and each APRS field. It runs the same parser the aprscaching gateway ingests with, so it decodes offline.
+
+## Use it
+
+- In **Tools → Decode**, pick **APRS packet**, paste a line (or **Use a sample**) and choose **Decode**. The decoder answers with a summary; the **Packet decoder** panel shows the fields.
+
+It shows on: web.
+
+## Permissions
+
+| Permission | Why |
+|---|---|
+| `decoder` | Adds the **APRS packet** decoder |
+| `panel` | Shows the decoded fields |
+
+## Source
+
+`src/index.js` is the source. `tool.js` is built from it, from `lib/` and from the MIT libraries of the aprscaching
+repository at the commit `lib.lock` pins (`node scripts/build.mjs`); CI checks that the committed `tool.js` matches a
+fresh build.
+
+## Signature
+
+Unsigned until the maintainer signs `tool.json` with the author key; the registry lists it once it is signed.
+
+## Licence
+
+MIT, as the `SPDX-License-Identifier` line in each file states.

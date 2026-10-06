@@ -8,8 +8,11 @@
 //   node scripts/verify.mjs [registry.json] [--strict]
 //
 // The pinned authority comes from the AUTHORITY environment variable, or else from authority.pub beside the
-// registry. --strict also fails on an entry address that leaves the repository when the registry is served
-// from a subpath (raw.githubusercontent.com/<owner>/<repo>/<tag>/registry.json), which is otherwise a warning.
+// registry. A signature that is missing or no longer holds (the registry's, a manifest's, a script's hash) is listed
+// as unsigned: a changed tool on dev stays unsigned until the next release. --strict, for main and release tags,
+// fails on those, and on an entry address that leaves the repository when the registry is served from a subpath
+// (raw.githubusercontent.com/<owner>/<repo>/<tag>/registry.json), which is otherwise a warning. The registry format,
+// each manifest's api and every file the registry names are checked either way.
 // Exits 1 on any failure, 2 on a usage error.
 import fs from "node:fs";
 import { createHash } from "node:crypto";
@@ -44,6 +47,9 @@ async function ed25519Verify(pubB64url, sigB64, data) {
   }
 }
 
+/** A manifest's `api`: the tool API version it needs, MAJOR.MINOR (packages/tools api.ts in the app). */
+const API_RE = /^(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$/;
+
 let failures = 0;
 let warnings = 0;
 const ok = (m) => console.log(`ok    ${m}`);
@@ -55,6 +61,14 @@ const warn = (m) => {
 const fail = (m) => {
   failures++;
   console.log(`FAIL  ${m}`);
+};
+// A signature that is missing or no longer holds: on dev a changed tool stays unsigned until the next release, so
+// it is listed; --strict (main, release tags) fails on it.
+let unsignedCount = 0;
+const unsigned = (m) => {
+  if (strict) return fail(m);
+  unsignedCount++;
+  console.log(`UNSIG ${m}`);
 };
 const rel = (p) => path.relative(root, p) || ".";
 
@@ -96,9 +110,10 @@ if (!Array.isArray(reg.entries) || typeof reg.sig !== "string") {
   fail(`${rel(registryPath)}: needs an entries array and a sig`);
   process.exit(1);
 }
+if (reg.format !== 1) fail(`registry format ${reg.format ?? "(none)"}: this verifier and the app read format 1`);
 if (reg.authority !== authority) fail(`registry authority ${reg.authority} is not the pinned key`);
-else if (!(await ed25519Verify(reg.authority, reg.sig, enc(stable(reg.entries)))))
-  fail("registry signature does not verify over its entries");
+else if (!(await ed25519Verify(reg.authority, reg.sig, enc(stable({ format: reg.format, entries: reg.entries })))))
+  unsigned("registry signature does not verify over its format and entries");
 else ok(`registry signature verifies (${reg.entries.length} entries)`);
 
 // Entry addresses resolve against the registry's own URL. Simulate the subpath it is published under, so an
@@ -154,12 +169,14 @@ for (const [i, e] of reg.entries.entries()) {
   }
 
   if (manifest.name !== e.name) fail(`${label}: manifest name is "${manifest.name}"`);
+  if (!API_RE.test(manifest.api ?? ""))
+    fail(`${label}: manifest needs "api": "MAJOR.MINOR", the tool API version it needs (got ${JSON.stringify(manifest.api)})`);
   for (const k of ["title", "author", "version"])
     if (manifest[k] !== e[k]) warn(`${label}: ${k} "${e[k]}" differs from the manifest's "${manifest[k]}"`);
 
   const sig = await manifestSig(manifest);
-  if (sig === "unsigned") fail(`${label}: manifest is unsigned; a listed tool must be signed by its author`);
-  else if (sig === "invalid") fail(`${label}: manifest signature does not verify with its pubkey`);
+  if (sig === "unsigned") unsigned(`${label}: manifest is unsigned; a listed tool must be signed by its author`);
+  else if (sig === "invalid") unsigned(`${label}: manifest signature does not verify with its pubkey`);
   else if (manifest.pubkey !== e.pubkey)
     fail(`${label}: entry pubkey ${e.pubkey} is not the manifest's ${manifest.pubkey}`);
   else ok(`${label}: manifest signed by ${manifest.pubkey}, matching the entry`);
@@ -169,8 +186,8 @@ for (const [i, e] of reg.entries.entries()) {
     if (!fs.existsSync(script)) fail(`${label}: script ${rel(script)} is missing`);
     else {
       const hash = createHash("sha256").update(fs.readFileSync(script)).digest("base64");
-      if (typeof manifest.entrySha256 !== "string") fail(`${label}: manifest has no entrySha256; sign it again with scripts/sign.mjs`);
-      else if (manifest.entrySha256 !== hash) fail(`${label}: ${rel(script)} does not match the manifest's entrySha256`);
+      if (typeof manifest.entrySha256 !== "string") unsigned(`${label}: manifest has no entrySha256; sign it again with scripts/sign.mjs`);
+      else if (manifest.entrySha256 !== hash) unsigned(`${label}: ${rel(script)} does not match the manifest's entrySha256`);
       else ok(`${label}: script matches the signed entrySha256`);
     }
   }
@@ -186,11 +203,11 @@ if (fs.existsSync(toolsDir)) {
     const m = readJson(file);
     if (!m) continue;
     const sig = await manifestSig(m);
-    if (sig === "invalid") fail(`${rel(file)}: manifest signature does not verify with its pubkey`);
+    if (sig === "invalid") unsigned(`${rel(file)}: manifest signature does not verify with its pubkey`);
     else if (sig === "unsigned") info(`${rel(file)}: unsigned and not listed in the registry`);
     else info(`${rel(file)}: signed by ${m.pubkey}, not listed in the registry`);
   }
 }
 
-console.log(`\n${failures} failure(s), ${warnings} warning(s)`);
+console.log(`\n${failures} failure(s), ${warnings} warning(s), ${unsignedCount} unsigned (signed at release; --strict fails on them)`);
 process.exit(failures ? 1 : 0);

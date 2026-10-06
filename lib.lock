@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/apachler/aprscaching.git",
+  "ref": "32b5862c5c03ef1e4eda02611bf2ab1c8712a810",
+  "paths": [
+    "packages/aprs/src",
+    "packages/packet/src/names.ts",
+    "packages/tools/src/panel.ts",
+    "packages/tools/src/decoders/morse.ts",
+    "packages/tools/src/decoders/psk31.ts",
+    "packages/tools/src/session-script.ts"
+  ]
+}
