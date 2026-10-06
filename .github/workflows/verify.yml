@@ -1,7 +1,9 @@
 name: verify
 
 # On dev, a changed tool stays unsigned until the next release: verify lists unsigned or stale signatures without
-# failing. main holds only fully signed states: there, and in PRs into it, every signature must hold (--strict).
+# failing, and the tests report a tool folder without a registry entry as a warning. main holds only fully signed,
+# listed states: there, and in PRs into it, every signature must hold (--strict) and every tool must be listed
+# (STRICT=1).
 on:
   push:
     branches: [dev, main]
@@ -26,7 +28,10 @@ jobs:
       - run: node scripts/fetch-libs.mjs
       # Every committed tool.js must be exactly what its sources build to, so the signed bytes are the reviewed ones.
       - run: node scripts/build.mjs --check
+      # STRICT=1 on main and in PRs into it: a tool folder without a registry entry fails instead of warning
       - run: pnpm test
+        env:
+          STRICT: ${{ (github.base_ref == 'main' || github.ref == 'refs/heads/main') && '1' || '' }}
       # The registry against the authority key in authority.pub, every listed tool against its author key.
       - name: verify (dev, unsigned tools listed)
         if: github.base_ref != 'main' && github.ref != 'refs/heads/main'

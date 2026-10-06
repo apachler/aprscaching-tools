@@ -11,8 +11,10 @@ a registry, is installed by the player on demand and runs in the app's sandbox.
 - `lib/` holds helpers the project's tools share; `lib.lock` pins the aprscaching commit whose MIT libraries
   (the APRS parser, the station-type registry, the panel model, the Morse and PSK31 decoders, the session-script
   parser) the tools bundle.
-- `scripts/` holds `fetch-libs.mjs` and `build.mjs` to build the tools, `genkey.mjs`, `sign.mjs` and
-  `sign-all.mjs` to make keys and sign, and `verify.mjs` to check the registry and every listed tool.
+- `scripts/` holds `fetch-libs.mjs` and `build.mjs` to build the tools, `new-tool.mjs` to start one, `genkey.mjs`,
+  `sign.mjs` and `sign-all.mjs` to make keys and sign, `verify.mjs` to check the registry and every listed tool,
+  `release.mjs` to release a tag step by step, and `doctor.mjs` to check that a computer can do all of that. The
+  signing keys stay in a folder outside every repository, by default `~/.config/aprscaching-tools/keys`.
 
 ## The tools
 
@@ -98,19 +100,30 @@ node scripts/verify.mjs
 
 ## Propose a tool
 
-Open a pull request with your tool's directory, signed with your own author key. [CONTRIBUTING.md](CONTRIBUTING.md)
-lists the steps and what the review checks. [MAINTAINERS.md](MAINTAINERS.md) covers listing, signing the registry
-and releasing.
+Open a pull request into `dev` with your tool's directory, signed with your own author key.
+[Contribute a tool](https://apachler.github.io/aprscaching-tools/project/contribute/) lists the steps and what the
+review checks; [Maintain the registry](https://apachler.github.io/aprscaching-tools/project/maintain/) covers listing,
+signing and releasing.
 
 ## Documentation
 
-The aprscaching manual documents the tool API and the registry for aprscaching 1.x:
+The documentation site, https://apachler.github.io/aprscaching-tools/, is built from `docs/` with MkDocs:
 
-- [Write your first tool](https://apachler.github.io/aprscaching/contribute/first-tool/)
-- [Tool reference](https://apachler.github.io/aprscaching/contribute/tool-reference/): `tool.json`, capabilities,
-  the tool bus and the sandbox
-- [The tool registry](https://apachler.github.io/aprscaching/contribute/tool-registry/): the file format and what
-  "registry-listed" covers
+- [Tool catalogue](https://apachler.github.io/aprscaching-tools/catalogue/): every tool, its commands and its
+  permissions
+- [Write your first tool](https://apachler.github.io/aprscaching-tools/write/first-tool/), the
+  [sandbox API](https://apachler.github.io/aprscaching-tools/write/sandbox-api/) and
+  [tool API versions](https://apachler.github.io/aprscaching-tools/api/)
+- [Publish a registry](https://apachler.github.io/aprscaching-tools/publish/) of your own
+
+Players and sysops find the Tools app in the [aprscaching manual](https://apachler.github.io/aprscaching/). To build
+the site locally:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r docs/requirements.txt
+node scripts/fetch-mermaid.mjs
+.venv/bin/mkdocs serve
+```
 
 ## Licence
 

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // What the review checks, for every tool in the repository: a manifest the aprscaching app accepts, a registry entry
 // that agrees with it, a README that explains each permission and declares the licence, and an MIT script.
+//
+// The maintainer adds a tool's registry entry when it is reviewed, so on dev a tool folder without one is a warning.
+// STRICT=1, which the main and release-tag workflows set, makes it a failure: main holds only listed, signed tools.
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,6 +13,18 @@ const CAPABILITIES = ["command", "monitor", "event", "decoder", "panel", "map", 
 const SURFACES = ["web", "terminal", "bbs", "node", "map"];
 const registry = JSON.parse(fs.readFileSync(path.join(repoRoot, "registry.json"), "utf8"));
 const read = (...p) => fs.readFileSync(path.join(repoRoot, ...p), "utf8");
+const strict = process.env.STRICT === "1";
+const local = (e) => !/^[a-z][a-z0-9+.-]*:/i.test(e.entry);
+
+/**
+ * On dev, an unlisted tool is reported and the test passes: as an annotation under GitHub Actions, else on stderr.
+ * Written to the file descriptor itself, since the test runner holds back console output of passing tests.
+ */
+function unlisted(name) {
+  const msg = `tools/${name} has no registry entry yet; the maintainer adds it when the tool is reviewed`;
+  if (process.env.GITHUB_ACTIONS) fs.writeSync(1, `::warning file=tools/${name}/tool.json::${msg}\n`);
+  else fs.writeSync(2, `warn  ${msg}\n`);
+}
 
 describe.each(toolNames())("%s", (name) => {
   const m = readManifest(name);
@@ -29,7 +44,8 @@ describe.each(toolNames())("%s", (name) => {
 
   it("is listed in the registry with the manifest's name, title, author and version", () => {
     const e = registry.entries.find((x) => x.entry === `tools/${name}/tool.json`);
-    expect(e).toBeDefined();
+    if (!e && !strict) return unlisted(name);
+    expect(e, `tools/${name} has no registry entry (STRICT=1)`).toBeDefined();
     expect(e.name).toBe(m.name);
     expect({ title: e.title, author: e.author, version: e.version }).toEqual({
       title: m.title,
@@ -57,8 +73,11 @@ it("names registry format 1", () => {
   expect(registry.format).toBe(1);
 });
 
-it("lists each tool once", () => {
+it("lists each tool once, and only tools the repository holds", () => {
   const names = registry.entries.map((e) => e.name);
   expect(new Set(names).size).toBe(names.length);
-  expect(registry.entries.map((e) => e.entry).sort()).toEqual(toolNames().map((n) => `tools/${n}/tool.json`));
+  const listed = registry.entries.filter(local).map((e) => e.entry).sort();
+  const folders = toolNames().map((n) => `tools/${n}/tool.json`);
+  expect(listed.filter((e) => !folders.includes(e))).toEqual([]);
+  if (strict) expect(listed).toEqual(folders);
 });
