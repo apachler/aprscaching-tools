@@ -3,7 +3,7 @@ name: verify
 # On dev, a changed tool stays unsigned until the next release: verify lists unsigned or stale signatures without
 # failing, and the tests report a tool folder without a registry entry as a warning. main holds only fully signed,
 # listed states: there, and in PRs into it, every signature must hold (--strict) and every tool must be listed
-# (STRICT=1).
+# (STRICT=1). A PR into main is a release, so it comes from a release/vX.Y.Z branch; verify is a required check there.
 on:
   push:
     branches: [dev, main]
@@ -17,6 +17,14 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
+      - name: a PR into main comes from a release branch
+        if: github.base_ref == 'main'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          [[ "$HEAD_REF" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]] && exit 0
+          echo "::error::a pull request into main comes from release/vX.Y.Z, not from $HEAD_REF: retarget it to dev"
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
