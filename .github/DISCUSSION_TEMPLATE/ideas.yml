@@ -1,0 +1,31 @@
+title: "[Idea] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share an idea for a tool, or for the registry and its docs. Search first and add your voice to an existing idea
+        when one fits. Ready to build it? Open a **Tool proposal** issue, or a pull request into `dev`.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would it solve?
+      description: The situation you are in, at the radio or in the app, and what is missing or hard today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What the tool would do, its commands or panel, and whether it would transmit.
+    validations:
+      required: true
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who it is for
+      multiple: true
+      options:
+        - Players (the Tools app in the browser)
+        - Packet operators (the packet terminal)
+        - Tool authors (writing and signing tools)
+        - Registry hosts (publishing a registry)
