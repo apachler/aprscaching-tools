@@ -18,7 +18,8 @@ capabilities and the sandbox.
     node scripts/genkey.mjs
     ```
 
-4. Sign the manifest. Sign again after every change to `tool.json`:
+4. Sign the manifest. The signature also covers your script: `sign.mjs` writes its SHA-256 into `entrySha256`.
+   Sign again after every change to `tool.json` or to the script:
 
     ```bash
     TOOL_PRIVATE_KEY=<your private value> node scripts/sign.mjs manifest tools/<name>/tool.json

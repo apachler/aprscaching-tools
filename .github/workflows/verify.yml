@@ -16,4 +16,4 @@ jobs:
         with:
           node-version: 24
       # Checks the registry against the authority key in authority.pub and every listed tool against its author key.
-      - run: node scripts/verify.mjs
+      - run: node scripts/verify.mjs --strict

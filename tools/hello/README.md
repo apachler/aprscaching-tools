@@ -24,4 +24,4 @@ Signed by `uibFUCjcBnxAe8mRQ1v2neJd0fPV_7Vs0Y59K5vH5Oc` (OE8APR).
 
 ## Licence
 
-AGPL-3.0-or-later, as the `SPDX-License-Identifier` line in `tool.js` states.
+MIT, as the `SPDX-License-Identifier` line in `tool.js` states.

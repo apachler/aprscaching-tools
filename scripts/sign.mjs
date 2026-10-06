@@ -7,6 +7,8 @@
 //   TOOL_PRIVATE_KEY=... node scripts/sign.mjs manifest path/to/tool.json
 //   TOOL_PRIVATE_KEY=... node scripts/sign.mjs registry path/to/registry.json   # entries[] or {entries}
 import fs from "node:fs";
+import path from "node:path";
+import { createHash } from "node:crypto";
 
 const stable = (v) =>
   v === null || typeof v !== "object"
@@ -34,7 +36,10 @@ const enc = (s) => new TextEncoder().encode(s);
 const doc = JSON.parse(fs.readFileSync(file, "utf8"));
 let out;
 if (kind === "manifest") {
-  const m = { ...doc, pubkey: pub };
+  // The signature covers the code too: entrySha256 is the SHA-256 of the entry script's exact bytes.
+  const script = path.join(path.dirname(file), doc.entry ?? "tool.js");
+  const entrySha256 = createHash("sha256").update(fs.readFileSync(script)).digest("base64");
+  const m = { ...doc, entrySha256, pubkey: pub };
   delete m.signature;
   out = { ...m, signature: await signB64(enc(stable(m))) };
 } else if (kind === "registry") {

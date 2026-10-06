@@ -12,6 +12,7 @@
 // from a subpath (raw.githubusercontent.com/<owner>/<repo>/<tag>/registry.json), which is otherwise a warning.
 // Exits 1 on any failure, 2 on a usage error.
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 
 const args = process.argv.slice(2);
@@ -166,6 +167,12 @@ for (const [i, e] of reg.entries.entries()) {
   if (manifestFile) {
     const script = path.join(path.dirname(manifestFile), manifest.entry ?? "tool.js");
     if (!fs.existsSync(script)) fail(`${label}: script ${rel(script)} is missing`);
+    else {
+      const hash = createHash("sha256").update(fs.readFileSync(script)).digest("base64");
+      if (typeof manifest.entrySha256 !== "string") fail(`${label}: manifest has no entrySha256; sign it again with scripts/sign.mjs`);
+      else if (manifest.entrySha256 !== hash) fail(`${label}: ${rel(script)} does not match the manifest's entrySha256`);
+      else ok(`${label}: script matches the signed entrySha256`);
+    }
   }
 }
 
