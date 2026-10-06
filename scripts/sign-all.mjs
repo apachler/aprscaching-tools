@@ -110,6 +110,10 @@ for (const e of reg.entries) {
     process.exit(1);
   }
   const own = !m.pubkey || m.pubkey === authorPub;
+  if (own && !fs.existsSync(path.join(path.dirname(file), m.entry ?? "tool.js"))) {
+    console.error(`sign-all: ${e.name}'s script ${m.entry ?? "tool.js"} is missing; nothing was signed`);
+    process.exit(1);
+  }
   if (!own) {
     const why = await signedAsIs(m, path.join(path.dirname(file), m.entry ?? "tool.js"));
     if (why) {

@@ -19,7 +19,8 @@
 //
 // Every step checks its precondition and says what it will do, and asks y/N before anything that changes git or
 // GitHub. A rerun finds which steps are done (the branch, a strict verify, the dated section on origin/main and
-// origin/dev, the tag) and continues from the first that is not. --dry-run only reports. --step runs one step;
+// origin/dev, the tag) and continues from the first that is not. --dry-run changes nothing but a `git fetch` that
+// brings the remote-tracking refs up to date, then reports. --step runs one step;
 // --yes answers its questions, for a step the operator already confirmed (it needs --step).
 //
 // The key files come from TOOL_KEYS_DIR (default $XDG_CONFIG_HOME/aprscaching-tools/keys, else
@@ -78,9 +79,13 @@ export function datedChangelog(changelog, version, date) {
 const localDate = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
+/** Set once a question was answered "no" because no terminal could answer it: the run then exits 1, not 0. */
+let unanswered = false;
+
 async function terminalAsk(question) {
   if (!process.stdin.isTTY) {
     console.log(`${question} [y/N] no (no terminal to answer: confirm, then rerun with --step <name> --yes)`);
+    unanswered = true;
     return false;
   }
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -270,7 +275,12 @@ steps.check = async (ctx, s) => {
       .map((t) => t.trim().replace(/^v/, ""))
       .filter((t) => SEMVER.test(t));
     const newest = tags.sort(cmp).at(-1);
-    if (s.localTag) fail(`a local tag ${ctx.tag} exists but origin has none; delete it (git tag -d ${ctx.tag}) or push it`);
+    const onMainTag =
+      s.localTag &&
+      s.onMain &&
+      ctx.git("rev-parse", `${ctx.tag}^{commit}`).stdout.trim() === ctx.git("rev-parse", "origin/main").stdout.trim();
+    if (onMainTag) ok(`a local tag ${ctx.tag} is on origin/main; the tag step pushes it`);
+    else if (s.localTag) fail(`a local tag ${ctx.tag} exists but origin has none; delete it (git tag -d ${ctx.tag}) or push it`);
     else if (newest && cmp(ctx.version, newest) <= 0 && !s.onMain) fail(`${ctx.version} is not newer than v${newest}`);
     else ok(`${ctx.tag} is not taken${newest ? ` (newest v${newest})` : ""}`);
   }
@@ -327,11 +337,15 @@ steps.prepare = async (ctx, s) => {
     ctx.run(PNPM[0], [...PNPM[1], "install", "--frozen-lockfile", "--ignore-scripts"], { env: corepackEnv(ctx.env), inherit: true }),
     "pnpm install",
   );
-  const source =
-    ctx.source ?? ctx.env.APRSCACHING_SOURCE ?? path.join(ctx.env.HOME ?? "", "Development", "github", "aprscaching");
-  const local = source && fs.existsSync(path.join(source, ".git"));
+  // This step alone decides where the libraries come from, so fetch-libs gets --source or nothing to fall back on.
+  const source = path.resolve(
+    ctx.source ?? ctx.env.APRSCACHING_SOURCE ?? path.join(ctx.env.HOME ?? "", "Development", "github", "aprscaching"),
+  );
+  const local = fs.existsSync(path.join(source, ".git"));
   ctx.log(local ? `fetch the libraries from ${source}` : "fetch the libraries from GitHub (no local APRScaching clone)");
-  const fl = ctx.run(ctx.node, ["scripts/fetch-libs.mjs", ...(local ? ["--source", source] : [])], { inherit: true });
+  const env = { ...ctx.env };
+  delete env.APRSCACHING_SOURCE;
+  const fl = ctx.run(ctx.node, ["scripts/fetch-libs.mjs", ...(local ? ["--source", source] : [])], { inherit: true, env });
   if (fl.status !== 0)
     throw new StepError(
       local
@@ -586,7 +600,7 @@ export async function release(ctx, { only } = {}) {
   } catch (e) {
     if (e instanceof Stopped) {
       ctx.log(`\n${e.message}. Nothing more was changed; rerun to continue from here.`);
-      return 0;
+      return unanswered ? 1 : 0;
     }
     ctx.log(`\nrelease: ${e instanceof StepError ? e.message : `unexpected error: ${e?.message ?? e}`}`);
     return 1;
@@ -599,9 +613,11 @@ export function parseArgs(argv) {
     const a = argv[i];
     if (a === "--dry-run") o.dryRun = true;
     else if (a === "--yes") o.yes = true;
-    else if (a === "--step") o.step = argv[++i];
-    else if (a === "--source") o.source = argv[++i];
-    else if (a === "--from") o.from = argv[++i];
+    else if (a === "--step" || a === "--source" || a === "--from") {
+      const v = argv[++i];
+      if (v === undefined || v.startsWith("--")) o.error = `${a} needs a value`;
+      else o[a.slice(2)] = v;
+    }
     else if (a.startsWith("--")) o.error = `unknown option ${a}`;
     else if (!o.version) o.version = a;
     else o.error = `unexpected argument ${a}`;

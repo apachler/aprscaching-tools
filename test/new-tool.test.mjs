@@ -61,6 +61,28 @@ describe("new-tool.mjs", () => {
     expect(fs.readFileSync(path.join(dir, "docs/catalogue/index.md"), "utf8")).toBe(index);
   });
 
+  it("writes working code for a title with quotes, backticks and brackets", () => {
+    const dir = scratch();
+    const title = 'Bob\'s "best" `tool` [x|y]';
+    createTool(dir, { name: "odd-title", title });
+    let registered;
+    const src = fs.readFileSync(path.join(dir, "tools/odd-title/src/index.js"), "utf8");
+    new Function("register", "ipc", "tool", src)((t) => (registered = t), undefined, {});
+    expect(registered.commands["odd-title"]("hi")).toEqual([`${title}: hi`]);
+    const test = fs.readFileSync(path.join(dir, "test/odd-title.test.mjs"), "utf8");
+    expect(() => new Function(test.replace(/^import .*$/gm, ""))).not.toThrow(); // the test file parses
+    const index = fs.readFileSync(path.join(dir, "docs/catalogue/index.md"), "utf8");
+    expect(index).toContain('| [Bob\'s "best" `tool` \\[x\\|y\\]](odd-title.md) |');
+  });
+
+  it("refuses a name another tool's manifest holds, and a title over one line", () => {
+    const dir = scratch();
+    fs.mkdirSync(path.join(dir, "tools/hello"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "tools/hello/tool.json"), JSON.stringify({ name: "hello-tool" }));
+    expect(() => createTool(dir, { name: "hello-tool" })).toThrow(/a tool named "hello-tool" exists already/);
+    expect(() => createTool(dir, { name: "two-lines", title: "a\nb" })).toThrow(/one line/);
+  });
+
   it("titles a name", () => {
     expect(titleOf("grid-bearing")).toBe("Grid bearing");
   });

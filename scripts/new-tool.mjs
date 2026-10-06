@@ -50,7 +50,7 @@ register({
     // a command returns the lines it answers with
     "${name}": (args) => {
       const text = args.trim();
-      return [text ? \`${title}: \${text}\` : "Usage: /${name} <text>"];
+      return [text ? ${JSON.stringify(`${title}: `)} + text : "Usage: /${name} <text>"];
     },
   },
 });
@@ -94,7 +94,7 @@ describe("${name}", () => {
   it("answers /${name} with its text, and says how to use it without", async () => {
     const t = loadTool("${name}");
     expect(t.commands()).toEqual(["${name}"]);
-    expect(await t.run("${name}", "hello")).toEqual(["${title}: hello"]);
+    expect(await t.run("${name}", "hello")).toEqual([${JSON.stringify(`${title}: hello`)}]);
     expect(await t.run("${name}", "")).toEqual(["Usage: /${name} <text>"]);
   });
 
@@ -144,7 +144,8 @@ export function withIndexRow(index, { name, title, description }) {
   for (let i = start + 1; i < lines.length && !lines[i].startsWith("## "); i++) if (lines[i].startsWith("|")) last = i;
   if (last < 0) throw new Error("the Utilities section of docs/catalogue/index.md has no table");
   const what = description.replace(/\|/g, "\\|").replace(/\.$/, "");
-  lines.splice(last + 1, 0, `| [${title}](${name}.md) | ${what} | \`command\` |`);
+  const label = title.replace(/[\\[\]|]/g, "\\$&");
+  lines.splice(last + 1, 0, `| [${label}](${name}.md) | ${what} | \`command\` |`);
   return lines.join("\n");
 }
 
@@ -167,6 +168,19 @@ export function withNavEntry(mkdocs, { name, title }) {
 
 export function createTool(root, o) {
   if (!NAME.test(o.name)) throw new Error(`"${o.name}" is not a tool name: lower case, 2 to 40 characters of a-z, 0-9 and -`);
+  if (o.title !== undefined && !/^[^\x00-\x1f\x7f]{1,60}$/.test(o.title))
+    throw new Error("the title is one line of 1 to 60 characters");
+  const toolsDir = path.join(root, "tools");
+  const taken = fs.existsSync(toolsDir)
+    ? fs.readdirSync(toolsDir).flatMap((d) => {
+        try {
+          return [JSON.parse(fs.readFileSync(path.join(toolsDir, d, "tool.json"), "utf8")).name];
+        } catch {
+          return [];
+        }
+      })
+    : [];
+  if (taken.includes(o.name)) throw new Error(`a tool named "${o.name}" exists already; nothing was written`);
   const spec = {
     name: o.name,
     title: o.title ?? titleOf(o.name),

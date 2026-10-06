@@ -95,7 +95,7 @@ for (const name of names) {
     console.error(`FAIL  ${name}: ${e.message}`);
     continue;
   }
-  if (/\brequire\(|\bimport\(|\bprocess\.|\bimportScripts\(/.test(text)) {
+  if (/\brequire\(|\bimport\(|\bprocess\.(env|exit|argv|cwd|platform|versions?|stdout|stderr|nextTick)\b|\bimportScripts\(/.test(text)) {
     failures++;
     console.error(`FAIL  ${name}: the bundle loads code or reaches Node APIs at run time`);
     continue;

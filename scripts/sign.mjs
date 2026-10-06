@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // SPDX-License-Identifier: MIT
 // Sign a tool.json manifest OR a tool registry with a TOOL_PRIVATE_KEY (from genkey.mjs). The canonical
 // bytes match the APRScaching app's verifier (packages/tools/src/registry.ts in apachler/aprscaching)

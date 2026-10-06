@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { doctor } from "../scripts/doctor.mjs";
-import { createContext, datedChangelog, release, unreleasedBody } from "../scripts/release.mjs";
+import { createContext, datedChangelog, parseArgs, release, unreleasedBody } from "../scripts/release.mjs";
 import { fingerprint, inspectKeyFolder, keyFiles, redact, workTreeOf } from "../scripts/release-kit.mjs";
 import { repoRoot } from "./harness.mjs";
 
@@ -104,6 +104,7 @@ function world(s = {}) {
     if (line === "git remote get-url origin") return ok(`${st.url}\n`);
     if (line === "git diff --stat") return ok(" registry.json | 2 +-\n");
     if (line === "git rev-parse origin/main") return ok("feedface\n");
+    if (line.startsWith("git rev-parse v") && line.endsWith("^{commit}")) return ok(`${st.localTagAt ?? "0ld"}\n`);
     if (line === "git merge-base --is-ancestor origin/dev origin/main") return st.devMovedOn ? no() : ok();
     if (line.startsWith("gh pr create")) st.prOpen = true;
     if (line.startsWith("gh pr list")) return ok(st.prOpen ? JSON.stringify([{ number: 7, url: "pr/7", headRefOid: "h7" }]) : "[]");
@@ -458,6 +459,35 @@ describe("the key folder", () => {
     expect(inside.code).toBe(1);
     expect(inside.t).toMatch(/FAIL {2}the key folder .* lies inside a git working tree/);
     expect(inside.t).not.toContain(fx.author);
+  });
+});
+
+describe("release.mjs arguments and resuming", () => {
+  it("parses the options, and refuses one without its value", () => {
+    expect(parseArgs(["1.3.0", "--step", "tag", "--yes"])).toMatchObject({ version: "1.3.0", step: "tag", yes: true });
+    expect(parseArgs(["1.3.1", "--from", "v1.3.0"])).toMatchObject({ from: "v1.3.0" });
+    expect(parseArgs(["1.3.0", "--step"]).error).toBe("--step needs a value");
+    expect(parseArgs(["1.3.0", "--source", "--yes"]).error).toBe("--source needs a value");
+    expect(parseArgs([]).error).toBe("name the version");
+  });
+
+  it("resumes the tag step when a local tag on main was not pushed yet", async () => {
+    const fx = fixture({ changelog: DATED("1.2.0") });
+    const w = world({ mainChangelog: DATED("1.2.0"), localTagAt: "feedface" });
+    w.st.refs.add("refs/tags/v1.2.0");
+    const h = harness(fx, w, { dryRun: true });
+    expect(await release(h.ctx)).toBe(0);
+    expect(h.text()).toMatch(/ok {4}a local tag v1\.2\.0 is on origin\/main; the tag step pushes it/);
+    expect(h.text()).toMatch(/todo  tag/);
+  });
+
+  it("refuses a local tag elsewhere than main", async () => {
+    const fx = fixture({ changelog: DATED("1.2.0") });
+    const w = world({ mainChangelog: DATED("1.2.0") });
+    w.st.refs.add("refs/tags/v1.2.0");
+    const h = harness(fx, w, { dryRun: true });
+    expect(await release(h.ctx)).toBe(1);
+    expect(h.text()).toMatch(/a local tag v1\.2\.0 exists but origin has none/);
   });
 });
 
