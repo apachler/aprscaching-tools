@@ -1,6 +1,6 @@
 # Station log
 
-Lists the stations the built-in Station DB tool announces on the tool bus, and answers two commands:
+Lists the stations the [Station DB](../station-db/) tool announces on the tool bus, and answers two commands:
 
 - `/seen`: the stations heard, newest first, with their type and source;
 - `/whois <call>`: asks the Station DB tool for the station's type and shows the answer in the panel.

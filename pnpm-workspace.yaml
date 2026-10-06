@@ -1,0 +1,9 @@
+# pnpm reads its settings here; this repository is one package.
+
+# esbuild fetches its platform binary in a postinstall script; pnpm runs no other dependency's scripts.
+allowBuilds:
+  esbuild: true
+
+# Supply-chain: refuse freshly published packages (malware is usually yanked within hours). The same 12 h floor as
+# the aprscaching repository.
+minimumReleaseAge: 720

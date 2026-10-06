@@ -1,0 +1,16 @@
+{
+  "name": "ctext-macros",
+  "title": "CTEXT macro pack",
+  "author": "OE8APR",
+  "version": "1.0.0",
+  "api": "1.0",
+  "permissions": [
+    "command"
+  ],
+  "surfaces": [
+    "terminal",
+    "bbs"
+  ],
+  "description": "Canned /cq /73 /qth text macros.",
+  "entry": "tool.js"
+}

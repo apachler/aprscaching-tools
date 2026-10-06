@@ -1,0 +1,17 @@
+{
+  "name": "auto-responder",
+  "title": "Auto-responder",
+  "author": "OE8APR",
+  "version": "1.0.0",
+  "api": "1.0",
+  "permissions": [
+    "event"
+  ],
+  "surfaces": [
+    "terminal",
+    "bbs",
+    "node"
+  ],
+  "description": "Greets an incoming connect (QTEXT/PMS style).",
+  "entry": "tool.js"
+}

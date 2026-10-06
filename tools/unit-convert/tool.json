@@ -1,0 +1,19 @@
+{
+  "name": "unit-convert",
+  "title": "Unit converter",
+  "author": "OE8APR",
+  "version": "1.1.0",
+  "api": "1.0",
+  "permissions": [
+    "command"
+  ],
+  "surfaces": [
+    "web",
+    "terminal",
+    "bbs",
+    "node"
+  ],
+  "remote": true,
+  "description": "/conv <value> <from> <to> — km/mi/m/ft/yd/kn/kmh/nm + c/f.",
+  "entry": "tool.js"
+}

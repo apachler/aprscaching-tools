@@ -1,0 +1,15 @@
+{
+  "name": "digimode-decoders",
+  "title": "PSK31 + CW decoders",
+  "author": "OE8APR",
+  "version": "1.0.0",
+  "api": "1.0",
+  "permissions": [
+    "decoder"
+  ],
+  "surfaces": [
+    "web"
+  ],
+  "description": "Decode PSK31 varicode + CW (Morse) — the audio-cache decoders.",
+  "entry": "tool.js"
+}

@@ -2,7 +2,8 @@
   "name": "station-log",
   "title": "Station log",
   "author": "OE8APR",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "api": "1.0",
   "permissions": [
     "command",
     "panel",
