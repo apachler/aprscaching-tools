@@ -68,8 +68,9 @@ export function unreleasedBody(changelog) {
   const m = /^## \[Unreleased\][^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(changelog ?? "");
   return m ? m[1].trim() : null;
 }
+/** Whether CHANGELOG.md has a `## [version]` section: a plain prefix test, so no version text reaches a pattern. */
 const hasSection = (changelog, version) =>
-  new RegExp(`^## \\[${version.replace(/\./g, "\\.")}\\]`, "m").test(changelog ?? "");
+  (changelog ?? "").split("\n").some((line) => line.startsWith(`## [${version}]`));
 
 /** CHANGELOG.md with Unreleased dated as `version` and a new empty Unreleased above it. */
 export function datedChangelog(changelog, version, date) {

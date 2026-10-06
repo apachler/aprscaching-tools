@@ -91,6 +91,13 @@ describe("new-tool.mjs", () => {
     expect(index).toContain('| [Bob\'s "best" `tool` \\[x\\|y\\]](odd-title.md) |');
   });
 
+  it("escapes a backslash and a pipe in the description's catalogue row", () => {
+    const dir = scratch();
+    createTool(dir, { name: "slashy", description: "Splits a|b on C:\\path\\" });
+    const index = fs.readFileSync(path.join(dir, "docs/catalogue/index.md"), "utf8");
+    expect(index).toContain("| Splits a\\|b on C:\\\\path\\\\ | `command` |");
+  });
+
   it("refuses a name another tool's manifest holds, and a title over one line", () => {
     const dir = scratch();
     fs.mkdirSync(path.join(dir, "tools/hello"), { recursive: true });

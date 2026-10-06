@@ -143,7 +143,8 @@ export function withIndexRow(index, { name, title, description }) {
   let last = -1;
   for (let i = start + 1; i < lines.length && !lines[i].startsWith("## "); i++) if (lines[i].startsWith("|")) last = i;
   if (last < 0) throw new Error("the Utilities section of docs/catalogue/index.md has no table");
-  const what = description.replace(/\|/g, "\\|").replace(/\.$/, "");
+  // a table cell: a backslash or a pipe in the description gets a backslash, so neither ends or bends the cell
+  const what = description.replace(/[\\|]/g, "\\$&").replace(/\.$/, "");
   const label = title.replace(/[\\[\]|]/g, "\\$&");
   lines.splice(last + 1, 0, `| [${label}](${name}.md) | ${what} | \`command\` |`);
   return lines.join("\n");
