@@ -72,14 +72,28 @@ const unsigned = (m) => {
 };
 const rel = (p) => path.relative(root, p) || ".";
 
+/** The JSON object in `file`; null, with a failure counted, when it is missing, not JSON or not an object. */
 function readJson(file) {
+  let value;
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
+    value = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (e) {
     fail(`${rel(file)}: ${e.code === "ENOENT" ? "missing" : `not valid JSON (${e.message})`}`);
     return null;
   }
+  if (!isObject(value)) {
+    fail(`${rel(file)}: not a JSON object`);
+    return null;
+  }
+  return value;
 }
+
+const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+/** Whether `file` lies inside the repository. */
+const inRepo = (file) => {
+  const r = path.relative(root, path.resolve(file));
+  return r !== "" && !r.startsWith("..") && !path.isAbsolute(r);
+};
 
 // The manifest's own signature: every field except `signature`, with `pubkey` included.
 async function manifestSig(m) {
@@ -151,8 +165,18 @@ for (const [i, e] of reg.entries.entries()) {
       fail(`${label}: cannot fetch ${url.href} (${err.message})`);
       continue;
     }
+    if (!isObject(manifest)) {
+      fail(`${label}: ${url.href} is not a JSON object`);
+      continue;
+    }
     info(`${label}: fetched ${url.href}`);
   } else {
+    // An encoded slash or backslash names one file to the app, which fetches the address as it is, and another to a
+    // file system once decoded: refuse it rather than verify a file the app never loads.
+    if (/%2f|%5c/i.test(url.pathname)) {
+      fail(`${label}: entry "${e.entry}" holds an encoded slash; write the path with plain "/"`);
+      continue;
+    }
     let local;
     if (url.href.startsWith(SERVED)) local = decodeURIComponent(url.href.slice(SERVED.length));
     else {
@@ -163,6 +187,10 @@ for (const [i, e] of reg.entries.entries()) {
       else warn(msg);
     }
     manifestFile = path.join(root, local);
+    if (!inRepo(manifestFile)) {
+      fail(`${label}: entry "${e.entry}" leaves the repository`);
+      continue;
+    }
     listed.add(path.resolve(manifestFile));
     manifest = readJson(manifestFile);
     if (!manifest) continue;
@@ -188,7 +216,8 @@ for (const [i, e] of reg.entries.entries()) {
 
   if (manifestFile) {
     const script = path.join(path.dirname(manifestFile), manifest.entry ?? "tool.js");
-    if (!fs.existsSync(script)) fail(`${label}: script ${rel(script)} is missing`);
+    if (!inRepo(script)) fail(`${label}: the manifest's entry "${manifest.entry}" leaves the repository`);
+    else if (!fs.existsSync(script)) fail(`${label}: script ${rel(script)} is missing`);
     else {
       const hash = createHash("sha256").update(fs.readFileSync(script)).digest("base64");
       if (typeof manifest.entrySha256 !== "string") unsigned(`${label}: manifest has no entrySha256; sign it again with scripts/sign.mjs`);

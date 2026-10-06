@@ -53,6 +53,11 @@ let failures = 0;
 for (const name of names) {
   const manifest = JSON.parse(fs.readFileSync(path.join(toolsDir, name, "tool.json"), "utf8"));
   const entry = manifest.entry ?? "tool.js";
+  if (!/^[\w.-]+\.m?js$/.test(entry) || entry.startsWith(".")) {
+    console.error(`${name}: entry "${entry}" must be a script file name in the tool's folder, such as tool.js`);
+    failures++;
+    continue;
+  }
   const out = path.join(toolsDir, name, entry);
   let text;
   try {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Auto-status 1.1.0, built by scripts/build.mjs from tools/auto-status/src, lib/ and the
+// Auto-status 1.1.1, built by scripts/build.mjs from tools/auto-status/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // tools/auto-status/src/index.js

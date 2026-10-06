@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Beacon scheduler 1.1.0, built by scripts/build.mjs from tools/beacon-scheduler/src, lib/ and the
+// Beacon scheduler 1.1.1, built by scripts/build.mjs from tools/beacon-scheduler/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // tools/beacon-scheduler/src/index.js

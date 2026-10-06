@@ -78,4 +78,37 @@ describe("sign.mjs and verify.mjs", () => {
     expect(r.status).toBe(1);
     expect(r.stdout).toMatch(/manifest signature does not verify/);
   });
+  it("fail a manifest that holds no JSON object, instead of skipping it", () => {
+    const { dir, verify } = signedCopy((d, when) => {
+      if (when === "after") fs.writeFileSync(path.join(d, "tools/unit-convert/tool.json"), "null");
+    });
+    const r = verify();
+    expect(r.status).toBe(1);
+    expect(r.stdout).toMatch(/tool\.json: not a JSON object/);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("fail an entry address with an encoded slash, which could leave the repository", () => {
+    const { dir, verify } = signedCopy((d, when) => {
+      if (when !== "before") return;
+      const regPath = path.join(d, "registry.json");
+      const reg = JSON.parse(fs.readFileSync(regPath, "utf8"));
+      reg.entries[0].entry = "tools/..%2F..%2Fsecret%2Ftool.json";
+      fs.writeFileSync(regPath, JSON.stringify(reg));
+    });
+    const r = verify();
+    expect(r.status).toBe(1);
+    expect(r.stdout).toMatch(/holds an encoded slash/);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+  it("sign refuses a manifest whose entry leaves its folder", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tools-sign-"));
+    fs.mkdirSync(path.join(dir, "t"));
+    fs.writeFileSync(path.join(dir, "secret.js"), "x");
+    fs.writeFileSync(path.join(dir, "t/tool.json"), JSON.stringify({ name: "t", entry: "../secret.js" }));
+    const r = node(dir, [path.join(repoRoot, "scripts/sign.mjs"), "manifest", "t/tool.json"], { TOOL_PRIVATE_KEY: genkey() });
+    expect(r.status).toBe(2);
+    expect(r.stderr).toMatch(/leaves the manifest's folder/);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 });

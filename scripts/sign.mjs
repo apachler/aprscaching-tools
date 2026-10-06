@@ -4,8 +4,11 @@
 // EXACTLY (stableStringify; manifest omits `signature`, registry signs `{ format, entries }`) so the app verifies
 // what this signs.
 //
-//   TOOL_PRIVATE_KEY=... node scripts/sign.mjs manifest path/to/tool.json
+//   TOOL_PRIVATE_KEY=... node scripts/sign.mjs manifest path/to/tool.json [script]
 //   TOOL_PRIVATE_KEY=... node scripts/sign.mjs registry path/to/registry.json   # entries[] or {entries}
+//
+// A manifest's script is its `entry` beside it, which must stay in the manifest's folder. A tool whose `entry` is an
+// absolute address, a script its author hosts, names the local copy of that script as the third argument.
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -21,10 +24,10 @@ const stable = (v) =>
           .map((k) => `${JSON.stringify(k)}:${stable(v[k])}`)
           .join(",")}}`;
 
-const [, , kind, file] = process.argv;
+const [, , kind, file, scriptArg] = process.argv;
 const privB64 = process.env.TOOL_PRIVATE_KEY;
 if (!kind || !file || !privB64) {
-  console.error("usage: TOOL_PRIVATE_KEY=... node scripts/sign.mjs <manifest|registry> <file>");
+  console.error("usage: TOOL_PRIVATE_KEY=... node scripts/sign.mjs <manifest|registry> <file> [script]");
   process.exit(2);
 }
 
@@ -37,7 +40,22 @@ const doc = JSON.parse(fs.readFileSync(file, "utf8"));
 let out;
 if (kind === "manifest") {
   // The signature covers the code too: entrySha256 is the SHA-256 of the entry script's exact bytes.
-  const script = path.join(path.dirname(file), doc.entry ?? "tool.js");
+  const entry = doc.entry ?? "tool.js";
+  let script;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(entry)) {
+    if (!scriptArg) {
+      console.error(`entry ${entry} is an address: name the local copy of the script as the third argument`);
+      process.exit(2);
+    }
+    script = scriptArg;
+  } else {
+    script = path.join(path.dirname(file), entry);
+    const r = path.relative(path.dirname(path.resolve(file)), path.resolve(script));
+    if (!r || r.startsWith("..") || path.isAbsolute(r)) {
+      console.error(`entry ${entry} leaves the manifest's folder`);
+      process.exit(2);
+    }
+  }
   const entrySha256 = createHash("sha256").update(fs.readFileSync(script)).digest("base64");
   const m = { ...doc, entrySha256, pubkey: pub };
   delete m.signature;

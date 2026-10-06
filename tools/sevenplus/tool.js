@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// 7PLUS reassembler 1.0.0, built by scripts/build.mjs from tools/sevenplus/src, lib/ and the
+// 7PLUS reassembler 1.0.1, built by scripts/build.mjs from tools/sevenplus/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // lib/sevenplus.js

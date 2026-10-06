@@ -39,7 +39,8 @@ them, and lets a registry vouch for your key.
 
     `sign.mjs` hashes the script `entry` names into `entrySha256`, then writes your `pubkey` and the `signature`.
     Reading the key with `"$(cat …)"` keeps the value out of your shell history. When `entry` is an absolute
-    address, give the script's file as a third argument.
+    address, a script you host yourself, give your local copy of that script as a third argument:
+    `node scripts/sign.mjs manifest tools/<name>/tool.json path/to/tool.js`.
 
 4. Sign again after every change to the manifest or the script, with a new `version`.
 

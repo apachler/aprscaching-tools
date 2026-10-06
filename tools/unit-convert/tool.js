@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Unit converter 1.1.0, built by scripts/build.mjs from tools/unit-convert/src, lib/ and the
+// Unit converter 1.1.1, built by scripts/build.mjs from tools/unit-convert/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // tools/unit-convert/src/index.js

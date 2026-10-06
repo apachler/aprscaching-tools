@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Watch & alert 1.1.0, built by scripts/build.mjs from tools/watch-alert/src, lib/ and the
+// Watch & alert 1.1.1, built by scripts/build.mjs from tools/watch-alert/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // lib/text.js

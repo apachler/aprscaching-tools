@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Station DB (NAMES.GP) 1.1.0, built by scripts/build.mjs from tools/station-db/src, lib/ and the
+// Station DB (NAMES.GP) 1.1.1, built by scripts/build.mjs from tools/station-db/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // vendor/aprscaching/packages/packet/src/names.ts

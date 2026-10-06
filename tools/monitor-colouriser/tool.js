@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Monitor colouriser 1.1.0, built by scripts/build.mjs from tools/monitor-colouriser/src, lib/ and the
+// Monitor colouriser 1.1.1, built by scripts/build.mjs from tools/monitor-colouriser/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // vendor/aprscaching/packages/packet/src/names.ts
