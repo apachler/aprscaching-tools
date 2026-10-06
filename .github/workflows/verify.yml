@@ -15,5 +15,12 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
+      # pnpm is pinned through packageManager; the lockfile is frozen and pnpm-workspace.yaml holds the release-age floor.
+      - run: corepack enable && pnpm install --frozen-lockfile
+      # The MIT libraries the tools bundle, from aprscaching at the commit lib.lock pins.
+      - run: node scripts/fetch-libs.mjs
+      # Every committed tool.js must be exactly what its sources build to, so the signed bytes are the reviewed ones.
+      - run: node scripts/build.mjs --check
+      - run: pnpm test
       # Checks the registry against the authority key in authority.pub and every listed tool against its author key.
       - run: node scripts/verify.mjs --strict

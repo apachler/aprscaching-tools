@@ -3,3 +3,6 @@
 *.priv
 .env
 node_modules/
+
+# Libraries fetched at the lib.lock ref by scripts/fetch-libs.mjs.
+vendor/
