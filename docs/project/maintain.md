@@ -22,8 +22,20 @@ flowchart LR
 ## The keys
 
 The private values never enter this repository, CI, a log or the shell history. Keep each one in a file of its own
-on the computer that signs (here `~/Development/github/aprscaching-keys/`), holding the value
-`node scripts/genkey.mjs --raw` printed, and pass it to one command as `"$(cat <file>)"`.
+on the computer that signs, holding the value `node scripts/genkey.mjs --raw` printed, and pass it to one command as
+`"$(cat <file>)"`. The files live in the key folder, outside every repository, so no `git add` can pick them up:
+
+- `TOOL_KEYS_DIR` when it is set;
+- otherwise `$XDG_CONFIG_HOME/aprscaching-tools/keys`, which is `~/.config/aprscaching-tools/keys` when
+  `XDG_CONFIG_HOME` is unset.
+
+`TOOL_AUTHOR_KEY_FILE` and `TOOL_AUTHORITY_KEY_FILE` point at one file elsewhere. The folder has mode 700 and each
+file mode 600. To move keys from another folder, such as `~/Development/github/aprscaching-keys`, into the key folder:
+
+```bash
+mkdir -p ~/.config/aprscaching-tools/keys && chmod 700 ~/.config/aprscaching-tools/keys
+mv ~/Development/github/aprscaching-keys/*.key ~/.config/aprscaching-tools/keys/ && rmdir ~/Development/github/aprscaching-keys
+```
 
 | Key | File | Signs |
 |---|---|---|
@@ -75,12 +87,13 @@ node scripts/doctor.mjs --release
 ```
 
 The doctor checks Node, pnpm through corepack, `gh auth status`, the `origin` remote, `dev` and `main`, the libraries
-in `vendor/`, that the lockfile installs, and the key files: present, mode 600, readable, the authority key the one
+in `vendor/`, that the lockfile installs, and the key files: in a folder outside every git working tree (a failure
+otherwise) with mode 700 (a warning otherwise), present, mode 600, readable, the authority key the one
 `authority.pub` pins and the author key the one the registry lists for OE8APR. It prints each public key and its
 fingerprint, never a private value, and one `pass`, `warn` or `FAIL` line per check.
 
-The key files are read from `TOOL_KEYS_DIR` (by default `~/Development/github/aprscaching-keys`); set
-`TOOL_AUTHOR_KEY_FILE` or `TOOL_AUTHORITY_KEY_FILE` to point at one elsewhere.
+The key files are read from the key folder ([The keys](#the-keys)); the `check` step of the release script refuses
+them in the same cases.
 
 ### Release with the script
 
@@ -93,7 +106,7 @@ node scripts/release.mjs 1.2.0              # every step that is not done, askin
 
 | Step | What it does |
 |---|---|
-| `check` | A clean tree, `gh` signed in, a new X.Y.Z version, a non-empty Unreleased section, the key files, a registry entry for every tool folder |
+| `check` | A clean tree, `gh` signed in, a new X.Y.Z version, a non-empty Unreleased section, the key files and their folder outside every working tree, a registry entry for every tool folder |
 | `prepare` | `release/vX.Y.Z` from `origin/dev`; `pnpm install --frozen-lockfile --ignore-scripts`, `fetch-libs --source`, `build --check` |
 | `sign` | `sign-all` with the two key files, ending in `verify --strict` |
 | `changelog` | Dates Unreleased as `## [X.Y.Z] - <date>` under a new empty Unreleased, and sets `package.json`'s version |
@@ -136,8 +149,8 @@ The script runs these steps; when it cannot, run them yourself. The steps for v1
 3. Sign everything in one step:
 
     ```bash
-    AUTHOR_KEY="$(cat ~/Development/github/aprscaching-keys/oe8apr-tool-author.key)" \
-    AUTHORITY_KEY="$(cat ~/Development/github/aprscaching-keys/registry-authority.key)" \
+    AUTHOR_KEY="$(cat ~/.config/aprscaching-tools/keys/oe8apr-tool-author.key)" \
+    AUTHORITY_KEY="$(cat ~/.config/aprscaching-tools/keys/registry-authority.key)" \
       node scripts/sign-all.mjs
     ```
 

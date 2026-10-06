@@ -7,8 +7,8 @@
 // Node 22 or newer; pnpm through corepack at the packageManager version; gh signed in; origin pointing at the
 // project repository; dev and main on origin; the libraries in vendor/ at the lib.lock commit; the lockfile installing
 // (pnpm install --frozen-lockfile --ignore-scripts, which only touches node_modules); and the signing key files:
-// present, mode 600, parseable, the authority key the one authority.pub pins and the author key the one the registry
-// lists for OE8APR. Only public keys and their fingerprints are printed.
+// in a folder outside every git working tree (mode 700, else a warning), present, mode 600, parseable, the authority
+// key the one authority.pub pins and the author key the one the registry lists for OE8APR. Only public keys and their fingerprints are printed.
 //
 // Missing key files are a warning (a contributor has none); --release makes them a failure. Exits 1 on any failure.
 import fs from "node:fs";
@@ -22,6 +22,7 @@ import {
   defaultRunner,
   fingerprint,
   inspectKey,
+  inspectKeyFolder,
   keyFiles,
   repoRoot,
   repoSlug,
@@ -102,6 +103,14 @@ export function doctor({ root = repoRoot, run = defaultRunner, env = process.env
   const files = keyFiles(env);
   const pinned = (read("authority.pub") ?? "").trim();
   const expected = authorKeysOf(JSON.parse(read("registry.json") ?? "{}"));
+  // where they live: outside every git working tree, in a folder only its owner opens (a contributor without keys
+  // skips this)
+  if (release || [files.author, files.authority].some((f) => inspectKey(f).state !== "missing")) {
+    const where = inspectKeyFolder(files);
+    for (const m of where.fails) fail(m);
+    for (const m of where.warns) warn(m);
+    if (!where.fails.length) pass(`key folder ${files.dir} is outside every git working tree`);
+  }
   for (const [label, file, match] of [
     ["author key", files.author, (pub) => !expected.length || expected.includes(pub)],
     ["authority key", files.authority, (pub) => pub === pinned],
