@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { doctor } from "../scripts/doctor.mjs";
-import { createContext, datedChangelog, parseArgs, release, unreleasedBody } from "../scripts/release.mjs";
+import { createContext, datedChangelog, nextVersion, parseArgs, release, unreleasedBody } from "../scripts/release.mjs";
 import { fingerprint, inspectKeyFolder, keyFiles, redact, workTreeOf } from "../scripts/release-kit.mjs";
 import { repoRoot } from "./harness.mjs";
 
@@ -92,6 +92,8 @@ function world(s = {}) {
     url: "https://github.com/apachler/aprscaching-tools.git",
     echo: null,
     devMovedOn: false,
+    releaseBranches: [],
+    devLog: [],
     prOpen: false,
     ...s,
   };
@@ -113,6 +115,9 @@ function world(s = {}) {
     if (line === "git remote get-url origin") return ok(`${st.url}\n`);
     if (line === "git diff --stat") return ok(" registry.json | 2 +-\n");
     if (line === "git rev-parse origin/main") return ok("feedface\n");
+    if (line.startsWith("git for-each-ref")) return ok(st.releaseBranches.join("\n"));
+    if (line.startsWith("git log --no-merges"))
+      return ok(st.devLog.map(([subject, body = ""]) => `${subject}\x1f${body}\x1e`).join("\n"));
     if (line.startsWith("git rev-parse v") && line.endsWith("^{commit}")) return ok(`${st.localTagAt ?? "0ld"}\n`);
     if (line === "git merge-base --is-ancestor origin/dev origin/main") return st.devMovedOn ? no() : ok();
     if (line.startsWith("gh pr create")) st.prOpen = true;
@@ -501,7 +506,7 @@ describe("release.mjs arguments and resuming", () => {
     expect(parseArgs(["1.3.1", "--from", "v1.3.0"])).toMatchObject({ from: "v1.3.0" });
     expect(parseArgs(["1.3.0", "--step"]).error).toBe("--step needs a value");
     expect(parseArgs(["1.3.0", "--source", "--yes"]).error).toBe("--source needs a value");
-    expect(parseArgs([]).error).toBe("name the version");
+    expect(parseArgs([]).error).toBeUndefined(); // the version is optional: the commits suggest it
   });
 
   it("resumes the tag step when a local tag on main was not pushed yet", async () => {
@@ -512,6 +517,32 @@ describe("release.mjs arguments and resuming", () => {
     expect(await release(h.ctx)).toBe(0);
     expect(h.text()).toMatch(/ok {4}a local tag v1\.2\.0 is on origin\/main; the tag step pushes it/);
     expect(h.text()).toMatch(/todo {2}tag/);
+  });
+
+  it("takes the version the commits since the newest tag ask for", async () => {
+    const run = async (devLog, o = {}) => {
+      const fx = fixture();
+      const w = world({ tags: ["v1.0.0", "v1.3.0"], devLog, ...o });
+      const h = harness(fx, w, { version: "", dryRun: true });
+      await release(h.ctx);
+      return h.text();
+    };
+    expect(await run([["fix(tools): a fix"], ["docs: a page"]])).toMatch(/^version 1\.3\.1: 2 fix\(es\)/m);
+    expect(await run([["fix: x"], ["feat(tools): a tool"]])).toMatch(/^version 1\.4\.0: 1 feature\(s\)/m);
+    expect(await run([["feat!: drop api 1.0"]])).toMatch(/^version 2\.0\.0: a breaking change/m);
+    expect(await run([["chore(release): v1.3.0"]])).toMatch(/nothing to release/);
+    // a release in progress keeps its version, whatever the commits say
+    expect(await run([["feat: more"]], { releaseBranches: ["origin/release/v1.3.1"] })).toMatch(
+      /^version 1\.3\.1: the release in progress on release\/v1\.3\.1/m,
+    );
+  });
+
+  it("takes a patch on the tag a hotfix starts from", async () => {
+    const fx = fixture();
+    const w = world({ tags: ["v1.2.0", "v1.3.0"], devLog: [["feat: on dev"]] });
+    const h = harness(fx, w, { version: "", from: "v1.2.0", dryRun: true });
+    await release(h.ctx);
+    expect(h.text()).toMatch(/^version 1\.2\.1: a hotfix on v1\.2\.0/m);
   });
 
   it("refuses a local tag elsewhere than main", async () => {
@@ -525,6 +556,17 @@ describe("release.mjs arguments and resuming", () => {
 });
 
 describe("release.mjs helpers", () => {
+  it("bumps by the strongest change: breaking, feature, else patch", () => {
+    const c = (subject, body = "") => ({ subject, body });
+    expect(nextVersion("1.3.0", [])).toBeNull();
+    expect(nextVersion("1.3.0", [c("chore(release): v1.3.0")])).toBeNull();
+    expect(nextVersion("1.3.0", [c("fix: a"), c("ci: b")]).version).toBe("1.3.1");
+    expect(nextVersion("1.3.2", [c("fix: a"), c("feat(scripts): b")]).version).toBe("1.4.0");
+    expect(nextVersion("1.3.2", [c("feat(api)!: c")]).version).toBe("2.0.0");
+    expect(nextVersion("1.3.2", [c("feat: c", "BREAKING CHANGE: the bus renames a topic")]).version).toBe("2.0.0");
+    expect(nextVersion("1.3.2", [c("fix: mention BREAKING CHANGE: in prose", "")]).version).toBe("1.3.3");
+  });
+
   it("reads and dates the Unreleased section", () => {
     expect(unreleasedBody(CHANGELOG)).toBe("- A new tool.");
     expect(unreleasedBody("# Changelog\n\n## [Unreleased]\n")).toBe("");
