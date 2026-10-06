@@ -11,3 +11,4 @@ vendor/
 docs/assets/vendor/
 site/
 .venv/
+__pycache__/
