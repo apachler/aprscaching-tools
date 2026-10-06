@@ -16,5 +16,8 @@
   ],
   "remote": true,
   "description": "/grid <locA> [locB] — distance + bearing between two Maidenhead locators (GP QTH; peers may query).",
-  "entry": "tool.js"
+  "entry": "tool.js",
+  "entrySha256": "6jJ8BErB20tdA/ILI0rmAMiBcU+NXV0v2puj3yy5OlE=",
+  "pubkey": "uibFUCjcBnxAe8mRQ1v2neJd0fPV_7Vs0Y59K5vH5Oc",
+  "signature": "Sle8S32TCNnYdM4djmuXVanrBBXDf5xQVic8Ld0gs9iTlAdnF/tP/ODbS2kOim/OcDoQFg4nAGknKnzyuxBhDQ=="
 }

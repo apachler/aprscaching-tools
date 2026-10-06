@@ -16,5 +16,8 @@
   ],
   "remote": true,
   "description": "Away-message + let a connected peer leave a short note (not a mailbox).",
-  "entry": "tool.js"
+  "entry": "tool.js",
+  "entrySha256": "OV/+SwGbIxn5eUZbhgudm2wWdFsVvqRVHrAA4K4153Q=",
+  "pubkey": "uibFUCjcBnxAe8mRQ1v2neJd0fPV_7Vs0Y59K5vH5Oc",
+  "signature": "HtPE+SJJN9ro7j9USeuWHRNyy5IK9Oc3y2TUcNlbFo0WntprdAmdHkfYx5zz6jbvuRMbTlKCf5kJSKLeQUinAQ=="
 }

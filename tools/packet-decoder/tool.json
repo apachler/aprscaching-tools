@@ -12,5 +12,8 @@
     "web"
   ],
   "description": "Paste a raw TNC2 or APRS-IS line and see every field it carries.",
-  "entry": "tool.js"
+  "entry": "tool.js",
+  "entrySha256": "MFHeHuwNtkeOdNaY0nc4dWEWP4NEzLUMYxwWeW3sujA=",
+  "pubkey": "uibFUCjcBnxAe8mRQ1v2neJd0fPV_7Vs0Y59K5vH5Oc",
+  "signature": "sWdsHbrq1orGJmnSbFaxRiIqBa0DMqgJqMuT9j7IJZd22rKaZUHcdVqqik6oKgCGkd6ktm1tij/jmXql5DjODA=="
 }

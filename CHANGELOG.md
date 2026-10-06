@@ -5,6 +5,8 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-06
+
 The app's first-party tools move here: aprscaching ships no tools of its own, and players install them from this
 registry.
 
