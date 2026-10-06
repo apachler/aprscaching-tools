@@ -34,6 +34,9 @@ describe("sign-all.mjs", () => {
     const last = reg.entries.at(-1);
     const run = (args, env) =>
       spawnSync(process.execPath, args, { cwd: dir, env: { ...process.env, ...env }, encoding: "utf8" });
+    // the copy's other tools are this test author's, signed as they are now, so that only the last one is at stake
+    for (const e of reg.entries.slice(0, -1))
+      expect(run(["scripts/sign.mjs", "manifest", e.entry], { TOOL_PRIVATE_KEY: author }).status).toBe(0);
     expect(run(["scripts/sign.mjs", "manifest", last.entry], { TOOL_PRIVATE_KEY: other }).status).toBe(0);
     const lastPath = path.join(dir, last.entry);
     fs.writeFileSync(lastPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(lastPath, "utf8")), description: "Changed after signing" }));
