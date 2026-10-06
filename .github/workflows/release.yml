@@ -1,13 +1,18 @@
 name: Release
 
 # A pushed v* tag on main becomes a GitHub Release. The tag is made by the maintainer after the signed release
-# merged into main; the notes come from CHANGELOG.md's section for that version.
+# merged into main; the notes come from CHANGELOG.md's section for that version. The release carries the registry as
+# an archive, its SHA-256 and a build-provenance attestation (Sigstore, in-toto) that names this workflow run. Releases
+# are immutable: the release is made as a draft with its files, then published, and stays as published.
 on:
   push:
     tags: ["v*"]
 
 permissions:
   contents: write
+  # the provenance attestation: a Sigstore certificate for this run, stored with the repository's attestations
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -29,11 +34,27 @@ jobs:
         env:
           STRICT: "1"
         run: pnpm exec vitest run test/repository.test.mjs
+      # What an instance reads at the tag: the registry, the authority key, the licence and the tools
+      - name: The registry archive
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git archive --format=tar.gz --prefix="aprscaching-tools-$TAG/" -o "aprscaching-tools-$TAG.tar.gz" "$TAG" \
+            registry.json authority.pub LICENSE tools
+          sha256sum "aprscaching-tools-$TAG.tar.gz" > "aprscaching-tools-$TAG.tar.gz.sha256"
+      - id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: aprscaching-tools-${{ github.ref_name }}.tar.gz
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: |
           notes="$(awk -v v="${TAG#v}" '$0 ~ "^## \\[?"v"[] ]" {on=1; next} /^## / && on {exit} on' CHANGELOG.md 2>/dev/null)"
           [ -n "$notes" ] || notes="Registry $TAG."
-          gh release create "$TAG" --title "$TAG" --notes "$notes" --verify-tag
+          cp "$BUNDLE" "aprscaching-tools-$TAG.tar.gz.intoto.jsonl"
+          gh release create "$TAG" --title "$TAG" --notes "$notes" --verify-tag --draft \
+            "aprscaching-tools-$TAG.tar.gz" "aprscaching-tools-$TAG.tar.gz.sha256" "aprscaching-tools-$TAG.tar.gz.intoto.jsonl"
+          gh release edit "$TAG" --draft=false

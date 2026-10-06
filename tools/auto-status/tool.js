@@ -12,11 +12,13 @@
     commands: {
       autostatus: (args) => {
         const parts = args.trim().split(/\s+/);
-        if (parts[0] === "off" || !parts[0]) {
+        if (parts[0].toLowerCase() === "off") {
           everyMin = 0;
           return ["Auto-status off."];
         }
-        everyMin = Math.max(MIN_MINUTES, Math.round(Number(parts[0]) || MIN_MINUTES));
+        const minutes = Number(parts[0]);
+        if (!parts[0] || !Number.isFinite(minutes)) return ["Usage: /autostatus <minutes> <text>  |  /autostatus off"];
+        everyMin = Math.max(MIN_MINUTES, Math.round(minutes));
         text = (parts.slice(1).join(" ") || "APRScaching").slice(0, STATUS_MAX);
         ticks = 0;
         return [`Auto-status every ${everyMin} min: "${text}" (TX-gated).`];

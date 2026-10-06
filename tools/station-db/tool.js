@@ -54,7 +54,7 @@
   tool.on("on_frame", (p) => {
     const call = callOf(p.peerCall);
     if (!call) return;
-    const type = registry.classify(call, { payload: asStr(p.text) });
+    const type = registry.classify(call, { dest: asStr(p.dst), payload: asStr(p.text) });
     heard.delete(call);
     heard.set(call, type);
     if (heard.size > KEPT) heard.delete(heard.keys().next().value);

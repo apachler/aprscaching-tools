@@ -8,7 +8,7 @@ Colours the packet terminal's monitor by station type. It classifies every stati
 
 It shows on: terminal.
 
-The host colours each line from rules the tool publishes, one per heard station, so a station takes its colour from the first frame the tool classified, at most a second later. It keeps the last 2000 stations.
+The host colours each line from rules the tool publishes, one per heard station, so a station takes its colour from the latest frame the tool classified, at most a second later. It keeps the 1200 stations heard most recently, so that the rules fit in one message.
 
 ## Permissions
 

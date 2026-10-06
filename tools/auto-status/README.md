@@ -4,7 +4,7 @@ Transmits an APRS status (`>text`) every so many minutes. Each transmission pass
 
 ## Use it
 
-- `/autostatus <minutes> <text>` — start, every 10 minutes or more (default 10, text `APRScaching`)
+- `/autostatus <minutes> <text>` — start, every `<minutes>`, 10 or more (text `APRScaching` when left out)
 - `/autostatus off` — stop
 
 It shows on: terminal.

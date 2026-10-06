@@ -3,6 +3,18 @@
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // vendor/aprscaching/packages/packet/src/names.ts
+  var TYPE_COLOR_VAR = {
+    bbs: "--st-bbs",
+    node: "--st-node",
+    digi: "--st-digi",
+    dxcluster: "--st-dx",
+    weather: "--st-wx",
+    igate: "--st-igate",
+    service: "--st-service",
+    cacher: "--st-cacher",
+    beacon: "--st-beacon",
+    user: "--st-user"
+  };
   var up = (s) => s.trim().toUpperCase();
   var ssidOf = (call) => {
     const m = /-(\d+)$/.exec(up(call));
@@ -48,14 +60,14 @@
   var callOf = (v) => asStr(v).trim().toUpperCase();
 
   // tools/monitor-colouriser/src/index.js
-  var MAX_STATIONS = 2e3;
+  var MAX_STATIONS = 1200;
   var PUBLISH_MS = 1e3;
   var registry = new StationRegistry();
   var types = /* @__PURE__ */ new Map();
   var timer = null;
   function publish() {
     timer = null;
-    tool.setColourRules([...types].map(([src, type]) => ({ src, colorVar: `--st-${type}` })));
+    tool.setColourRules([...types].map(([src, type]) => ({ src, colorVar: TYPE_COLOR_VAR[type] ?? TYPE_COLOR_VAR.user })));
   }
   tool.on("on_frame", (p) => {
     const call = callOf(p.peerCall);

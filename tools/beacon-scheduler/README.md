@@ -4,7 +4,7 @@ Transmits a status beacon at a fixed interval. The host sends it over the browse
 
 ## Use it
 
-- `/beacon <minutes> <comment>` — every so many minutes, 10 or more (default 30, comment `APRScaching`)
+- `/beacon <minutes> <comment>` — every `<minutes>`, 10 through 1440 (comment `APRScaching` when left out)
 - `/beacon off` — stop
 
 It shows on: terminal.

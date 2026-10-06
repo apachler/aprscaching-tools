@@ -85,6 +85,7 @@ export function loadTool(name, opts = {}) {
   const s = {
     commands: {},
     colourRules: [],
+    colourPublishes: 0,
     panel: null,
     map: null,
     decoders: {},
@@ -114,6 +115,9 @@ export function loadTool(name, opts = {}) {
     },
     setColourRules: (rules) => {
       need("monitor");
+      // one message: the host drops one over 64 KB of JSON, and the tool log says so
+      if (JSON.stringify(rules).length > 64 * 1024) return void s.logs.push("message over 64 KB dropped");
+      s.colourPublishes++;
       s.colourRules = clone(rules);
     },
     on: (event, fn) => {

@@ -24,7 +24,7 @@ describe("connect-bell", () => {
     expect(t.panel.nodes[0].text).toMatch(/Waiting for a connect/);
     await t.dispatch("on_connect", { peerCall: "OE3ABC" });
     expect(t.state.logs).toEqual(["*ring* OE3ABC connected"]);
-    expect(t.panel.nodes[0]).toEqual({ kind: "kv", key: "Last connect", value: "OE3ABC (0s ago)" });
+    expect(t.panel.nodes[0]).toEqual({ kind: "kv", key: "Last connect", value: expect.stringMatching(/^OE3ABC at \d\d:\d\dZ$/) });
   });
 });
 
@@ -109,6 +109,15 @@ describe("auto-status", () => {
     await t.dispatch("on_tick");
     expect(t.state.txs).toHaveLength(1);
   });
+  it("stops on OFF in any case, and answers its usage without a number first", async () => {
+    const t = loadTool("auto-status");
+    await t.run("autostatus", "10 QRV");
+    expect(await t.run("autostatus", "OFF")).toEqual(["Auto-status off."]);
+    expect(await t.run("autostatus", "QRV on 144.800")).toEqual(["Usage: /autostatus <minutes> <text>  |  /autostatus off"]);
+    expect(await t.run("autostatus", "")).toEqual(["Usage: /autostatus <minutes> <text>  |  /autostatus off"]);
+    for (let i = 0; i < 20; i++) await t.dispatch("on_tick");
+    expect(t.state.txs).toEqual([]);
+  });
   it("logs a held status when the host's gate refuses it", async () => {
     const t = loadTool("auto-status", { tx: () => false });
     await t.run("autostatus", "10");
@@ -125,10 +134,18 @@ describe("beacon-scheduler", () => {
     expect(t.state.beacons.at(-1)).toEqual({ comment: "test", intervalSec: 1800 });
     expect(await t.run("beacon", "1 fast")).toEqual(["Beacon scheduled every 10 min."]);
     expect(t.state.beacons.at(-1)).toEqual({ comment: "fast", intervalSec: 600 });
-    expect(await t.run("beacon", "")).toEqual(["Beacon scheduled every 30 min."]);
-    expect(t.state.beacons.at(-1)).toEqual({ comment: "APRScaching", intervalSec: 1800 });
+    expect(await t.run("beacon", "2000 daily")).toEqual(["Beacon scheduled every 1440 min."]);
+    expect(t.state.beacons.at(-1)).toEqual({ comment: "daily", intervalSec: 86400 });
+    expect(await t.run("beacon", "60")).toEqual(["Beacon scheduled every 60 min."]);
+    expect(t.state.beacons.at(-1)).toEqual({ comment: "APRScaching", intervalSec: 3600 });
     expect(await t.run("beacon", "off")).toEqual(["Beacon off."]);
     expect(t.state.beacons.at(-1)).toBeNull();
+  });
+  it("answers its usage, and schedules nothing, without a number first", async () => {
+    const t = loadTool("beacon-scheduler");
+    expect(await t.run("beacon", "")).toEqual(["Usage: /beacon <minutes> <comment>  |  /beacon off"]);
+    expect(await t.run("beacon", "of")).toEqual(["Usage: /beacon <minutes> <comment>  |  /beacon off"]);
+    expect(t.state.beacons).toEqual([]);
   });
   it("says why the host refused a beacon", async () => {
     const t = loadTool("beacon-scheduler", {
