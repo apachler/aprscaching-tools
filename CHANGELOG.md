@@ -5,6 +5,9 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+- **The next version.** `release.mjs` and `/release` need no version: the Conventional Commits on `dev` since the
+  newest tag choose it (a breaking change the next major, a `feat` the next minor, anything else the next patch). A
+  release in progress keeps its version, and `--from vX.Y.Z` makes a patch on that tag.
 - **`/release`** runs the whole release on one request, signing and the merge into `main` included, and stops only
   on a failure, a CHANGELOG line it had to write, or something unexpected. It never reads the key files.
 - **Release workflow.** Only the release job may write; the workflow as a whole reads.

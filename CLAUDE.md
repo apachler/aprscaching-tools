@@ -29,7 +29,8 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 - A release: on the `release/vX.Y.Z` branch the maintainer runs `sign-all` and dates CHANGELOG.md; after the PR
   into `main`, the maintainer tags `vX.Y.Z` on `main` and the tag becomes a GitHub Release. An APRScaching release
   bundles a tag with its `tools/toolkey/bundle-registry.mjs`.
-- `scripts/release.mjs <X.Y.Z>` runs that flow step by step and resumes where it stopped; `/release <X.Y.Z>`
+- `scripts/release.mjs [X.Y.Z]` runs that flow step by step and resumes where it stopped; without a version, the
+  Conventional Commits since the newest tag choose it (breaking → major, `feat` → minor, else patch). `/release`
   (`.claude/skills/release/`) drives it: asking for the release is the go-ahead for the whole run, signing and the
   merge into `main` included, and it stops for the user only on a failure, a CHANGELOG line it had to write, or
   something unexpected. An agent never reads, prints or passes the key files (the `sign` step reads them itself), and

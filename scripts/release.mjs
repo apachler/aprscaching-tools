@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Release a registry tag, step by step, on the computer that holds the signing keys:
 //
-//   node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <name> [--yes]] [--source <APRScaching clone>] [--from <ref>]
+//   node scripts/release.mjs [X.Y.Z] [--dry-run] [--step <name> [--yes]] [--source <APRScaching clone>] [--from <ref>]
+//
+// Without a version, the release takes the one a release branch in progress names (release/vX.Y.Z, here or on
+// origin), so a rerun finishes the release it started; with --from vX.Y.Z, a patch on that tag; else the next version
+// the Conventional Commits on origin/dev since the newest tag ask for: a breaking change (`type!:` or a
+// `BREAKING CHANGE:` footer) the next major, a `feat` the next minor, anything else the next patch.
 //
 // The steps, in order:
 //   check      the tree is clean, gh is signed in, the version is new semver, CHANGELOG.md's Unreleased section has
@@ -111,6 +116,7 @@ export function createContext(o) {
     tag: `v${version}`,
     branch: `release/v${version}`,
     from: o.from ?? "origin/dev",
+    fromSet: o.from !== undefined,
     root: o.root ?? repoRoot,
     env: o.env ?? process.env,
     dryRun: !!o.dryRun,
@@ -593,11 +599,82 @@ const PLAN = {
   handover: (ctx) => [`print: node tools/toolkey/bundle-registry.mjs ${ctx.tag} --source <tools checkout>`],
 };
 
+/** A commit that is part of the release itself, not a change it releases. */
+const RELEASE_COMMIT = /^chore\(release\)/;
+
+/**
+ * The version after `newest` (X.Y.Z) that `commits` ({ subject, body }) ask for, with the reason; null when there is
+ * nothing to release.
+ */
+export function nextVersion(newest, commits) {
+  const changes = commits.filter((c) => !RELEASE_COMMIT.test(c.subject));
+  if (!changes.length) return null;
+  const [major, minor, patch] = newest.split(".").map(Number);
+  const breaking = changes.find((c) => /^\w+(\([^)]*\))?!:/.test(c.subject) || /^BREAKING[ -]CHANGE:/m.test(c.body));
+  if (breaking) return { version: `${major + 1}.0.0`, reason: `a breaking change: ${breaking.subject}` };
+  const feats = changes.filter((c) => /^feat(\([^)]*\))?:/.test(c.subject));
+  if (feats.length)
+    return { version: `${major}.${minor + 1}.0`, reason: `${feats.length} feature(s), such as: ${feats[0].subject}` };
+  return {
+    version: `${major}.${minor}.${patch + 1}`,
+    reason: `${changes.length} fix(es) and other change(s), no feature`,
+  };
+}
+
+/** The version a run without one releases, with the reason (see the header); null when there is nothing to release. */
+export function autoVersion(ctx) {
+  ctx.git("fetch", "origin", "--prune", "--tags");
+  const branches = ctx
+    .git("for-each-ref", "--format=%(refname:short)", "refs/heads/release/", "refs/remotes/origin/release/")
+    .stdout.split("\n")
+    .map((b) => /release\/v(\d+\.\d+\.\d+)$/.exec(b.trim())?.[1])
+    .filter((v) => v && SEMVER.test(v));
+  if (branches.length) {
+    const v = branches.sort(cmp).at(-1);
+    return { version: v, reason: `the release in progress on release/v${v}` };
+  }
+  if (ctx.fromSet) {
+    const base = /^v?(\d+\.\d+\.\d+)$/.exec(ctx.from)?.[1];
+    if (!base) throw new StepError(`--from ${ctx.from} is not a tag vX.Y.Z: name the version`);
+    const [a, b, c] = base.split(".").map(Number);
+    return { version: `${a}.${b}.${c + 1}`, reason: `a hotfix on v${base}` };
+  }
+  const newest = ctx
+    .git("tag", "--list", "v*")
+    .stdout.split("\n")
+    .map((t) => t.trim().replace(/^v/, ""))
+    .filter((t) => SEMVER.test(t))
+    .sort(cmp)
+    .at(-1);
+  if (!newest) throw new StepError("no release tag yet: name the first version");
+  const log = ctx.git("log", "--no-merges", "--format=%s%x1f%b%x1e", `v${newest}..origin/dev`).stdout;
+  const commits = log
+    .split("\x1e")
+    .map((r) => r.trim())
+    .filter(Boolean)
+    .map((r) => {
+      const [subject, body = ""] = r.split("\x1f");
+      return { subject: subject.trim(), body };
+    });
+  return nextVersion(newest, commits);
+}
+
 /** Run the release: every pending step in order, one step (`only`), or a report (dry run). Returns an exit code. */
 export async function release(ctx, { only } = {}) {
   try {
     if (only && !STEPS.includes(only)) throw new StepError(`no step ${only}; the steps are ${STEPS.join(", ")}`);
     if (ctx.yes && !only) throw new StepError("--yes answers one step's questions: name it with --step");
+    if (!ctx.version) {
+      const next = autoVersion(ctx);
+      if (!next) {
+        ctx.log("nothing to release: origin/dev has no change since the newest tag");
+        return 0;
+      }
+      ctx.version = next.version;
+      ctx.tag = `v${next.version}`;
+      ctx.branch = `release/v${next.version}`;
+      ctx.log(`version ${next.version}: ${next.reason}`);
+    }
     if (!SEMVER.test(ctx.version)) throw new StepError(`${ctx.version || "(none)"} is not a version X.Y.Z`);
     const url = ctx.git("remote", "get-url", "origin").stdout.trim();
     ctx.slug = repoSlug(url) ?? UPSTREAM;
@@ -669,7 +746,6 @@ export function parseArgs(argv) {
     else if (!o.version) o.version = a;
     else o.error = `unexpected argument ${a}`;
   }
-  if (!o.version && !o.error) o.error = "name the version";
   return o;
 }
 
@@ -677,7 +753,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const o = parseArgs(process.argv.slice(2));
   if (o.error) {
     console.error(
-      `release: ${o.error}\nusage: node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <${STEPS.join("|")}> [--yes]] [--source <dir>] [--from <ref>]`,
+      `release: ${o.error}\nusage: node scripts/release.mjs [X.Y.Z] [--dry-run] [--step <${STEPS.join("|")}> [--yes]] [--source <dir>] [--from <ref>]`,
     );
     process.exit(2);
   }

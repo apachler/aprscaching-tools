@@ -1,11 +1,11 @@
 ---
 name: release
-description: Release a signed registry tag vX.Y.Z of aprscaching-tools with scripts/release.mjs. Use for "/release <version>", "release the registry", "cut v1.2.0", "tag a new tools release", "hotfix v1.2.1". Asking for the release is the go-ahead for the whole run, signing and the merge into main included; it stops for the user only when a CHANGELOG line needs writing, a check fails, or something unexpected turns up. The agent never reads the key files.
+description: Release a signed registry tag vX.Y.Z of aprscaching-tools with scripts/release.mjs. Use for "/release", "/release <version>", "release the registry", "cut v1.2.0", "tag a new tools release", "hotfix v1.2.1". Asking for the release is the go-ahead for the whole run, signing and the merge into main included; it stops for the user only when a CHANGELOG line needs writing, a check fails, or something unexpected turns up. The agent never reads the key files.
 ---
 
 # Release the registry
 
-`/release <X.Y.Z>` releases tag `vX.Y.Z`: a `release/vX.Y.Z` branch from `dev`, signed and merged into `main` by pull
+`/release [X.Y.Z]` releases tag `vX.Y.Z`; without a version, the commits since the newest tag choose it: a `release/vX.Y.Z` branch from `dev`, signed and merged into `main` by pull
 request, the tag on `main` that the Release workflow publishes, and `dev` brought up to `main`. `scripts/release.mjs`
 does the work; this skill runs it from start to end.
 
@@ -41,14 +41,19 @@ step; `--yes` without `--step` is refused.
 
 ## Steps
 
-Work in the repository root. `$V` is the version without the `v`. For a hotfix, add `--from v<the tag it fixes>` to
+Work in the repository root. `$V` is the version without the `v`: the one the user named, else the one the dry run
+in step 2 chose. For a hotfix, add `--from v<the tag it fixes>` to
 every `release.mjs` command: the release branch starts from that tag instead of `dev`, and the Unreleased lines are
 written on the release branch after step 4.
 
 1. **Doctor.** `node scripts/doctor.mjs --release`. A `FAIL` stops the release: tell the user the command the doctor
    names.
-2. **Where the release stands.** `node scripts/release.mjs $V --dry-run` lists each step as `done` or `todo`; go on
-   from the first `todo`.
+2. **Where the release stands.** `node scripts/release.mjs $V --dry-run`, or without `$V` when the user named none:
+   its first line is then `version X.Y.Z: <why>`. A release branch in progress keeps its version; otherwise a breaking
+   change (`type!:` or a `BREAKING CHANGE:` footer) since the newest tag makes the next major, a `feat` the next
+   minor, anything else the next patch. `nothing to release` ends the run. Say which version and why in your first
+   report, then use it as `$V` for every later command. It lists each step as `done` or `todo`; go on from the first
+   `todo`.
 3. **The CHANGELOG entry** (skip it when `changelog` is done). Each PR adds its own line under `## [Unreleased]`.
    Compare that section on `origin/dev` with the PRs merged since the last tag:
 

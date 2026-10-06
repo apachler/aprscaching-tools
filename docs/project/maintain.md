@@ -105,9 +105,16 @@ Each pull request adds its own line under `## [Unreleased]` in `CHANGELOG.md`. B
 against the pull requests merged since the last tag and fill any gap, then:
 
 ```bash
-node scripts/release.mjs 1.3.0 --dry-run    # where the release stands; changes nothing but a git fetch
-node scripts/release.mjs 1.3.0              # every step that is not done, asking before each change
+node scripts/release.mjs --dry-run          # the next version and where the release stands; changes nothing but a git fetch
+node scripts/release.mjs                    # every step that is not done, asking before each change
+node scripts/release.mjs 1.4.0              # the same, for a version you name
 ```
+
+Without a version, the script chooses it. A release branch already in progress keeps its version, so a rerun
+finishes the release it started; `--from vX.Y.Z` makes a patch on that tag. Otherwise the commits on `origin/dev`
+since the newest tag decide, by their Conventional Commit type: a breaking change (`feat!:` or a `BREAKING CHANGE:`
+footer) makes the next major, a `feat` the next minor, anything else the next patch. A run with nothing new since
+the newest tag says `nothing to release`.
 
 | Step | What it does |
 |---|---|
@@ -130,7 +137,7 @@ clone there the libraries come from GitHub. Without a terminal every question is
 The script reads the key files in the `sign` step only, and passes their values to `sign-all` in that one process's
 environment. Every line it prints passes through a filter that removes them.
 
-In Claude Code, `/release 1.3.0` runs the whole release: asking for it is the go-ahead for every step, signing and
+In Claude Code, `/release` (or `/release 1.4.0`) runs the whole release: asking for it is the go-ahead for every step, signing and
 the merge into `main` included. It checks the Unreleased entry against the pull requests merged since the last tag,
 runs the `sign` step, which reads the key files itself, and merges into `main` only once the pull request's checks
 have passed. It stops for you only when a check or step fails, when it had to write a CHANGELOG line for a pull
