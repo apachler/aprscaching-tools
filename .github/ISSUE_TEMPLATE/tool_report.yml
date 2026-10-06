@@ -1,0 +1,43 @@
+name: Report a tool
+description: A tool in the registry is broken, misleading, or does more than its permissions explain.
+labels: ["tool report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If the tool is **malicious** or the problem has a **security impact** (it exfiltrates data, transmits
+        without being asked, or bypasses a signature), report it privately through the advisory in SECURITY.md
+        instead, so it can be removed from the registry before details are public.
+  - type: input
+    id: tool
+    attributes:
+      label: Tool and version
+      description: Its name and version as the app's Tools list or its tool.json shows them.
+    validations:
+      required: true
+  - type: input
+    id: registry
+    attributes:
+      label: Registry tag
+      description: The tag your instance uses, such as v1.2.2.
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong
+      options:
+        - It does something its permissions or README do not explain
+        - It transmits, beacons or connects when it should not
+        - It is broken or crashes
+        - Its description, catalogue page or licence is wrong
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What you saw
+      description: What the tool did, how you noticed, and how to see it again.
+    validations:
+      required: true
