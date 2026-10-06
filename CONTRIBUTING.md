@@ -11,7 +11,9 @@ capabilities and the sandbox.
     - `tool.json`, with `entry` relative to it (`"entry": "tool.js"`);
     - the script;
     - `README.md`: what the tool does, each permission and why it needs it, and a **Licence** section.
-2. Put an `SPDX-License-Identifier` line at the top of the script, matching the README.
+2. Put an `SPDX-License-Identifier` line at the top of the script, matching the README. A tool may instead keep
+   its source in `src/index.js` and use this repository's build (README, **Build**), which bundles `lib/` and the
+   aprscaching MIT libraries into a readable `tool.js`; commit both, built with `node scripts/build.mjs`.
 3. Make an author key once, on a computer you trust, and keep the private value offline:
 
     ```bash
@@ -43,7 +45,7 @@ the files. The server must send `Access-Control-Allow-Origin: *`.
 - **No `tx` without a clear purpose.** A tool that transmits says what, when and how often, and never transmits
   without the operator asking.
 - The script does what the description says and nothing else: no obfuscated or minified code, no code loaded at
-  run time.
+  run time. A built `tool.js` must match a fresh build of its sources; CI checks it.
 
 A new version is a new pull request with the signed `tool.json` and script. A new author key needs the same proof
 as the first.

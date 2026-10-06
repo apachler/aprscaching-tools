@@ -13,6 +13,27 @@ offline computer that holds it, then copy the signed `registry.json` back. Its p
 22usQMnB0VLUKlwA176NK2EZwqcSxcgx0M_rS2jNWp0
 ```
 
+## Build the project's tools
+
+The project's own tools have their source in `tools/<name>/src/` and are built into `tools/<name>/tool.js`
+(README, **Build**). The build is reproducible, and CI fails when a committed `tool.js` differs from a fresh build,
+so the bytes you sign are the bytes the sources give. Move `lib.lock` to a new aprscaching commit or release tag
+only together with a rebuild; it changes the scripts, so every tool built here is signed again.
+
+## Sign a release
+
+`scripts/sign-all.mjs` signs everything in one step, on the offline computer that holds both private values:
+
+```bash
+pnpm install && node scripts/fetch-libs.mjs
+AUTHOR_KEY=<author private value> AUTHORITY_KEY=<authority private value> node scripts/sign-all.mjs
+```
+
+It checks that every `tool.js` matches its sources, signs each listed `tool.json` with the author key (a manifest
+signed by another author is left alone), copies each manifest's key, title and version into its registry entry,
+signs the registry with the authority key and runs `verify.mjs --strict`. The authority key must be the one in
+`authority.pub`.
+
 ## Add or update an entry
 
 1. Review the pull request against [CONTRIBUTING.md](CONTRIBUTING.md#what-the-review-checks). Confirm the author
@@ -69,6 +90,17 @@ Tags follow the aprscaching major version: `v1.<minor>.<patch>` is a registry fo
 node scripts/verify.mjs --strict
 git tag -a v1.0.0 -m "registry v1.0.0"
 git push origin main v1.0.0
+```
+
+Before a tag, sign with `sign-all.mjs` and commit the signed files. For v1.1.0, the release that moves the app's
+first-party tools here:
+
+```bash
+AUTHOR_KEY=<author private value> AUTHORITY_KEY=<authority private value> node scripts/sign-all.mjs
+git commit -s -am "chore: sign the registry and tools for v1.1.0"
+git push origin main
+git tag -a v1.1.0 -m "registry v1.1.0"
+git push origin v1.1.0
 ```
 
 A tag never moves: a fix is a new tag. Instances that follow `github:apachler/aprscaching-tools@<tag>` read the

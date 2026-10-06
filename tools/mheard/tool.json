@@ -1,0 +1,17 @@
+{
+  "name": "mheard",
+  "title": "MHeard",
+  "author": "OE8APR",
+  "version": "1.0.0",
+  "permissions": [
+    "monitor",
+    "event",
+    "panel"
+  ],
+  "surfaces": [
+    "terminal",
+    "web"
+  ],
+  "description": "Rolling recently-heard stations, aggregated across sources (RF terminal, APRS, …).",
+  "entry": "tool.js"
+}

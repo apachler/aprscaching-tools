@@ -1,0 +1,19 @@
+{
+  "name": "grid-bearing",
+  "title": "Grid & bearing",
+  "author": "OE8APR",
+  "version": "1.0.0",
+  "permissions": [
+    "command",
+    "panel"
+  ],
+  "surfaces": [
+    "web",
+    "terminal",
+    "bbs",
+    "node"
+  ],
+  "remote": true,
+  "description": "/grid <locA> [locB] — distance + bearing between two Maidenhead locators (GP QTH; peers may query).",
+  "entry": "tool.js"
+}

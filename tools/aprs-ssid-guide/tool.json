@@ -1,0 +1,16 @@
+{
+  "name": "aprs-ssid-guide",
+  "title": "APRS SSID guide",
+  "author": "OE8APR",
+  "version": "1.0.0",
+  "permissions": [
+    "panel"
+  ],
+  "surfaces": [
+    "web",
+    "terminal",
+    "bbs"
+  ],
+  "description": "A quick reference of the conventional APRS -SSID assignments.",
+  "entry": "tool.js"
+}
