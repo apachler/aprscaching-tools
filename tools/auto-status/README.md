@@ -27,7 +27,8 @@ fresh build.
 
 ## Signature
 
-Unsigned until the maintainer signs `tool.json` with the author key; the registry lists it once it is signed.
+Signed by OE8APR's author key, the key in `tool.json`'s `pubkey`. The maintainer signs it again at each release that
+changes it, and the registry lists it with that key.
 
 ## Licence
 

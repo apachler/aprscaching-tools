@@ -129,6 +129,12 @@ describe("station-db and info-responder", () => {
     expect(await bus.call("station.type", "ZZ9ZZZ")).toBe("");
   });
 
+  it("refuses a second provider of a held service, as the app's bus does", () => {
+    const bus = createBus();
+    loadTool("station-db", { bus });
+    expect(() => loadTool("station-db", { bus })).toThrow(/service "station.type" is held already/);
+  });
+
   it("station-db and the colouriser classify a station alike, the destination included", async () => {
     vi.useFakeTimers();
     const bus = createBus();

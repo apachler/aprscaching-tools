@@ -42,15 +42,16 @@ describe.each(toolNames())("%s", (name) => {
     if (m.permissions.includes("network")) expect(m.connect?.length).toBeGreaterThan(0);
   });
 
-  it("is listed in the registry with the manifest's name, title, author and version", () => {
+  it("is listed in the registry with the manifest's name, title, author, version and description", () => {
     const e = registry.entries.find((x) => x.entry === `tools/${name}/tool.json`);
     if (!e && !strict) return unlisted(name);
     expect(e, `tools/${name} has no registry entry (STRICT=1)`).toBeDefined();
     expect(e.name).toBe(m.name);
-    expect({ title: e.title, author: e.author, version: e.version }).toEqual({
+    expect({ title: e.title, author: e.author, version: e.version, description: e.description }).toEqual({
       title: m.title,
       author: m.author,
       version: m.version,
+      description: m.description,
     });
     if (m.pubkey) expect(e.pubkey).toBe(m.pubkey);
   });

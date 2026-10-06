@@ -2,7 +2,9 @@
 // A stand-in for the APRScaching sandbox, for the tests: it runs a built tools/<name>/tool.js exactly as the
 // sandbox's worker does (the body of a function of `register`, `ipc` and `tool`), with the API the tool reference
 // documents and the same permission checks, and records what the tool asks of the host. Values cross the boundary
-// through structuredClone, as postMessage copies them. Several tools can share one bus.
+// through structuredClone, as postMessage copies them; bus payloads travel as JSON, as the app sends them. Several
+// tools can share one bus, with the app's bus rules: no takeover of a held service, `session.` and `host.` names for
+// the app alone, and `tx` for a service that transmits.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,13 +31,38 @@ const FEATURES = [
   "bus.provide",
 ];
 
+/** A bus payload as the app delivers it: plain JSON, so a Date arrives as its string. */
+const asJson = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+
+/** Names only the app may provide or publish on. */
+export const RESERVED = /^(session|host)\./;
+/** The app's services that make the radio transmit: a caller needs 'tx'. */
+const TRANSMITTING = new Set(["session.script"]);
+
+/**
+ * Whether the app would send `info` from requestTx: one line, a status (`>text`, 62 characters, not led by a grid
+ * locator) or a message (`:ADDRESSEE:text{id}`, a one-word addressee padded to nine, 67 characters of text), and no
+ * bulletin or announcement addressee.
+ */
+export function txAllowed(info) {
+  if (!info || /[\r\n]/.test(info)) return false;
+  if (info.startsWith(">")) {
+    const text = info.slice(1);
+    return text.length > 0 && text.length <= 62 && !/^[A-R]{2}[0-9]{2}/i.test(text);
+  }
+  const m = /^:([!-~]{1,9} *):(.*?)(\{[A-Za-z0-9]{1,5}\})?$/.exec(info);
+  if (!m || m[1].length !== 9) return false;
+  if (/^(BLN|NWS|SKY|CWA|BOM)/i.test(m[1])) return false;
+  return m[2].length > 0 && m[2].length <= 67;
+}
+
 /** A tool bus: topics, services (a tool's or the host's) and the sender of each message. */
 export function createBus() {
   const subs = new Map();
   const services = new Map();
   return {
     emit(topic, data, from) {
-      for (const fn of subs.get(topic) ?? []) fn(structuredClone(data), from);
+      for (const fn of subs.get(topic) ?? []) fn(asJson(data), from);
     },
     subscribe(topic, fn) {
       if (!subs.has(topic)) subs.set(topic, []);
@@ -44,9 +71,10 @@ export function createBus() {
     provide(name, fn) {
       services.set(name, fn);
     },
+    has: (name) => services.has(name),
     async call(name, args) {
       const fn = services.get(name);
-      return fn ? structuredClone(await fn(structuredClone(args))) : undefined;
+      return fn ? asJson(await fn(asJson(args))) : undefined;
     },
     topics: () => [...subs.keys()],
   };
@@ -93,6 +121,7 @@ export function loadTool(name, opts = {}) {
     handlers: {},
     logs: [],
     txs: [],
+    txHeld: [],
     beacons: [],
   };
   const need = (c) => {
@@ -126,6 +155,11 @@ export function loadTool(name, opts = {}) {
     },
     requestTx: async (info) => {
       need("tx");
+      // the app holds a frame it does not send, and the call resolves false
+      if (!txAllowed(String(info))) {
+        s.txHeld.push(String(info));
+        return false;
+      }
       s.txs.push(String(info));
       return opts.tx ? opts.tx(String(info)) : true;
     },
@@ -137,6 +171,7 @@ export function loadTool(name, opts = {}) {
     },
     emit: (topic, data) => {
       need("ipc");
+      if (RESERVED.test(String(topic))) throw new Error(`topic "${topic}" is the app's alone`);
       bus.emit(String(topic), clone(data), name);
     },
     subscribe: (topic, fn) => {
@@ -145,10 +180,14 @@ export function loadTool(name, opts = {}) {
     },
     call: async (svc, args) => {
       need("ipc");
+      if (TRANSMITTING.has(String(svc)) && !granted.includes("tx"))
+        throw new Error(`service "${svc}" needs the 'tx' permission, which ${name} does not hold`);
       return bus.call(String(svc), clone(args));
     },
     provide: (svc, fn) => {
       need("ipc");
+      if (RESERVED.test(String(svc))) throw new Error(`service "${svc}" is the app's alone`);
+      if (bus.has(String(svc))) throw new Error(`service "${svc}" is held already`);
       bus.provide(String(svc), fn);
     },
   };

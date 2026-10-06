@@ -2,7 +2,7 @@
 // The tools that answer connected sessions, transmit or run on the minute tick: Auto-responder, Connect bell, Link
 // ping, Scheduled query, Auto-status and the Beacon scheduler.
 import { describe, expect, it } from "vitest";
-import { createBus, loadTool } from "./harness.mjs";
+import { createBus, loadTool, readManifest } from "./harness.mjs";
 
 describe("auto-responder", () => {
   it("greets an incoming connect by callsign through the session's reply", async () => {
@@ -64,13 +64,19 @@ describe("sched-query", () => {
     expect(await t.run("gpauto", "run")).toEqual(["Running 3 steps…"]);
   });
 
-  it("says why a session.script refusal stopped it", async () => {
+  it("says why a session.script refusal stopped it: without 'tx' the app refuses the call", async () => {
     const bus = createBus();
+    let ran = false;
     bus.provide("session.script", () => {
-      throw new Error("service \"session.script\" needs the 'tx' permission");
+      ran = true;
+      return { ok: true };
     });
-    const t = loadTool("sched-query", { bus });
-    expect((await t.run("gpauto", "connect HB9W-8"))[0]).toMatch(/^Refused: .*'tx' permission/);
+    const manifest = readManifest("sched-query");
+    const t = loadTool("sched-query", { bus, permissions: manifest.permissions.filter((p) => p !== "tx") });
+    expect((await t.run("gpauto", "connect HB9W-8"))[0]).toBe(
+      "Refused: service \"session.script\" needs the 'tx' permission, which sched-query does not hold",
+    );
+    expect(ran).toBe(false);
   });
 
   it("runs a scheduled script on every Nth minute tick, and renders the terminal's progress", async () => {
@@ -110,6 +116,28 @@ describe("sched-query", () => {
     refuse = true;
     for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
     expect(t.state.logs).toEqual(["scheduled run: Refused: over the transmit budget"]);
+  });
+});
+
+describe("the transmit format the app accepts", () => {
+  it("allows a status or a message, and holds everything else", async () => {
+    const { txAllowed } = await import("./harness.mjs");
+    expect(txAllowed(">QRV on 144.800")).toBe(true);
+    expect(txAllowed(">" + "x".repeat(62))).toBe(true);
+    expect(txAllowed(">" + "x".repeat(63))).toBe(false);
+    expect(txAllowed(">JN76 QRV")).toBe(false); // led by a grid locator
+    expect(txAllowed(":OE8APR-9 :hello{12}")).toBe(true);
+    expect(txAllowed(":OE8APR:hello")).toBe(false); // the addressee is padded to nine
+    expect(txAllowed(":BLN1     :bulletin")).toBe(false);
+    expect(txAllowed("!4704.41N/01526.27E>")).toBe(false); // a position
+    expect(txAllowed(">two\nlines")).toBe(false);
+  });
+  it("holds a status too long for the app, and the tool hears false", async () => {
+    const t = loadTool("auto-status");
+    await t.run("autostatus", "10 " + "x".repeat(70)); // auto-status cuts it to 62
+    for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
+    expect(t.state.txs).toEqual([">" + "x".repeat(62)]);
+    expect(t.state.txHeld).toEqual([]);
   });
 });
 

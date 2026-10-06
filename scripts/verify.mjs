@@ -171,8 +171,13 @@ for (const [i, e] of reg.entries.entries()) {
   if (manifest.name !== e.name) fail(`${label}: manifest name is "${manifest.name}"`);
   if (!API_RE.test(manifest.api ?? ""))
     fail(`${label}: manifest needs "api": "MAJOR.MINOR", the tool API version it needs (got ${JSON.stringify(manifest.api)})`);
-  for (const k of ["title", "author", "version"])
-    if (manifest[k] !== e[k]) warn(`${label}: ${k} "${e[k]}" differs from the manifest's "${manifest[k]}"`);
+  // the entry repeats what the manifest says; sign-all copies it at release, so on dev a changed tool may differ
+  for (const k of ["title", "author", "version", "description"]) {
+    if (manifest[k] === e[k] || (k === "description" && e[k] === undefined)) continue;
+    const msg = `${label}: ${k} "${e[k]}" differs from the manifest's "${manifest[k]}"`;
+    if (strict) fail(msg);
+    else warn(msg);
+  }
 
   const sig = await manifestSig(manifest);
   if (sig === "unsigned") unsigned(`${label}: manifest is unsigned; a listed tool must be signed by its author`);

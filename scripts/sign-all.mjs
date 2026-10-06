@@ -7,7 +7,7 @@
 //   1. checks that every committed tool.js matches a fresh build of its sources (scripts/build.mjs --check);
 //   2. signs each listed tool.json in this repository with AUTHOR_KEY (scripts/sign.mjs manifest), which also pins
 //      the script's SHA-256 (entrySha256). A manifest signed by another author's key is left as it is;
-//   3. copies each local manifest's pubkey, title, author and version into its registry entry;
+//   3. copies each local manifest's pubkey, title, author, version and description into its registry entry;
 //   4. signs the registry with AUTHORITY_KEY (scripts/sign.mjs registry);
 //   5. runs scripts/verify.mjs --strict.
 //
@@ -127,7 +127,13 @@ step(`signing the tools with the author key ${authorPub}`);
 for (const { e, file, own } of plan) {
   if (own) node(["scripts/sign.mjs", "manifest", e.entry], process.env.AUTHOR_KEY);
   const signed = JSON.parse(fs.readFileSync(file, "utf8"));
-  Object.assign(e, { pubkey: signed.pubkey, title: signed.title, author: signed.author, version: signed.version });
+  Object.assign(e, {
+    pubkey: signed.pubkey,
+    title: signed.title,
+    author: signed.author,
+    version: signed.version,
+    description: signed.description,
+  });
 }
 fs.writeFileSync(regPath, JSON.stringify(reg, null, 2) + "\n");
 
