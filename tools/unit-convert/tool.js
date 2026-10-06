@@ -25,7 +25,8 @@
           const n = Number(nS);
           const f = unit(from);
           const t = unit(to);
-          if (!isFinite(n) || !f || !t) return ["Usage: /conv <value> <from> <to>   e.g.  /conv 100 km mi  |  /conv 20 c f"];
+          if (!isFinite(n) || !f || !t)
+            return ["Usage: /conv <value> <from> <to>   e.g.  /conv 100 km mi  |  /conv 20 c f"];
           if (f === "c" && t === "f") return [`${n} C = ${(n * 9 / 5 + 32).toFixed(1)} F`];
           if (f === "f" && t === "c") return [`${n} F = ${((n - 32) * 5 / 9).toFixed(1)} C`];
           const factor = FACTOR[`${f}>${t}`];

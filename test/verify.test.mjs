@@ -17,13 +17,21 @@ const pubOf = (priv) => JSON.parse(Buffer.from(priv, "base64").toString()).pub;
 function signedCopy(edit = () => {}, { resignManifest = true } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tools-verify-"));
   fs.mkdirSync(path.join(dir, "scripts"));
-  for (const f of ["sign.mjs", "verify.mjs"]) fs.copyFileSync(path.join(repoRoot, "scripts", f), path.join(dir, "scripts", f));
+  for (const f of ["sign.mjs", "verify.mjs"])
+    fs.copyFileSync(path.join(repoRoot, "scripts", f), path.join(dir, "scripts", f));
   fs.cpSync(path.join(repoRoot, "tools/unit-convert"), path.join(dir, "tools/unit-convert"), { recursive: true });
   const author = genkey();
   const authority = genkey();
   fs.writeFileSync(path.join(dir, "authority.pub"), pubOf(authority) + "\n");
   const m = JSON.parse(fs.readFileSync(path.join(dir, "tools/unit-convert/tool.json"), "utf8"));
-  const entry = { name: m.name, title: m.title, author: m.author, version: m.version, pubkey: pubOf(author), entry: "tools/unit-convert/tool.json" };
+  const entry = {
+    name: m.name,
+    title: m.title,
+    author: m.author,
+    version: m.version,
+    pubkey: pubOf(author),
+    entry: "tools/unit-convert/tool.json",
+  };
   fs.writeFileSync(path.join(dir, "registry.json"), JSON.stringify({ entries: [entry] }));
   const sign = (kind, file, key) => {
     const r = node(dir, ["scripts/sign.mjs", kind, file], { TOOL_PRIVATE_KEY: key });
@@ -106,7 +114,9 @@ describe("sign.mjs and verify.mjs", () => {
     fs.mkdirSync(path.join(dir, "t"));
     fs.writeFileSync(path.join(dir, "secret.js"), "x");
     fs.writeFileSync(path.join(dir, "t/tool.json"), JSON.stringify({ name: "t", entry: "../secret.js" }));
-    const r = node(dir, [path.join(repoRoot, "scripts/sign.mjs"), "manifest", "t/tool.json"], { TOOL_PRIVATE_KEY: genkey() });
+    const r = node(dir, [path.join(repoRoot, "scripts/sign.mjs"), "manifest", "t/tool.json"], {
+      TOOL_PRIVATE_KEY: genkey(),
+    });
     expect(r.status).toBe(2);
     expect(r.stderr).toMatch(/leaves the manifest's folder/);
     fs.rmSync(dir, { recursive: true, force: true });

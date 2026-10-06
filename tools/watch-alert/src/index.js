@@ -13,7 +13,11 @@ const hits = new Map(); // watched entry → when it was last heard
 
 const base = (call) => call.split("-")[0];
 /** The callsigns in a command's arguments, separated by spaces or commas. */
-const calls = (args) => String(args).split(/[\s,]+/).map(callOf).filter(Boolean);
+const calls = (args) =>
+  String(args)
+    .split(/[\s,]+/)
+    .map(callOf)
+    .filter(Boolean);
 /** The watched entry a heard callsign matches: the call itself, else its base call; null when not watched. */
 const match = (call) => (watched.has(call) ? call : watched.has(base(call)) ? base(call) : null);
 

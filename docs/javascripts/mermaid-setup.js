@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+/* global mermaid */
 // Runs right after the site's own Mermaid (docs-hooks/site.py loads both, on a page with a diagram) and before
 // Material draws the diagrams. Material initialises Mermaid with a stylesheet of its own colour variables, which
 // the site maps to the app's diagram tokens. Mermaid's "neo" look writes fixed pastel colours inline on sequence

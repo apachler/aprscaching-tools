@@ -167,7 +167,10 @@ export function withNavEntry(mkdocs, { name, title }) {
 }
 
 export function createTool(root, o) {
-  if (!NAME.test(o.name)) throw new Error(`"${o.name}" is not a tool name: lower case, 2 to 40 characters of a-z, 0-9 and -`);
+  if (!NAME.test(o.name))
+    throw new Error(`"${o.name}" is not a tool name: lower case, 2 to 40 characters of a-z, 0-9 and -`);
+  // a title is one line: no control characters, which is what this pattern looks for
+  // eslint-disable-next-line no-control-regex
   if (o.title !== undefined && !/^[^\x00-\x1f\x7f]{1,60}$/.test(o.title))
     throw new Error("the title is one line of 1 to 60 characters");
   const toolsDir = path.join(root, "tools");
@@ -211,7 +214,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   };
   const name = argv.find((a, i) => !a.startsWith("--") && !argv[i - 1]?.startsWith("--"));
   if (!name) {
-    console.error('usage: node scripts/new-tool.mjs <name> [--title "<Title>"] [--author <CALL>] [--description "<line>"]');
+    console.error(
+      'usage: node scripts/new-tool.mjs <name> [--title "<Title>"] [--author <CALL>] [--description "<line>"]',
+    );
     process.exit(2);
   }
   let r;

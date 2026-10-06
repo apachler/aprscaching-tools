@@ -62,7 +62,7 @@ async function signedAsIs(m, script) {
   if (typeof m.signature !== "string") return "it carries no signature";
   const rest = { ...m };
   delete rest.signature;
-  let ok = false;
+  let ok;
   try {
     const key = await crypto.subtle.importKey("raw", b64(m.pubkey), { name: "Ed25519" }, false, ["verify"]);
     ok = await crypto.subtle.verify("Ed25519", key, b64(m.signature), new TextEncoder().encode(stable(rest)));

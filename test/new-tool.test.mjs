@@ -28,18 +28,34 @@ describe("new-tool.mjs", () => {
     const { written } = createTool(dir, { name: "qso-timer", title: "QSO timer: A & B" });
     expect(written).toContain("tools/qso-timer/src/index.js");
     const m = JSON.parse(fs.readFileSync(path.join(dir, "tools/qso-timer/tool.json"), "utf8"));
-    expect(m).toMatchObject({ name: "qso-timer", author: "OE8APR", version: "1.0.0", api: "1.0", permissions: ["command"] });
+    expect(m).toMatchObject({
+      name: "qso-timer",
+      author: "OE8APR",
+      version: "1.0.0",
+      api: "1.0",
+      permissions: ["command"],
+    });
     const page = fs.readFileSync(path.join(dir, "docs/catalogue/qso-timer.md"), "utf8");
     expect(page.split("\n")[0]).toBe("# QSO timer: A & B");
     expect(page).toContain("| `command` | Registers `/qso-timer` |");
     expect(page).toContain("<!-- tool-facts -->");
-    expect(page.trimEnd().split("\n").filter((l) => l.startsWith("## ")).at(-1)).toBe("## Next");
+    expect(
+      page
+        .trimEnd()
+        .split("\n")
+        .filter((l) => l.startsWith("## "))
+        .at(-1),
+    ).toBe("## Next");
     const index = fs.readFileSync(path.join(dir, "docs/catalogue/index.md"), "utf8");
     const utilities = index.slice(index.indexOf("## Utilities"), index.indexOf("## Next"));
-    expect(utilities).toContain("| [QSO timer: A & B](qso-timer.md) | Answers /qso-timer with a line of its own | `command` |");
+    expect(utilities).toContain(
+      "| [QSO timer: A & B](qso-timer.md) | Answers /qso-timer with a line of its own | `command` |",
+    );
     const nav = fs.readFileSync(path.join(dir, "mkdocs.yml"), "utf8");
     // right after the group's last page, whichever tool that is
-    expect(nav).toMatch(/\n {10}- [^\n]+: catalogue\/[a-z0-9-]+\.md\n {10}- "QSO timer: A & B": catalogue\/qso-timer\.md\n/);
+    expect(nav).toMatch(
+      /\n {10}- [^\n]+: catalogue\/[a-z0-9-]+\.md\n {10}- "QSO timer: A & B": catalogue\/qso-timer\.md\n/,
+    );
   });
 
   it("writes a source that answers its command", () => {

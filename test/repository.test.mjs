@@ -10,7 +10,19 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { readManifest, repoRoot, toolNames } from "./harness.mjs";
 
-const CAPABILITIES = ["command", "monitor", "event", "decoder", "panel", "map", "ipc", "beacon", "network", "tx", "geo"];
+const CAPABILITIES = [
+  "command",
+  "monitor",
+  "event",
+  "decoder",
+  "panel",
+  "map",
+  "ipc",
+  "beacon",
+  "network",
+  "tx",
+  "geo",
+];
 const SURFACES = ["web", "terminal", "bbs", "node", "map"];
 const registry = JSON.parse(fs.readFileSync(path.join(repoRoot, "registry.json"), "utf8"));
 const read = (...p) => fs.readFileSync(path.join(repoRoot, ...p), "utf8");
@@ -34,7 +46,8 @@ describe.each(toolNames())("%s", (name) => {
   it("has a manifest the app accepts", () => {
     if (built) expect(m.name).toBe(name); // a tool built here lives in a directory of its name
     expect(m.name).toMatch(/^[a-z0-9][a-z0-9-]{1,39}$/);
-    for (const k of ["title", "author", "version", "description"]) expect(typeof m[k] === "string" && m[k].trim()).toBeTruthy();
+    for (const k of ["title", "author", "version", "description"])
+      expect(typeof m[k] === "string" && m[k].trim()).toBeTruthy();
     expect(m.entry).toBe("tool.js");
     expect(m.api).toBe("1.0"); // the tool API version it needs; part of the signed manifest
     expect(m.permissions.every((p) => CAPABILITIES.includes(p))).toBe(true);
@@ -78,7 +91,10 @@ it("names registry format 1", () => {
 it("lists each tool once, and only tools the repository holds", () => {
   const names = registry.entries.map((e) => e.name);
   expect(new Set(names).size).toBe(names.length);
-  const listed = registry.entries.filter(local).map((e) => e.entry).sort();
+  const listed = registry.entries
+    .filter(local)
+    .map((e) => e.entry)
+    .sort();
   const folders = toolNames().map((n) => `tools/${n}/tool.json`);
   expect(listed.filter((e) => !folders.includes(e))).toEqual([]);
   if (strict) expect(listed).toEqual(folders);

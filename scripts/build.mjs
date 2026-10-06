@@ -44,10 +44,11 @@ const names = fs
   .map((d) => d.name)
   .filter((n) => !only.length || only.includes(n))
   .sort();
-for (const n of only) if (!names.includes(n)) {
-  console.error(`build: no tool ${n} with a src/index.js`);
-  process.exit(1);
-}
+for (const n of only)
+  if (!names.includes(n)) {
+    console.error(`build: no tool ${n} with a src/index.js`);
+    process.exit(1);
+  }
 
 let failures = 0;
 for (const name of names) {
@@ -95,7 +96,11 @@ for (const name of names) {
     console.error(`FAIL  ${name}: ${e.message}`);
     continue;
   }
-  if (/\brequire\(|\bimport\(|\bprocess\.(env|exit|argv|cwd|platform|versions?|stdout|stderr|nextTick)\b|\bimportScripts\(/.test(text)) {
+  if (
+    /\brequire\(|\bimport\(|\bprocess\.(env|exit|argv|cwd|platform|versions?|stdout|stderr|nextTick)\b|\bimportScripts\(/.test(
+      text,
+    )
+  ) {
     failures++;
     console.error(`FAIL  ${name}: the bundle loads code or reaches Node APIs at run time`);
     continue;

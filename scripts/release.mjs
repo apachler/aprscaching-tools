@@ -73,7 +73,8 @@ const hasSection = (changelog, version) =>
 
 /** CHANGELOG.md with Unreleased dated as `version` and a new empty Unreleased above it. */
 export function datedChangelog(changelog, version, date) {
-  if (!/^## \[Unreleased\][^\n]*\n/m.test(changelog)) throw new StepError("CHANGELOG.md has no ## [Unreleased] section");
+  if (!/^## \[Unreleased\][^\n]*\n/m.test(changelog))
+    throw new StepError("CHANGELOG.md has no ## [Unreleased] section");
   return changelog.replace(/^## \[Unreleased\][^\n]*\n/m, `## [Unreleased]\n\n## [${version}] - ${date}\n`);
 }
 
@@ -142,7 +143,10 @@ export function createContext(o) {
     return fn();
   };
   ctx.must = (r, what) => {
-    if (r.status !== 0) throw new StepError(`${what} failed${r.stderr.trim() ? `: ${r.stderr.trim().split("\n").slice(-3).join(" / ")}` : ""}`);
+    if (r.status !== 0)
+      throw new StepError(
+        `${what} failed${r.stderr.trim() ? `: ${r.stderr.trim().split("\n").slice(-3).join(" / ")}` : ""}`,
+      );
     return r;
   };
   ctx.read = (rel) => {
@@ -159,7 +163,8 @@ export function createContext(o) {
 export function detect(ctx, { fetch = true } = {}) {
   if (fetch) {
     const f = ctx.git("fetch", "origin", "--prune", "--tags");
-    if (f.status !== 0) ctx.log(`warn  git fetch failed; using the refs this clone has (${f.stderr.trim().split("\n")[0]})`);
+    if (f.status !== 0)
+      ctx.log(`warn  git fetch failed; using the refs this clone has (${f.stderr.trim().split("\n")[0]})`);
   }
   const ref = (r) => ctx.git("rev-parse", "--verify", "--quiet", r);
   const show = (r) => {
@@ -230,14 +235,19 @@ function keyReport(ctx) {
   const authority = { file: files.authority, ...inspectKey(files.authority) };
   const where = inspectKeyFolder(files);
   const problems = [...where.fails];
-  for (const [name, k] of [["author", author], ["authority", authority]])
+  for (const [name, k] of [
+    ["author", author],
+    ["authority", authority],
+  ])
     if (k.state !== "ok") problems.push(`the ${name} key: ${k.detail}`);
   const pinned = (ctx.read("authority.pub") ?? "").trim();
   if (authority.pub && authority.pub !== pinned)
     problems.push(`the authority key file holds ${authority.pub}, but authority.pub pins ${pinned}`);
   const expected = authorKeysOf(JSON.parse(ctx.read("registry.json") ?? "{}"));
   if (author.pub && expected.length && !expected.includes(author.pub))
-    problems.push(`the author key file holds ${author.pub}; the registry lists OE8APR's tools under ${expected.join(", ")}`);
+    problems.push(
+      `the author key file holds ${author.pub}; the registry lists OE8APR's tools under ${expected.join(", ")}`,
+    );
   return { author, authority, problems, warnings: where.warns };
 }
 
@@ -268,7 +278,9 @@ steps.check = async (ctx, s) => {
   else ok(`origin is ${ctx.slug}`);
 
   if (s.tagged)
-    ctx.log(`info  ${ctx.tag} is tagged on origin: ${s.onDev ? "only the handover is left" : "dev still needs it (sync-dev), then the handover"}`);
+    ctx.log(
+      `info  ${ctx.tag} is tagged on origin: ${s.onDev ? "only the handover is left" : "dev still needs it (sync-dev), then the handover"}`,
+    );
   else if (SEMVER.test(ctx.version)) {
     const tags = ctx
       .git("tag", "--list", "v*")
@@ -281,7 +293,8 @@ steps.check = async (ctx, s) => {
       s.onMain &&
       ctx.git("rev-parse", `${ctx.tag}^{commit}`).stdout.trim() === ctx.git("rev-parse", "origin/main").stdout.trim();
     if (onMainTag) ok(`a local tag ${ctx.tag} is on origin/main; the tag step pushes it`);
-    else if (s.localTag) fail(`a local tag ${ctx.tag} exists but origin has none; delete it (git tag -d ${ctx.tag}) or push it`);
+    else if (s.localTag)
+      fail(`a local tag ${ctx.tag} exists but origin has none; delete it (git tag -d ${ctx.tag}) or push it`);
     else if (newest && cmp(ctx.version, newest) <= 0 && !s.onMain) fail(`${ctx.version} is not newer than v${newest}`);
     else ok(`${ctx.tag} is not taken${newest ? ` (newest v${newest})` : ""}`);
   }
@@ -313,7 +326,9 @@ steps.check = async (ctx, s) => {
     const listed = new Set((reg.entries ?? []).map((e) => e.entry));
     const unlisted = toolFolders(ctx.root).filter((n) => !listed.has(`tools/${n}/tool.json`));
     if (unlisted.length)
-      fail(`tools without a registry entry: ${unlisted.join(", ")}; add their entries (or remove the folders) before signing`);
+      fail(
+        `tools without a registry entry: ${unlisted.join(", ")}; add their entries (or remove the folders) before signing`,
+      );
     else ok("every tool folder has a registry entry");
   }
 
@@ -323,7 +338,8 @@ steps.check = async (ctx, s) => {
 steps.prepare = async (ctx, s) => {
   if (!s.onRelease) {
     if (!s.clean) throw new StepError(`the working tree has changes on ${s.current}; commit or stash them first`);
-    if (s.localBranch) await ctx.confirm(`Switch to ${ctx.branch}?`, () => ctx.must(ctx.git("switch", ctx.branch), "git switch"));
+    if (s.localBranch)
+      await ctx.confirm(`Switch to ${ctx.branch}?`, () => ctx.must(ctx.git("switch", ctx.branch), "git switch"));
     else if (s.remoteBranch)
       await ctx.confirm(`Check out ${ctx.branch} from origin?`, () =>
         ctx.must(ctx.git("switch", "--track", `origin/${ctx.branch}`), "git switch"),
@@ -335,7 +351,10 @@ steps.prepare = async (ctx, s) => {
   }
   ctx.log("install the build tools from the frozen lockfile");
   ctx.must(
-    ctx.run(PNPM[0], [...PNPM[1], "install", "--frozen-lockfile", "--ignore-scripts"], { env: corepackEnv(ctx.env), inherit: true }),
+    ctx.run(PNPM[0], [...PNPM[1], "install", "--frozen-lockfile", "--ignore-scripts"], {
+      env: corepackEnv(ctx.env),
+      inherit: true,
+    }),
     "pnpm install",
   );
   // This step alone decides where the libraries come from, so fetch-libs gets --source or nothing to fall back on.
@@ -343,10 +362,15 @@ steps.prepare = async (ctx, s) => {
     ctx.source ?? ctx.env.APRSCACHING_SOURCE ?? path.join(ctx.env.HOME ?? "", "Development", "github", "aprscaching"),
   );
   const local = fs.existsSync(path.join(source, ".git"));
-  ctx.log(local ? `fetch the libraries from ${source}` : "fetch the libraries from GitHub (no local APRScaching clone)");
+  ctx.log(
+    local ? `fetch the libraries from ${source}` : "fetch the libraries from GitHub (no local APRScaching clone)",
+  );
   const env = { ...ctx.env };
   delete env.APRSCACHING_SOURCE;
-  const fl = ctx.run(ctx.node, ["scripts/fetch-libs.mjs", ...(local ? ["--source", source] : [])], { inherit: true, env });
+  const fl = ctx.run(ctx.node, ["scripts/fetch-libs.mjs", ...(local ? ["--source", source] : [])], {
+    inherit: true,
+    env,
+  });
   if (fl.status !== 0)
     throw new StepError(
       local
@@ -374,7 +398,8 @@ steps.sign = async (ctx, s) => {
     env.AUTHOR_KEY = env.AUTHORITY_KEY = undefined;
     if (r.stdout.trim()) ctx.log(r.stdout.trimEnd());
     if (r.stderr.trim()) ctx.log(r.stderr.trimEnd());
-    if (r.status !== 0) throw new StepError("sign-all failed; nothing is committed. Fix the cause and run the sign step again");
+    if (r.status !== 0)
+      throw new StepError("sign-all failed; nothing is committed. Fix the cause and run the sign step again");
   });
   ctx.log(ctx.git("diff", "--stat").stdout.trimEnd());
 };
@@ -390,7 +415,11 @@ steps.changelog = async (ctx, s) => {
   if (bump) ctx.log(`set package.json's version to ${ctx.version}`);
   await ctx.confirm("Update CHANGELOG.md?", () => {
     fs.writeFileSync(path.join(ctx.root, "CHANGELOG.md"), datedChangelog(text, ctx.version, ctx.today));
-    if (bump) fs.writeFileSync(path.join(ctx.root, "package.json"), pkg.replace(/("version":\s*")[^"]*(")/, `$1${ctx.version}$2`));
+    if (bump)
+      fs.writeFileSync(
+        path.join(ctx.root, "package.json"),
+        pkg.replace(/("version":\s*")[^"]*(")/, `$1${ctx.version}$2`),
+      );
   });
 };
 
@@ -398,7 +427,7 @@ steps.changelog = async (ctx, s) => {
 async function watchChecks(ctx, number) {
   for (let i = 0; i < 30; i++) {
     const r = ctx.gh("pr", "checks", String(number), "--json", "name,bucket");
-    let list = [];
+    let list;
     try {
       list = JSON.parse(r.stdout || "[]");
     } catch {
@@ -417,7 +446,10 @@ async function watchChecks(ctx, number) {
 
 /** The open PR from `head` into `base`, or null. */
 function openPr(ctx, head, base) {
-  const r = ctx.must(ctx.gh("pr", "list", "--head", head, "--base", base, "--state", "open", "--json", "number,url,headRefOid"), "gh pr list");
+  const r = ctx.must(
+    ctx.gh("pr", "list", "--head", head, "--base", base, "--state", "open", "--json", "number,url,headRefOid"),
+    "gh pr list",
+  );
   return JSON.parse(r.stdout || "[]")[0] ?? null;
 }
 
@@ -437,7 +469,8 @@ steps["pr-main"] = async (ctx, s) => {
   if (!s.strictOk) throw new StepError("verify --strict fails on this tree; run the sign step first");
   const tracked = s.porcelain.split("\n").filter((l) => l.trim() && !l.startsWith("??"));
   const untracked = s.porcelain.split("\n").filter((l) => l.startsWith("??"));
-  if (untracked.length) ctx.log(`warn  untracked files stay out of the commit: ${untracked.map((l) => l.slice(3)).join(", ")}`);
+  if (untracked.length)
+    ctx.log(`warn  untracked files stay out of the commit: ${untracked.map((l) => l.slice(3)).join(", ")}`);
   if (tracked.length) {
     ctx.log(tracked.join("\n"));
     await ctx.confirm(`Commit these ${tracked.length} file(s) with a sign-off?`, () => {
@@ -457,18 +490,24 @@ steps["pr-main"] = async (ctx, s) => {
   await watchChecks(ctx, pr.number);
   const sha = ctx.must(ctx.gh("pr", "view", String(pr.number), "--json", "headRefOid"), "gh pr view").stdout;
   await ctx.confirm(`Merge #${pr.number} into main as a merge commit? This publishes ${ctx.tag}'s signed state`, () =>
-    ctx.must(ctx.gh("pr", "merge", String(pr.number), "--merge", "--match-head-commit", JSON.parse(sha).headRefOid), "gh pr merge"),
+    ctx.must(
+      ctx.gh("pr", "merge", String(pr.number), "--merge", "--match-head-commit", JSON.parse(sha).headRefOid),
+      "gh pr merge",
+    ),
   );
   ctx.git("fetch", "origin", "--prune");
 };
 
 steps.tag = async (ctx, s) => {
-  if (!s.onMain) throw new StepError(`origin/main has no CHANGELOG section for ${ctx.version}; finish the pr-main step first`);
+  if (!s.onMain)
+    throw new StepError(`origin/main has no CHANGELOG section for ${ctx.version}; finish the pr-main step first`);
   const sha = ctx.must(ctx.git("rev-parse", "origin/main"), "git rev-parse origin/main").stdout.trim();
   await ctx.confirm(`Tag origin/main (${sha.slice(0, 12)}) as ${ctx.tag} and push the tag?`, () => {
     if (!s.localTag) ctx.must(ctx.git("tag", "-a", ctx.tag, sha, "-m", `registry ${ctx.tag}`), "git tag");
     else if (ctx.git("rev-parse", `${ctx.tag}^{commit}`).stdout.trim() !== sha)
-      throw new StepError(`the local tag ${ctx.tag} is not on origin/main; delete it (git tag -d ${ctx.tag}) and rerun`);
+      throw new StepError(
+        `the local tag ${ctx.tag} is not on origin/main; delete it (git tag -d ${ctx.tag}) and rerun`,
+      );
     ctx.must(ctx.git("push", "origin", `refs/tags/${ctx.tag}`), "git push tag");
   });
   let id = null;
@@ -490,7 +529,8 @@ steps.tag = async (ctx, s) => {
 };
 
 steps["sync-dev"] = async (ctx, s) => {
-  if (!s.onMain) throw new StepError(`origin/main has no CHANGELOG section for ${ctx.version}; finish the pr-main step first`);
+  if (!s.onMain)
+    throw new StepError(`origin/main has no CHANGELOG section for ${ctx.version}; finish the pr-main step first`);
   const main = ctx.must(ctx.git("rev-parse", "origin/main"), "git rev-parse origin/main").stdout.trim();
   if (ctx.git("merge-base", "--is-ancestor", "origin/dev", "origin/main").status === 0) {
     await ctx.confirm(`Fast-forward dev to origin/main (${main.slice(0, 12)})?`, () =>
@@ -514,7 +554,11 @@ steps["sync-dev"] = async (ctx, s) => {
   }
   ctx.git("fetch", "origin", "--prune");
   const local = ctx.git("rev-parse", "--verify", "--quiet", `refs/heads/${ctx.branch}`).status === 0;
-  if (await ctx.ask(`Switch to dev and fast-forward it to origin/dev${local ? `, deleting the local ${ctx.branch}` : ""}?`)) {
+  if (
+    await ctx.ask(
+      `Switch to dev and fast-forward it to origin/dev${local ? `, deleting the local ${ctx.branch}` : ""}?`,
+    )
+  ) {
     ctx.must(ctx.git("switch", "dev"), "git switch dev");
     ctx.must(ctx.git("merge", "--ff-only", "origin/dev"), "git merge --ff-only");
     if (local) ctx.must(ctx.git("branch", "-D", ctx.branch), "git branch -D");
@@ -524,7 +568,9 @@ steps["sync-dev"] = async (ctx, s) => {
 steps.handover = async (ctx) => {
   ctx.log(`${ctx.tag} is released. Bundle it into APRScaching, on a branch cut from its dev:`);
   ctx.log("");
-  ctx.log(`  /bundle-tools ${ctx.tag}                     (the Claude skill in the APRScaching repository), or by hand:`);
+  ctx.log(
+    `  /bundle-tools ${ctx.tag}                     (the Claude skill in the APRScaching repository), or by hand:`,
+  );
   ctx.log(`  git -C ${ctx.root} worktree add /tmp/aprscaching-tools-${ctx.tag} ${ctx.tag}`);
   ctx.log(`  node tools/toolkey/bundle-registry.mjs ${ctx.tag} --source /tmp/aprscaching-tools-${ctx.tag}`);
   ctx.log("");
@@ -618,8 +664,7 @@ export function parseArgs(argv) {
       const v = argv[++i];
       if (v === undefined || v.startsWith("--")) o.error = `${a} needs a value`;
       else o[a.slice(2)] = v;
-    }
-    else if (a.startsWith("--")) o.error = `unknown option ${a}`;
+    } else if (a.startsWith("--")) o.error = `unknown option ${a}`;
     else if (!o.version) o.version = a;
     else o.error = `unexpected argument ${a}`;
   }
@@ -630,7 +675,9 @@ export function parseArgs(argv) {
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const o = parseArgs(process.argv.slice(2));
   if (o.error) {
-    console.error(`release: ${o.error}\nusage: node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <${STEPS.join("|")}> [--yes]] [--source <dir>] [--from <ref>]`);
+    console.error(
+      `release: ${o.error}\nusage: node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <${STEPS.join("|")}> [--yes]] [--source <dir>] [--from <ref>]`,
+    );
     process.exit(2);
   }
   const ctx = createContext(o);

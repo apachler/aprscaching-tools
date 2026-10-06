@@ -30,7 +30,11 @@ if (typeof lock.repository !== "string" || !/^https:\/\//.test(lock.repository))
   fail("lib.lock: repository must be an https URL");
 if (typeof lock.ref !== "string" || !/^[0-9a-f]{40}$/.test(lock.ref))
   fail("lib.lock: ref must be a full commit hash, so the libraries can't move under a tool");
-if (!Array.isArray(lock.paths) || !lock.paths.length || !lock.paths.every((p) => /^[\w./-]+$/.test(p) && !p.includes("..")))
+if (
+  !Array.isArray(lock.paths) ||
+  !lock.paths.length ||
+  !lock.paths.every((p) => /^[\w./-]+$/.test(p) && !p.includes(".."))
+)
   fail("lib.lock: paths must list repository-relative paths");
 
 const i = process.argv.indexOf("--source");
@@ -78,4 +82,6 @@ for (const f of files) {
   if (!/SPDX-License-Identifier: MIT\b/.test(head)) fail(`${path.relative(dest, f)} does not declare the MIT licence`);
 }
 fs.writeFileSync(path.join(dest, ".lib-ref"), `${lock.ref}\n`);
-console.log(`fetch-libs: ${files.length} MIT files from ${source ?? lock.repository} at ${lock.ref.slice(0, 12)} in vendor/aprscaching`);
+console.log(
+  `fetch-libs: ${files.length} MIT files from ${source ?? lock.repository} at ${lock.ref.slice(0, 12)} in vendor/aprscaching`,
+);

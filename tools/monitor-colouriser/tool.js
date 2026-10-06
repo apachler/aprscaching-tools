@@ -67,7 +67,9 @@
   var timer = null;
   function publish() {
     timer = null;
-    tool.setColourRules([...types].map(([src, type]) => ({ src, colorVar: TYPE_COLOR_VAR[type] ?? TYPE_COLOR_VAR.user })));
+    tool.setColourRules(
+      [...types].map(([src, type]) => ({ src, colorVar: TYPE_COLOR_VAR[type] ?? TYPE_COLOR_VAR.user }))
+    );
   }
   tool.on("on_frame", (p) => {
     const call = callOf(p.peerCall);

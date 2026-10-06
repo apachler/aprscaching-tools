@@ -15,7 +15,8 @@ describe("sevenplus", () => {
   });
 
   it("reads real part headers and collects every pasted part", () => {
-    const part = (n, of) => ` go_7+. ${String(n).padStart(3, "0")} of ${String(of).padStart(3, "0")} TEST.ZIP 0012345 FFFF (7PLUS v2.2)\nQUJD\n stop_7+. (TEST.P0${n}/7F)`;
+    const part = (n, of) =>
+      ` go_7+. ${String(n).padStart(3, "0")} of ${String(of).padStart(3, "0")} TEST.ZIP 0012345 FFFF (7PLUS v2.2)\nQUJD\n stop_7+. (TEST.P0${n}/7F)`;
     const one = decode7plus(part(1, 2));
     expect(one).toMatch(/part\(s\) 1 of 2/);
     expect(one).toMatch(/file: TEST\.ZIP/);

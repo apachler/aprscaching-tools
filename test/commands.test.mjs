@@ -60,7 +60,17 @@ describe("block-art", () => {
     expect(b.cells.map((c) => c.ch).join("")).toBe("ABCD");
     bus.emit("render.blocks", { text: "XY" }, "another-tool");
     expect(t.panel.nodes[0].cells.map((c) => c.ch).join("")).toBe("XY");
-    bus.emit("render.blocks", { cols: 999, cells: [{ ch: "QZ", c: 3 }, { ch: "!", c: 99 }] }, "another-tool");
+    bus.emit(
+      "render.blocks",
+      {
+        cols: 999,
+        cells: [
+          { ch: "QZ", c: 3 },
+          { ch: "!", c: 99 },
+        ],
+      },
+      "another-tool",
+    );
     b = t.panel.nodes[0];
     expect(b.cols).toBe(200);
     expect(b.cells).toEqual([{ ch: "Q", c: 3 }, { ch: "!" }]);

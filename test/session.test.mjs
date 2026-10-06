@@ -24,7 +24,11 @@ describe("connect-bell", () => {
     expect(t.panel.nodes[0].text).toMatch(/Waiting for a connect/);
     await t.dispatch("on_connect", { peerCall: "OE3ABC" });
     expect(t.state.logs).toEqual(["*ring* OE3ABC connected"]);
-    expect(t.panel.nodes[0]).toEqual({ kind: "kv", key: "Last connect", value: expect.stringMatching(/^OE3ABC at \d\d:\d\dZ$/) });
+    expect(t.panel.nodes[0]).toEqual({
+      kind: "kv",
+      key: "Last connect",
+      value: expect.stringMatching(/^OE3ABC at \d\d:\d\dZ$/),
+    });
   });
 });
 
@@ -94,7 +98,11 @@ describe("sched-query", () => {
     for (let i = 0; i < 20; i++) await t.dispatch("on_tick");
     expect(runs).toBe(3); // at once, then on ticks 10 and 20
     expect(t.state.logs).toEqual(["scheduled run: Running 2 steps…", "scheduled run: Running 2 steps…"]);
-    bus.emit("session.progress", { status: "done", step: 2, total: 2, captured: ["DX de OE8APR"], note: "ok" }, "(host)");
+    bus.emit(
+      "session.progress",
+      { status: "done", step: 2, total: 2, captured: ["DX de OE8APR"], note: "ok" },
+      "(host)",
+    );
     expect(t.panel.nodes[0]).toEqual({ kind: "kv", key: "Status", value: "done (2/2)", tone: "ok" });
     expect(t.panel.nodes.at(-1)).toEqual({ kind: "text", text: "DX de OE8APR" });
     expect(await t.run("gpauto", "off")).toEqual(["Scheduled query off."]);
@@ -160,7 +168,9 @@ describe("auto-status", () => {
     const t = loadTool("auto-status");
     await t.run("autostatus", "10 QRV");
     expect(await t.run("autostatus", "OFF")).toEqual(["Auto-status off."]);
-    expect(await t.run("autostatus", "QRV on 144.800")).toEqual(["Usage: /autostatus <minutes> <text>  |  /autostatus off"]);
+    expect(await t.run("autostatus", "QRV on 144.800")).toEqual([
+      "Usage: /autostatus <minutes> <text>  |  /autostatus off",
+    ]);
     expect(await t.run("autostatus", "")).toEqual(["Usage: /autostatus <minutes> <text>  |  /autostatus off"]);
     for (let i = 0; i < 20; i++) await t.dispatch("on_tick");
     expect(t.state.txs).toEqual([]);

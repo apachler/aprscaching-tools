@@ -22,17 +22,20 @@ register({
   commands: {
     info: { remote: true, run: () => [info()] },
     menu: { remote: true, run: () => ["Commands: INFO  MENU  WHOIS <call>"] },
-    whois: { remote: true, run: async (args) => {
-      const c = args.trim().toUpperCase();
-      if (!c) return ["Usage: WHOIS <CALL>"];
-      let type = "";
-      try {
-        type = asStr(await tool.call("station.type", c));
-      } catch {
-        // no Station DB answer: the call reads as not heard
-      }
-      return [type ? `${c}: ${type}` : `${c}: not heard yet (enable Station DB to classify).`];
-    } },
+    whois: {
+      remote: true,
+      run: async (args) => {
+        const c = args.trim().toUpperCase();
+        if (!c) return ["Usage: WHOIS <CALL>"];
+        let type = "";
+        try {
+          type = asStr(await tool.call("station.type", c));
+        } catch {
+          // no Station DB answer: the call reads as not heard
+        }
+        return [type ? `${c}: ${type}` : `${c}: not heard yet (enable Station DB to classify).`];
+      },
+    },
     // the operator's alone: a command without `remote: true` never answers a peer
     setinfo: {
       run: (args) => {

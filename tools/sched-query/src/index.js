@@ -67,7 +67,8 @@ register({
         ticks = 0;
         return [`Scheduled every ${everyMin} min. ${await runOnce(script)}`];
       }
-      if (a.toLowerCase() === "run") return [script ? await runOnce(script) : "No stored script — /gpauto <steps> first."];
+      if (a.toLowerCase() === "run")
+        return [script ? await runOnce(script) : "No stored script — /gpauto <steps> first."];
       script = a;
       return [await runOnce(a)];
     },

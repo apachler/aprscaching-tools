@@ -39,7 +39,10 @@ describe("sign-all.mjs", () => {
       expect(run(["scripts/sign.mjs", "manifest", e.entry], { TOOL_PRIVATE_KEY: author }).status).toBe(0);
     expect(run(["scripts/sign.mjs", "manifest", last.entry], { TOOL_PRIVATE_KEY: other }).status).toBe(0);
     const lastPath = path.join(dir, last.entry);
-    fs.writeFileSync(lastPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(lastPath, "utf8")), description: "Changed after signing" }));
+    fs.writeFileSync(
+      lastPath,
+      JSON.stringify({ ...JSON.parse(fs.readFileSync(lastPath, "utf8")), description: "Changed after signing" }),
+    );
     const before = new Map(reg.entries.map((e) => [e.entry, fs.readFileSync(path.join(dir, e.entry), "utf8")]));
     const r = run(["scripts/sign-all.mjs"], { AUTHOR_KEY: author, AUTHORITY_KEY: authority });
     expect(r.status).toBe(1);

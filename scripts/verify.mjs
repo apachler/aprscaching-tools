@@ -198,7 +198,9 @@ for (const [i, e] of reg.entries.entries()) {
 
   if (manifest.name !== e.name) fail(`${label}: manifest name is "${manifest.name}"`);
   if (!API_RE.test(manifest.api ?? ""))
-    fail(`${label}: manifest needs "api": "MAJOR.MINOR", the tool API version it needs (got ${JSON.stringify(manifest.api)})`);
+    fail(
+      `${label}: manifest needs "api": "MAJOR.MINOR", the tool API version it needs (got ${JSON.stringify(manifest.api)})`,
+    );
   // the entry repeats what the manifest says; sign-all copies it at release, so on dev a changed tool may differ
   for (const k of ["title", "author", "version", "description"]) {
     if (manifest[k] === e[k] || (k === "description" && e[k] === undefined)) continue;
@@ -220,8 +222,10 @@ for (const [i, e] of reg.entries.entries()) {
     else if (!fs.existsSync(script)) fail(`${label}: script ${rel(script)} is missing`);
     else {
       const hash = createHash("sha256").update(fs.readFileSync(script)).digest("base64");
-      if (typeof manifest.entrySha256 !== "string") unsigned(`${label}: manifest has no entrySha256; sign it again with scripts/sign.mjs`);
-      else if (manifest.entrySha256 !== hash) unsigned(`${label}: ${rel(script)} does not match the manifest's entrySha256`);
+      if (typeof manifest.entrySha256 !== "string")
+        unsigned(`${label}: manifest has no entrySha256; sign it again with scripts/sign.mjs`);
+      else if (manifest.entrySha256 !== hash)
+        unsigned(`${label}: ${rel(script)} does not match the manifest's entrySha256`);
       else ok(`${label}: script matches the signed entrySha256`);
     }
   }
@@ -243,5 +247,7 @@ if (fs.existsSync(toolsDir)) {
   }
 }
 
-console.log(`\n${failures} failure(s), ${warnings} warning(s), ${unsignedCount} unsigned (signed at release; --strict fails on them)`);
+console.log(
+  `\n${failures} failure(s), ${warnings} warning(s), ${unsignedCount} unsigned (signed at release; --strict fails on them)`,
+);
 process.exit(failures ? 1 : 0);
