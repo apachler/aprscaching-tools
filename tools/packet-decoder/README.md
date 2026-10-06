@@ -1,6 +1,6 @@
 # Packet decoder
 
-Paste a raw TNC2 monitor line or an APRS-IS line and see every field it carries: the AX.25 header, how the line arrived (heard on RF or entered over APRS-IS, with the IGate), the packet type and each APRS field. It runs the same parser the aprscaching gateway ingests with, so it decodes offline.
+Paste a raw TNC2 monitor line or an APRS-IS line and see every field it carries: the AX.25 header, how the line arrived (heard on RF or entered over APRS-IS, with the IGate), the packet type and each APRS field. It runs the same parser the APRScaching gateway ingests with, so it decodes offline.
 
 ## Use it
 
@@ -17,7 +17,7 @@ It shows on: web.
 
 ## Source
 
-`src/index.js` is the source. `tool.js` is built from it, from `lib/` and from the MIT libraries of the aprscaching
+`src/index.js` is the source. `tool.js` is built from it, from `lib/` and from the MIT libraries of the APRScaching
 repository at the commit `lib.lock` pins (`node scripts/build.mjs`); CI checks that the committed `tool.js` matches a
 fresh build.
 

@@ -27,7 +27,7 @@ permissions.
     ```bash
     git fetch origin && git switch -c feat/<slug> origin/dev
     corepack pnpm install --frozen-lockfile --ignore-scripts
-    node scripts/fetch-libs.mjs        # or --source <a local aprscaching clone>
+    node scripts/fetch-libs.mjs        # or --source <a local APRScaching clone>
     ```
 
 3. **Scaffold.**

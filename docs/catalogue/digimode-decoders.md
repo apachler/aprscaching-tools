@@ -35,6 +35,6 @@ from a speaker reaches them through the microphone.
 
 ## Next
 
-- [Audio caches](https://apachler.github.io/aprscaching/play/cache-types/audio/) in the aprscaching manual: where
+- [Audio caches](https://apachler.github.io/aprscaching/play/cache-types/audio/) in the APRScaching manual: where
   players meet these signals.
 - [CW encoder](cw-encoder.md): the send side.

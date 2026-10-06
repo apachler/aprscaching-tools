@@ -1,9 +1,14 @@
 # Changelog
 
-Each release of the registry is a tag `vX.Y.Z` on `main`; an aprscaching release bundles one. Tool API and registry
+Each release of the registry is a tag `vX.Y.Z` on `main`; an APRScaching release bundles one. Tool API and registry
 format versions are named where they change.
 
 ## [Unreleased]
+
+## [1.2.1] - 2026-10-06
+
+- **Wordmark.** The documentation site, the READMEs and the tool pages write the name as APRScaching. Vale checks
+  `docs/` for the other spellings, and `test/wordmark.test.mjs` checks every Markdown file in the repository.
 
 ## [1.2.0] - 2026-10-06
 
@@ -14,7 +19,7 @@ A documentation site for players, tool authors and registry hosts, and scripts t
   tool, the tool API versions, and how to publish a registry. `mkdocs build --strict` checks each catalogue page
   against its tool's manifest. The site deploys to GitHub Pages from `main`.
 - **Release script.** `scripts/release.mjs <X.Y.Z>` releases a tag step by step (check, prepare, sign, changelog, the
-  PR into `dev`, the PR into `main`, the tag, the handover to aprscaching), asks before every change to git or
+  PR into `dev`, the PR into `main`, the tag, the handover to APRScaching), asks before every change to git or
   GitHub, and resumes from the first step not done. It reads the key files only to sign, and prints public keys only.
 - **Doctor.** `scripts/doctor.mjs` checks Node, pnpm, `gh`, the remote, `vendor/`, the lockfile and the key files.
 - **Key folder.** The signing keys live in `TOOL_KEYS_DIR`, by default `~/.config/aprscaching-tools/keys`, outside
@@ -27,10 +32,10 @@ A documentation site for players, tool authors and registry hosts, and scripts t
 
 ## [1.1.0] - 2026-10-06
 
-The app's first-party tools move here: aprscaching ships no tools of its own, and players install them from this
+The app's first-party tools move here: APRScaching ships no tools of its own, and players install them from this
 registry.
 
-- **New tools**, built from `tools/<name>/src` with the aprscaching MIT libraries at the `lib.lock` commit: Packet
+- **New tools**, built from `tools/<name>/src` with the APRScaching MIT libraries at the `lib.lock` commit: Packet
   decoder (decoder and field panel), PSK31 + CW decoders, 7PLUS reassembler, MHeard, Watch & alert, Monitor
   colouriser, Station DB, CTEXT macro pack, Grid & bearing, Unit converter, CW encoder, Map waypoints, Block art,
   APRS SSID guide, Auto-responder, Away note, Connect bell, Info / menu responder, Link ping, Scheduled query,
@@ -45,7 +50,7 @@ registry.
 
 ## [1.0.0] - 2026-10-06
 
-The first registry for aprscaching 1.x.
+The first registry for APRScaching 1.x.
 
 - Hello tool and Station log, signed by OE8APR's author key.
 - `registry.json` signed by the project authority key in `authority.pub`; entries relative to the registry.

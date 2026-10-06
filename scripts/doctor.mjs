@@ -87,7 +87,7 @@ export function doctor({ root = repoRoot, run = defaultRunner, env = process.env
   // vendor/
   const lock = JSON.parse(read("lib.lock") ?? "{}");
   const have = (read("vendor/aprscaching/.lib-ref") ?? "").trim();
-  if (!have) warn("vendor/ is empty: run node scripts/fetch-libs.mjs (--source <aprscaching clone> works offline)");
+  if (!have) warn("vendor/ is empty: run node scripts/fetch-libs.mjs (--source <APRScaching clone> works offline)");
   else if (have !== lock.ref)
     warn(`vendor/ holds ${have.slice(0, 12)}, lib.lock pins ${String(lock.ref).slice(0, 12)}: run node scripts/fetch-libs.mjs`);
   else pass(`vendor/ holds the libraries at ${have.slice(0, 12)}`);

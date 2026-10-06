@@ -1,13 +1,13 @@
 # Versions and compatibility
 
-Which aprscaching instances run my tool, and what may change under it? This page explains how the tool API and the
+Which APRScaching instances run my tool, and what may change under it? This page explains how the tool API and the
 registry file are versioned, what a tool declares, and what the project promises when the API changes. It is for
 tool authors and registry publishers.
 
 ## Two versions, apart from the app's
 
 - **The tool API** is what the sandbox offers a tool: the manifest fields, `register`, `tool`, `ipc`, the events,
-  the bus rules and the limits. It is versioned as `MAJOR.MINOR`, apart from the app's own releases. aprscaching 1.0
+  the bus rules and the limits. It is versioned as `MAJOR.MINOR`, apart from the app's own releases. APRScaching 1.0
   implements tool API **1.0**.
 - **The registry format** is the shape of `registry.json`, named by its `format` field. The project registry is
   format **<!-- registry-format -->**.
@@ -88,7 +88,7 @@ one.
 
 ## The registry's tags
 
-The project registry's tags follow the app's major: `v1.<minor>.<patch>` is a registry for aprscaching 1.x, whose
+The project registry's tags follow the app's major: `v1.<minor>.<patch>` is a registry for APRScaching 1.x, whose
 tools need tool API 1.x. A tag never moves; a fix is a new tag.
 
 ## Next

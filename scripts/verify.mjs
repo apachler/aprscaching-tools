@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
-// Verify this repository the way the aprscaching app verifies it: the registry's Ed25519 signature against a
+// Verify this repository the way the APRScaching app verifies it: the registry's Ed25519 signature against a
 // pinned authority key, then every entry's tool.json signature against the manifest's own `pubkey`, and the
 // entry's `pubkey` against the manifest's. No dependencies: Node's WebCrypto Ed25519 and the same canonical
 // JSON as the app (packages/tools/src/registry.ts in apachler/aprscaching).
