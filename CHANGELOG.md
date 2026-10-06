@@ -5,6 +5,18 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-06
+
+- **Pull requests into `main`.** They come from a `release/vX.Y.Z` branch: `verify`, now a required check on `main`,
+  fails any other. Dependabot opens its pull requests against `dev`.
+- **Changelog per pull request.** Each pull request adds its line under Unreleased, and a release dates that section.
+  The pull request template, the contributor guide and `/new-tool` ask for it.
+- **Release into main.** The release branch goes straight into `main` by pull request, and the new `sync-dev` step
+  then fast-forwards `dev` to `main`, or merges `main` into `dev` by pull request when `dev` has moved on. A release
+  takes one pull request instead of two. `release.mjs --from <tag>` starts a hotfix from the tag it fixes.
+- **One go-ahead.** `/release` runs the PR into `main`, the tag and `sync-dev` on one approval when nothing needs
+  signing and every check passes, and stops to ask the moment one does not.
+
 ## [1.2.1] - 2026-10-06
 
 - **Wordmark.** The documentation site, the READMEs and the tool pages write the name as APRScaching. Vale checks

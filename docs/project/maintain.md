@@ -7,15 +7,19 @@ published as a GitHub Release, and bundled into the app.
 ## How a release flows
 
 `dev` is the working branch: every change reaches it by a squash-merged pull request, and a changed tool stays
-unsigned there until the next release. `main` holds only fully signed states, and a ruleset lets it change only by
-pull request.
+unsigned there until the next release. `main` holds only fully signed states, is the default branch the address
+`github:apachler/aprscaching-tools` reads, and changes only by pull request.
+
+A release branch is cut from `dev`, signed, and merged into `main` as a merge commit. `dev` then catches up with
+`main`: a fast-forward push when nothing has landed on `dev` since the release branch was cut, which is the one push
+to `dev` outside a pull request, or a pull request from `main` merged as a merge commit when something has.
 
 ```mermaid
 flowchart LR
   F["Feature PRs<br/>squash-merged into dev<br/>(unsigned)"] --> R["release/vX.Y.Z from dev:<br/>sign-all, CHANGELOG"]
-  R --> D["PR into dev,<br/>squash-merged"]
-  D --> M["PR dev → main,<br/>merge commit"]
+  R --> M["PR into main,<br/>merge commit"]
   M --> T["Tag vX.Y.Z on main:<br/>GitHub Release"]
+  T --> D["dev catches up:<br/>fast-forward to main"]
   T --> A["APRScaching PR:<br/>bundle-registry.mjs vX.Y.Z"]
 ```
 
@@ -97,7 +101,8 @@ them in the same cases.
 
 ### Release with the script
 
-Write what the release changes under `## [Unreleased]` in `CHANGELOG.md`, then:
+Each pull request adds its own line under `## [Unreleased]` in `CHANGELOG.md`. Before a release, check that section
+against the pull requests merged since the last tag and fill any gap, then:
 
 ```bash
 node scripts/release.mjs 1.2.0 --dry-run    # where the release stands; changes nothing
@@ -107,26 +112,40 @@ node scripts/release.mjs 1.2.0              # every step that is not done, askin
 | Step | What it does |
 |---|---|
 | `check` | A clean tree, `gh` signed in, a new X.Y.Z version, a non-empty Unreleased section, the key files and their folder outside every working tree, a registry entry for every tool folder |
-| `prepare` | `release/vX.Y.Z` from `origin/dev`; `pnpm install --frozen-lockfile --ignore-scripts`, `fetch-libs --source`, `build --check` |
+| `prepare` | `release/vX.Y.Z` from `origin/dev`, or from `--from <ref>`; `pnpm install --frozen-lockfile --ignore-scripts`, `fetch-libs --source`, `build --check` |
 | `sign` | `sign-all` with the two key files, ending in `verify --strict` |
 | `changelog` | Dates Unreleased as `## [X.Y.Z] - <date>` under a new empty Unreleased, and sets `package.json`'s version |
-| `pr-dev` | Commits with a sign-off, pushes, opens the PR into `dev`, watches its checks, squash-merges |
-| `pr-main` | Opens the `dev` → `main` PR, watches the strict checks, merges it as a merge commit |
+| `pr-main` | Commits with a sign-off, pushes, opens the PR into `main`, watches the strict checks, merges it as a merge commit |
 | `tag` | Tags `origin/main`, pushes the tag, watches the Release workflow |
+| `sync-dev` | Fast-forwards `dev` to `main`; when `dev` has moved on, opens a PR from `main` into `dev` and merges it as a merge commit |
 | `handover` | Prints the APRScaching command that bundles the tag |
 
 Each step checks its precondition, says what it will do and asks `y/N` before it changes git or GitHub. A no stops the
 release where it is. A rerun finds the steps already done (the release branch, a strict verify, the dated section on
-`origin/dev` and on `origin/main`, the tag) and continues from the first one that is not. `--step <name>` runs one
+`origin/main` and on `origin/dev`, the tag) and continues from the first one that is not. `--step <name>` runs one
 step; `--yes` answers that step's questions, for a step already confirmed. `--source <dir>` names the APRScaching
 clone `fetch-libs` reads; it defaults to `APRSCACHING_SOURCE`, then `~/Development/github/aprscaching`.
 
 The script reads the key files in the `sign` step only, and passes their values to `sign-all` in that one process's
 environment. Every line it prints passes through a filter that removes them.
 
-In Claude Code, `/release 1.2.0` runs the doctor, drafts the Unreleased entry from the pull requests merged since the
-last tag for your approval, and runs the steps one by one. You run the `sign` step yourself, and it merges into `main`
-only on your go-ahead (`.claude/skills/release/SKILL.md`).
+In Claude Code, `/release 1.2.0` runs the doctor, checks the Unreleased entry against the pull requests merged since
+the last tag for your approval, and runs the steps one by one. You run the `sign` step yourself, and it merges into
+`main` only on your go-ahead: before that step, or once for the whole release when nothing needs signing and every
+check passes (`.claude/skills/release/SKILL.md`).
+
+### Hotfix
+
+A fix that cannot wait for what is on `dev` starts from the tag it fixes. `--from` names it:
+
+```bash
+node scripts/release.mjs 1.2.2 --from v1.2.1
+```
+
+`prepare` cuts `release/v1.2.2` from `v1.2.1`; write the fix and its Unreleased entry there, then go on as for any
+release. `sync-dev` finds that `dev` has moved on and brings `main` in through a pull request. When `CHANGELOG.md`
+conflicts there, resolve it on a branch from `dev`: merge `origin/main` into it with a merge commit, keep both the
+dated hotfix section and `dev`'s Unreleased lines, and open that as the pull request into `dev`.
 
 ### Release by hand
 
@@ -161,26 +180,26 @@ The script runs these steps; when it cannot, run them yourself. The steps for v1
     signature does not hold. The authority key must be the one in `authority.pub`.
 
 4. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [1.1.0] - <date>` and open a new empty `Unreleased` section.
-5. Commit, push and open the pull request into `dev`:
+5. Commit, push and open the pull request into `main`; once its strict checks pass, merge it as a merge commit:
 
     ```bash
-    git commit -s -am "chore(release): sign the registry and tools for v1.1.0"
+    git commit -s -am "chore(release): v1.1.0"
     git push -u origin release/v1.1.0
-    gh pr create --base dev --title "chore(release): v1.1.0" --body "Signs the registry and tools for v1.1.0."
+    gh pr create --base main --title "chore(release): v1.1.0" --body "Release v1.1.0."
     ```
 
-6. Once it is squash-merged into `dev`, open the release pull request from `dev` into `main`, and merge it as a
-   merge commit:
-
-    ```bash
-    gh pr create --base main --head dev --title "chore(release): v1.1.0" --body "Release v1.1.0."
-    ```
-
-7. Tag `main` and push the tag:
+6. Tag `main` and push the tag:
 
     ```bash
     git fetch origin && git tag -a v1.1.0 origin/main -m "registry v1.1.0"
     git push origin v1.1.0
+    ```
+
+7. Bring `dev` up to `main`. Git refuses the push unless it is a fast-forward; then open a pull request from `main`
+   into `dev` instead, and merge it as a merge commit:
+
+    ```bash
+    git push origin origin/main:refs/heads/dev
     ```
 
 The tag becomes a GitHub Release, with the CHANGELOG section as its notes (`.github/workflows/release.yml`, which

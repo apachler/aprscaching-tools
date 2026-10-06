@@ -1,8 +1,11 @@
 version: 2
 updates:
   # The build's dev dependencies (esbuild, vitest), grouped. pnpm-workspace.yaml holds back versions younger than 12 h.
+  # Updates go into dev like every other change. Dependabot reads this file from the default branch, main, so a change
+  # here takes effect with the next release. Security updates ignore target-branch and open against main: retarget them.
   - package-ecosystem: npm
     directory: "/"
+    target-branch: dev
     schedule:
       interval: weekly
       day: monday
@@ -18,6 +21,7 @@ updates:
   # GitHub Actions — keep the pinned SHAs current (Dependabot bumps the SHA and the # vX comment).
   - package-ecosystem: github-actions
     directory: "/"
+    target-branch: dev
     schedule:
       interval: weekly
       day: monday
