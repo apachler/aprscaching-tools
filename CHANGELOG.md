@@ -5,6 +5,11 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-06
+
+- **Wordmark.** The documentation site, the READMEs and the tool pages write the name as APRScaching. Vale checks
+  `docs/` for the other spellings, and `test/wordmark.test.mjs` checks every Markdown file in the repository.
+
 ## [1.2.0] - 2026-10-06
 
 A documentation site for players, tool authors and registry hosts, and scripts that guide a release and a new tool.
