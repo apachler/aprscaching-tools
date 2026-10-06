@@ -130,10 +130,11 @@ clone there the libraries come from GitHub. Without a terminal every question is
 The script reads the key files in the `sign` step only, and passes their values to `sign-all` in that one process's
 environment. Every line it prints passes through a filter that removes them.
 
-In Claude Code, `/release 1.3.0` runs the doctor, checks the Unreleased entry against the pull requests merged since
-the last tag for your approval, and runs the steps one by one. You run the `sign` step yourself, and it merges into
-`main` only on your go-ahead: before that step, or once for the whole release when nothing needs signing and every
-check passes (`.claude/skills/release/SKILL.md`).
+In Claude Code, `/release 1.3.0` runs the whole release: asking for it is the go-ahead for every step, signing and
+the merge into `main` included. It checks the Unreleased entry against the pull requests merged since the last tag,
+runs the `sign` step, which reads the key files itself, and merges into `main` only once the pull request's checks
+have passed. It stops for you only when a check or step fails, when it had to write a CHANGELOG line for a pull
+request that brought none, or when something turns up you would want to see (`.claude/skills/release/SKILL.md`).
 
 ### Hotfix
 

@@ -5,6 +5,13 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+- **`/release`** runs the whole release on one request, signing and the merge into `main` included, and stops only
+  on a failure, a CHANGELOG line it had to write, or something unexpected. It never reads the key files.
+- **Release workflow.** Only the release job may write; the workflow as a whole reads.
+- **Docs build.** `docs/requirements.txt` names every file of each pinned package by its SHA-256, and CI installs it
+  with `--require-hashes`.
+- **README badges.** CI, licence, latest release, documentation site and OpenSSF Scorecard.
+
 ## [1.3.0] - 2026-10-06
 
 Twelve tools fixed after a full review, a verifier that fails closed, lint, and release files with provenance.
