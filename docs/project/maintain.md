@@ -34,11 +34,10 @@ on the computer that signs, holding the value `node scripts/genkey.mjs --raw` pr
   `XDG_CONFIG_HOME` is unset.
 
 `TOOL_AUTHOR_KEY_FILE` and `TOOL_AUTHORITY_KEY_FILE` point at one file elsewhere. The folder has mode 700 and each
-file mode 600. To move keys from another folder, such as `~/Development/github/aprscaching-keys`, into the key folder:
+file mode 600:
 
 ```bash
 mkdir -p ~/.config/aprscaching-tools/keys && chmod 700 ~/.config/aprscaching-tools/keys
-mv ~/Development/github/aprscaching-keys/*.key ~/.config/aprscaching-tools/keys/ && rmdir ~/Development/github/aprscaching-keys
 ```
 
 | Key | File | Signs |

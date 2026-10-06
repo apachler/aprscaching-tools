@@ -38,7 +38,8 @@ describe("new-tool.mjs", () => {
     const utilities = index.slice(index.indexOf("## Utilities"), index.indexOf("## Next"));
     expect(utilities).toContain("| [QSO timer: A & B](qso-timer.md) | Answers /qso-timer with a line of its own | `command` |");
     const nav = fs.readFileSync(path.join(dir, "mkdocs.yml"), "utf8");
-    expect(nav).toMatch(/\n {10}- Hello tool: catalogue\/hello\.md\n {10}- "QSO timer: A & B": catalogue\/qso-timer\.md\n/);
+    // right after the group's last page, whichever tool that is
+    expect(nav).toMatch(/\n {10}- [^\n]+: catalogue\/[a-z0-9-]+\.md\n {10}- "QSO timer: A & B": catalogue\/qso-timer\.md\n/);
   });
 
   it("writes a source that answers its command", () => {

@@ -65,9 +65,12 @@ checks, and records what the tool asks of the app. Values cross the boundary thr
     expect(await t.run("setinfo", "hello", { remote: true })).toBeNull();
     ```
 
-- **Events.** Raise them with `dispatch`, including the minute tick:
+- **Events.** Raise them with `dispatch`, including the minute tick. Auto-status stays idle until `/autostatus`
+  sets its interval, so the test runs that first:
 
     ```js
+    const t = loadTool("auto-status");
+    await t.run("autostatus", "10");
     for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
     expect(t.state.txs).toEqual([">APRScaching"]);
     ```
