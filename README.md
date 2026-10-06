@@ -11,8 +11,9 @@ a registry, is installed by the player on demand and runs in the app's sandbox.
 - `lib/` holds helpers the project's tools share; `lib.lock` pins the aprscaching commit whose MIT libraries
   (the APRS parser, the station-type registry, the panel model, the Morse and PSK31 decoders, the session-script
   parser) the tools bundle.
-- `scripts/` holds `fetch-libs.mjs` and `build.mjs` to build the tools, `genkey.mjs`, `sign.mjs` and
-  `sign-all.mjs` to make keys and sign, and `verify.mjs` to check the registry and every listed tool.
+- `scripts/` holds `fetch-libs.mjs` and `build.mjs` to build the tools, `new-tool.mjs` to start one, `genkey.mjs`,
+  `sign.mjs` and `sign-all.mjs` to make keys and sign, `verify.mjs` to check the registry and every listed tool,
+  `release.mjs` to release a tag step by step, and `doctor.mjs` to check that a computer can do all of that.
 
 ## The tools
 

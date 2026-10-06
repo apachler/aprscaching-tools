@@ -66,7 +66,58 @@ with the new key.
 
 ## Release a tag
 
-Tags follow the aprscaching major: `v1.<minor>.<patch>` is a registry for aprscaching 1.x. The steps for v1.1.0:
+Tags follow the aprscaching major: `v1.<minor>.<patch>` is a registry for aprscaching 1.x.
+
+### Check the computer
+
+```bash
+node scripts/doctor.mjs --release
+```
+
+The doctor checks Node, pnpm through corepack, `gh auth status`, the `origin` remote, `dev` and `main`, the libraries
+in `vendor/`, that the lockfile installs, and the key files: present, mode 600, readable, the authority key the one
+`authority.pub` pins and the author key the one the registry lists for OE8APR. It prints each public key and its
+fingerprint, never a private value, and one `pass`, `warn` or `FAIL` line per check.
+
+The key files are read from `TOOL_KEYS_DIR` (by default `~/Development/github/aprscaching-keys`); set
+`TOOL_AUTHOR_KEY_FILE` or `TOOL_AUTHORITY_KEY_FILE` to point at one elsewhere.
+
+### Release with the script
+
+Write what the release changes under `## [Unreleased]` in `CHANGELOG.md`, then:
+
+```bash
+node scripts/release.mjs 1.2.0 --dry-run    # where the release stands; changes nothing
+node scripts/release.mjs 1.2.0              # every step that is not done, asking before each change
+```
+
+| Step | What it does |
+|---|---|
+| `check` | A clean tree, `gh` signed in, a new X.Y.Z version, a non-empty Unreleased section, the key files, a registry entry for every tool folder |
+| `prepare` | `release/vX.Y.Z` from `origin/dev`; `pnpm install --frozen-lockfile --ignore-scripts`, `fetch-libs --source`, `build --check` |
+| `sign` | `sign-all` with the two key files, ending in `verify --strict` |
+| `changelog` | Dates Unreleased as `## [X.Y.Z] - <date>` under a new empty Unreleased, and sets `package.json`'s version |
+| `pr-dev` | Commits with a sign-off, pushes, opens the PR into `dev`, watches its checks, squash-merges |
+| `pr-main` | Opens the `dev` → `main` PR, watches the strict checks, merges it as a merge commit |
+| `tag` | Tags `origin/main`, pushes the tag, watches the Release workflow |
+| `handover` | Prints the aprscaching command that bundles the tag |
+
+Each step checks its precondition, says what it will do and asks `y/N` before it changes git or GitHub. A no stops the
+release where it is. A rerun finds the steps already done (the release branch, a strict verify, the dated section on
+`origin/dev` and on `origin/main`, the tag) and continues from the first one that is not. `--step <name>` runs one
+step; `--yes` answers that step's questions, for a step already confirmed. `--source <dir>` names the aprscaching
+clone `fetch-libs` reads; it defaults to `APRSCACHING_SOURCE`, then `~/Development/github/aprscaching`.
+
+The script reads the key files in the `sign` step only, and passes their values to `sign-all` in that one process's
+environment. Every line it prints passes through a filter that removes them.
+
+In Claude Code, `/release 1.2.0` runs the doctor, drafts the Unreleased entry from the pull requests merged since the
+last tag for your approval, and runs the steps one by one. You run the `sign` step yourself, and it merges into `main`
+only on your go-ahead (`.claude/skills/release/SKILL.md`).
+
+### Release by hand
+
+The script runs these steps; when it cannot, run them yourself. The steps for v1.1.0:
 
 1. Cut the release branch from `dev`:
 
@@ -150,6 +201,10 @@ app, each manifest's signature against the author key its entry lists, and each 
 app's `public/tools/`, keeping the repository's layout, so the instance serves them from its own address with the
 same relative entries. Open the change as a pull request into `dev`; it ships with the next aprscaching release.
 
+In Claude Code in the aprscaching repository, `/bundle-tools v1.1.0` does this on a `chore/bundle-tools-v1.1.0`
+branch: it reads the tag from a temporary worktree of this repository, runs the gate (`pnpm run verify`, the tool
+sandbox end-to-end test and the visual run of the tools surfaces) and opens the pull request. It merges nothing.
+
 When the new tag needs a newer tool API than the app implements, it waits for the app release that implements it
 ([Tool API versions](../api/index.md)).
 
@@ -158,6 +213,12 @@ When the new tag needs a newer tool API than the app implements, it waits for th
 This site is built from `docs/` with MkDocs (`mkdocs.yml`). Every pull request builds it with
 `mkdocs build --strict`, and a push to `main` publishes it to GitHub Pages (`.github/workflows/docs.yml`). A new tool
 needs its catalogue page: the build fails for a tool folder without one.
+
+## The repository checks on dev and main
+
+`pnpm test` checks every tool folder against its registry entry. Contributors open pull requests before the entry
+exists, so on `dev` a folder without one is a warning. With `STRICT=1`, which CI sets on `main`, on pull requests into
+it and on release tags, it fails: `main` holds only listed, signed tools. Add the entries before the release.
 
 ## Next
 

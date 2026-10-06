@@ -20,16 +20,40 @@ checks.
     git fetch upstream && git switch -c feat/cw-trainer upstream/dev
     ```
 
-2. Add the folder `tools/<name>/`, where `<name>` is your manifest's `name`:
-    - `tool.json`, with `"entry": "tool.js"` and `"api": "1.0"` ([The manifest](../write/manifest.md));
-    - `tool.js`, the script, with an `SPDX-License-Identifier` line at the top;
-    - `src/index.js` and the built `tool.js`, when you use this repository's build
+2. Check that your computer has what the build and the tests need:
+
+    ```bash
+    node scripts/doctor.mjs
+    ```
+
+    It prints a `pass`, `warn` or `FAIL` line for Node, pnpm through corepack, `gh`, the remote and its branches, the
+    libraries in `vendor/` and the lockfile. The key-file lines are for the maintainer; a warning there is fine.
+
+3. Start the tool:
+
+    ```bash
+    node scripts/new-tool.mjs cw-trainer --title "CW trainer" --description "Sends practice groups at your speed."
+    ```
+
+    `new-tool.mjs` writes everything the review and the documentation build check, as a working `/cw-trainer`
+    command that asks only for `command`:
+
+    - `tools/<name>/tool.json`, with `"entry": "tool.js"`, `"api": "1.0"`, version `1.0.0` and the MIT licence
+      ([The manifest](../write/manifest.md));
+    - `tools/<name>/src/index.js`, the source, and the built `tool.js`
       ([Build with the shared libraries](../write/build.md));
-    - `README.md`: what the tool does, a **Permissions** table with a row for each permission and why it needs it,
-      a **What it transmits** section for a tool with `tx` or `beacon`, and a **Licence** section that matches the
-      script's SPDX line.
-3. Add your tests under `test/`, and a catalogue page `docs/catalogue/<name>.md` built like the
-   [others](../catalogue/index.md), with a row in the catalogue index and an entry in `mkdocs.yml`.
+    - `tools/<name>/README.md`, with a **Permissions** table and a **Licence** section;
+    - `test/<name>.test.mjs`, a test of the command;
+    - `docs/catalogue/<name>.md`, the catalogue page, with a row in the catalogue index's Utilities table and an entry
+      in `mkdocs.yml`.
+
+    The new tool builds and passes `pnpm test`, `verify.mjs` and `mkdocs build --strict` as it is. Make it do its
+    job: edit `src/index.js` and rebuild with `node scripts/build.mjs <name>`; add each permission it uses to
+    `tool.json` and to both **Permissions** tables, with why it needs it; give a tool with `tx` or `beacon` a
+    **What it transmits** section; extend the test; move the catalogue row and the nav entry to the group that fits.
+    `--author <callsign>` sets the author, which is OE8APR by default. In Claude Code, `/new-tool <name>` takes you
+    through these steps to the pull request (`.claude/skills/new-tool/SKILL.md`).
+
 4. Sign the manifest with your author key. The signature covers the script through `entrySha256`; sign again after
    every change:
 
@@ -46,8 +70,8 @@ checks.
     ```
 
     `verify.mjs` shows your tool as `signed by <your key>, not listed in the registry`. Leave `registry.json` as it
-    is: the maintainer adds the entry. Until then the repository test `is listed in the registry` fails for your
-    tool.
+    is: the maintainer adds the entry. Until then `pnpm test` prints a warning that your tool has no registry entry,
+    and passes.
 
 6. Commit with a sign-off and a Conventional Commit message, push, and open a pull request into `dev`:
 
@@ -94,8 +118,8 @@ the first.
 
 ## Check that it worked
 
-The pull request's checks are green apart from `is listed in the registry`, and its description names your key and
-how to confirm it.
+The pull request's checks are green, with a warning that your tool has no registry entry yet, and its description
+names your key and how to confirm it.
 
 ## Next
 
