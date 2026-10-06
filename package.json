@@ -1,7 +1,7 @@
 {
   "name": "aprscaching-tools",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "license": "MIT",
   "type": "module",
   "description": "The project tool registry for APRScaching 1.x: signed, sandboxed tools for the Shack's Tools app",
