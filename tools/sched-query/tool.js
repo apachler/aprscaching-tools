@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Scheduled query (GPAUTO) 1.0.0, built by scripts/build.mjs from tools/sched-query/src, lib/ and the
-// aprscaching libraries at 32b5862c5c03ef1e4eda02611bf2ab1c8712a810 (lib.lock). Edit the sources, not this file.
+// aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // vendor/aprscaching/packages/tools/src/session-script.ts
   function splitTimeout(rest) {

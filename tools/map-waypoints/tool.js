@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Map waypoints 1.0.0, built by scripts/build.mjs from tools/map-waypoints/src, lib/ and the
-// aprscaching libraries at 32b5862c5c03ef1e4eda02611bf2ab1c8712a810 (lib.lock). Edit the sources, not this file.
+// aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // lib/geo.js
   var MH_BASES = [18, 10, 24, 10, 24];

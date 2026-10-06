@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Packet decoder 1.1.0, built by scripts/build.mjs from tools/packet-decoder/src, lib/ and the
-// aprscaching libraries at 32b5862c5c03ef1e4eda02611bf2ab1c8712a810 (lib.lock). Edit the sources, not this file.
+// aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // vendor/aprscaching/packages/aprs/src/tnc2.ts
   function parseTNC2(line) {

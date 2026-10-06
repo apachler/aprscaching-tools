@@ -47,9 +47,8 @@ describe.each(toolNames())("%s", (name) => {
   });
 
   if (built)
-    it("is built from its sources at the lib.lock ref", () => {
-      const lock = JSON.parse(read("lib.lock"));
-      expect(read("tools", name, "tool.js")).toContain(`aprscaching libraries at ${lock.ref} (lib.lock)`);
+    it("is built from its sources and the libraries lib.lock pins", () => {
+      expect(read("tools", name, "tool.js")).toContain("aprscaching libraries lib.lock pins");
     });
 });
 

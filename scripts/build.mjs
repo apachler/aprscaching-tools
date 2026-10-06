@@ -6,7 +6,8 @@
 //
 // The output targets the sandbox's Worker: one browser script, no imports, no Node APIs, run as the body of a
 // function of `register`, `ipc` and `tool`. It is readable (not minified) and reproducible: the same sources, the
-// same lib.lock ref and the same esbuild version give the same bytes on any machine, which CI checks.
+// same library code and the same esbuild version give the same bytes on any machine, which CI checks. The
+// banner names no commit, so moving lib.lock to a ref whose libraries are unchanged leaves every tool.js as it is.
 //
 //   node scripts/build.mjs                # write every tools/<name>/tool.js
 //   node scripts/build.mjs <name>…        # only these tools
@@ -72,7 +73,7 @@ for (const name of names) {
         js: [
           "// SPDX-License-Identifier: MIT",
           `// ${manifest.title} ${manifest.version}, built by scripts/build.mjs from tools/${name}/src, lib/ and the`,
-          `// aprscaching libraries at ${lock.ref} (lib.lock). Edit the sources, not this file.`,
+          "// aprscaching libraries lib.lock pins. Edit the sources, not this file.",
         ].join("\n"),
       },
       logLevel: "silent",
