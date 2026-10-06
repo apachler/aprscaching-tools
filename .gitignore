@@ -1,0 +1,5 @@
+# Private signing values never enter the repository.
+*.key
+*.priv
+.env
+node_modules/
