@@ -5,6 +5,8 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+- **Pull requests into `main`.** They come from a `release/vX.Y.Z` branch: `verify`, now a required check on `main`,
+  fails any other. Dependabot opens its pull requests against `dev`.
 - **Changelog per pull request.** Each pull request adds its line under Unreleased, and a release dates that section.
   The pull request template, the contributor guide and `/new-tool` ask for it.
 - **Release into main.** The release branch goes straight into `main` by pull request, and the new `sync-dev` step
