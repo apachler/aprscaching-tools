@@ -54,9 +54,9 @@ of one. Its value becomes the output lines. Words match without regard to case: 
 
 A command is the operator's alone. To let a connected station run it, register it as `{ run: handler, remote: true }`
 and set `"remote": true` in the manifest. A station connected to the packet terminal then types the word without the
-slash, on a session it opened. The surface's own commands win over a tool's. Up to 4 lines of output go back under
-the terminal's transmit gate. Commands run in order, with at most 4 waiting per session; nothing runs from the far
-end of a session the player opened:
+slash, on a session it opened; the line is read up to its 256th character. The surface's own commands win over a
+tool's. Up to 4 lines of output go back under the terminal's transmit gate. Commands run in order, with at most 4
+waiting per session; nothing runs from the far end of a session the player opened:
 
 ```js
 register({

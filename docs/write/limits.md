@@ -16,6 +16,7 @@ It is for tool authors who want a tool that never hits one by surprise. Every nu
 | A `tool.log()` line | 300 characters | Cut |
 | An event payload's strings | 512 characters each | Cut |
 | A reply to a connected session | One line of 256 characters; four replies per event, for two minutes | Later replies are dropped |
+| A remote command's line | 256 characters | The rest is cut before the line is read |
 | A remote command's output | Four lines of 256 characters per command; four commands waiting per session | A line beyond them is not run |
 | A ping (`link.ping.request`) | One every 10 seconds | Held, and the tool log says so |
 | Commands and decoders registered | 200 entries each | The rest are dropped |
