@@ -1,0 +1,19 @@
+title: "[Q] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask how to use, write, sign or publish a tool. The [documentation site](https://apachler.github.io/aprscaching-tools/)
+        may already answer it. A security problem never goes here: see SECURITY.md.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What you are trying to do, what you tried, and what happened.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Registry tag or tool version
+      description: Such as v1.3.0, or the tool's name and version from the app's Tools list.

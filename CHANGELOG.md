@@ -5,6 +5,11 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+- **Back up the keys.** The maintainer's guide shows how to keep an encrypted offline copy of the signing keys and
+  check it, and what a lost key costs without one.
+- **Discussions.** Forms for Q&A and Ideas, and the issue chooser and SUPPORT.md link to each.
+- **Tests.** CONTRIBUTING.md states the test policy: new behaviour adds its tests, a bug fix the test that would have
+  caught it.
 - **The next version.** `release.mjs` and `/release` need no version: the Conventional Commits on `dev` since the
   newest tag choose it (a breaking change the next major, a `feat` the next minor, anything else the next patch). A
   release in progress keeps its version, and `--from vX.Y.Z` makes a patch on that tag.

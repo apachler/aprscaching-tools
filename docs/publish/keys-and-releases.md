@@ -38,6 +38,7 @@ post on a channel you control. The project registry does this on its [home page]
 | A tool must go | Remove its entry and sign again. The registry stops offering it; players who installed it keep it, signed by its author's key, until they remove it. |
 | The authority key changes | Sign the registry with the new key and publish the new fingerprint. Every instance and player that pinned the old key sees **key changed** until they compare and confirm the new one. |
 | The authority key leaks | As above, and tell everyone who pinned it: until they confirm a new key, the leaked key still signs what they see. |
+| A key is lost, with no copy | As for a changed key: a new author key signs every tool again, or a new authority key signs the registry and everyone who pinned the old one confirms the new. An encrypted offline copy avoids this ([Back up the keys](../project/maintain.md#back-up-the-keys)). |
 
 An authority key change costs every instance and player a confirmation, so change it only when it leaks.
 

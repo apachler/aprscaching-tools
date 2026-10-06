@@ -52,6 +52,36 @@ The authority's public key is `authority.pub`:
 <!-- authority-key -->
 ```
 
+### Back up the keys
+
+A key that is lost cannot be recovered, and the registry depends on both. Without the author key, every project tool
+is signed again under a new key, and players who installed one see **Author key CHANGED**. Without the authority key,
+nothing can sign `registry.json`, and every instance and player that pinned the key has to confirm a new one. Keep
+an encrypted copy of the key folder offline, in a place apart from the computer that signs:
+
+1. Write the encrypted archive straight to the removable medium, never into a git working tree or a folder a cloud
+   service syncs. `gpg` asks for a passphrase; keep it apart from the medium, such as in a password manager:
+
+    ```bash
+    tar -C ~/.config/aprscaching-tools -czf - keys \
+      | gpg --symmetric --cipher-algo AES256 -o /media/<stick>/aprscaching-tools-keys.tar.gz.gpg
+    ```
+
+2. Keep two copies, on two media in two places, and make a new one when a key changes.
+3. Check a copy once a year, and after you make it: restore it into an empty key folder and run the doctor, which
+   compares the authority key with `authority.pub` and the author key with the registry:
+
+    ```bash
+    TOOL_KEYS_DIR="$(mktemp -d)" && chmod 700 "$TOOL_KEYS_DIR"
+    gpg -d /media/<stick>/aprscaching-tools-keys.tar.gz.gpg | tar -C "$TOOL_KEYS_DIR" --strip-components=1 -xzf -
+    TOOL_KEYS_DIR="$TOOL_KEYS_DIR" node scripts/doctor.mjs --release
+    rm -rf "$TOOL_KEYS_DIR"
+    ```
+
+To restore for good, unpack into `~/.config/aprscaching-tools` instead, then `chmod 700` the folder and `chmod 600`
+each file. When no copy is left, the steps for a changed key apply ([Keys, rotation and release
+practice](../publish/keys-and-releases.md#when-a-key-changes-or-leaks)).
+
 ## Add or update an entry
 
 1. Review the pull request against [what the review checks](contribute.md#what-the-review-checks). Confirm the
