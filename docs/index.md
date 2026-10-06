@@ -71,4 +71,4 @@ registry, and compare the key in all three places before you trust a copy of it.
 ## Next
 
 - [Tool catalogue](catalogue/index.md): every tool in the project registry.
-- [Write your first tool](write/first-tool.md): from an empty folder to a signed tool.
+- [Write your first tool](write/first-tool.md): from the scaffold to a signed, tested tool.

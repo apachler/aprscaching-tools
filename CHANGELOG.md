@@ -9,6 +9,10 @@ format versions are named where they change.
   report, a tool proposal, and a report about a tool in the registry. `LICENSE` holds the plain MIT text, so GitHub
   shows the licence as MIT; the README says which files it covers and that each tool carries its own.
 - **OpenSSF Scorecard.** A weekly rating of the repository's supply-chain practice, shown as a README badge.
+- **Write your first tool** starts from `scripts/new-tool.mjs`, so the tool it builds has its catalogue page and
+  passes `mkdocs build --strict`. The limits page says which colour-rule call takes how many rules and caps a
+  decoder's answer at 20,000 characters; the `load` message names `api` and `features`; the tick test example sets
+  the interval first.
 
 ## [1.2.2] - 2026-10-06
 
