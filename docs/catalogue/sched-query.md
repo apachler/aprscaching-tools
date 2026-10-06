@@ -18,14 +18,16 @@ A script is up to 20 steps, separated by `;` or one per line:
 | `waitfor <text> [seconds]` | Waits until a received line contains `<text>`; 60 seconds when left out |
 | `send <line>` | Sends one line |
 | `wait <seconds>` | Waits |
-| `disconnect` | Disconnects |
+| `disconnect` or `bye` | Disconnects |
+
+A line that starts with `#` or `rem` is a comment, and the parser skips a line it does not know.
 
 ## Use it
 
 | Command | Does |
 |---|---|
 | `/gpauto <steps>` | Runs the script now, and keeps it |
-| `/gpauto every <minutes> <steps>` | Runs it now, then every `<minutes>` |
+| `/gpauto every <minutes> <steps>` | Runs it now, then every `<minutes>`, 10 or more. Each scheduled run's outcome goes to the tool log |
 | `/gpauto run` | Runs the kept script again |
 | `/gpauto off` | Ends the schedule |
 | `/gpauto` | Says whether a script is kept |
@@ -44,7 +46,7 @@ Open the packet terminal's TNC first; without it the tool answers `Open the pack
   session transmits only while your callsign is control-verified, with the terminal's own transmit consent.
 - **Within the tool's budget.** Each run draws on the tool's transmit budget of one transmission a minute and six an
   hour: one for each `connect`, and one more for each five `send` steps. A run the budget cannot cover is
-  refused, and the tool answers `Refused:` with the reason.
+  refused: a run you start answers `Refused:` with the reason, and a scheduled one writes it to the tool log.
 - **Only the scripts you give it**, when you ask or on the schedule you set. A new script closes the channel the
   last one held, and switching the tool off or removing it cancels its script.
 

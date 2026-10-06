@@ -38,10 +38,14 @@ if (got !== INTEGRITY) fail(`mermaid-${VERSION}.tgz does not match its pinned in
 // A tar archive: 512-byte headers, each followed by its file padded to 512 bytes.
 const tar = zlib.gunzipSync(tgz);
 const found = {};
-for (let at = 0; at + 512 <= tar.length; ) {
+for (let at = 0; at + 512 <= tar.length;) {
   const head = tar.subarray(at, at + 512);
   if (head.every((b) => b === 0)) break;
-  const field = (from, len) => head.subarray(from, from + len).toString("utf8").replace(/\0.*$/s, "");
+  const field = (from, len) =>
+    head
+      .subarray(from, from + len)
+      .toString("utf8")
+      .replace(/\0.*$/s, "");
   const prefix = field(345, 155);
   const name = (prefix ? prefix + "/" : "") + field(0, 100);
   const size = parseInt(field(124, 12).trim() || "0", 8);

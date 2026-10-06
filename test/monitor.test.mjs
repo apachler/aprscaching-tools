@@ -19,12 +19,35 @@ describe("monitor-colouriser", () => {
     expect(t.colour({ src: "DL1ABC" })).toBeNull(); // not heard: the host's own colour stays
   });
 
+  it("uses the theme's token names, --st-wx for a weather station", async () => {
+    vi.useFakeTimers();
+    const t = loadTool("monitor-colouriser");
+    await t.dispatch("on_frame", { peerCall: "OE8XWX", dst: "APRS", text: "_10061200c090s005g010t050", source: "RF" });
+    vi.advanceTimersByTime(1000);
+    expect(t.colour({ src: "OE8XWX" })).toBe("--st-wx");
+  });
+
   it("keeps one rule per station and publishes only when a type changes", async () => {
     vi.useFakeTimers();
     const t = loadTool("monitor-colouriser");
     for (let i = 0; i < 3; i++) await t.dispatch("on_frame", { peerCall: "OE8APR-9", dst: "APRS", text: "!x" });
     vi.advanceTimersByTime(1000);
     expect(t.state.colourRules.filter((r) => r.src === "OE8APR-9")).toHaveLength(1);
+    expect(t.state.colourPublishes).toBe(1);
+    for (let i = 0; i < 3; i++) await t.dispatch("on_frame", { peerCall: "OE8APR-9", dst: "APRS", text: "!x" });
+    vi.advanceTimersByTime(1000);
+    expect(t.state.colourPublishes).toBe(1); // the type did not change: nothing to publish
+  });
+
+  it("keeps few enough stations that its rules fit in one message", async () => {
+    vi.useFakeTimers();
+    const t = loadTool("monitor-colouriser");
+    for (let i = 0; i < 1500; i++) await t.dispatch("on_frame", { peerCall: `OE${i}AB-15`, dst: "APRS", text: "!x" });
+    vi.advanceTimersByTime(1000);
+    expect(t.state.logs).toEqual([]);
+    expect(t.state.colourRules).toHaveLength(1200);
+    expect(t.colour({ src: "OE1499AB-15" })).not.toBeNull(); // the newest stay
+    expect(t.colour({ src: "OE0AB-15" })).toBeNull(); // the oldest go
   });
 
   it("needs 'monitor' to hear frames", () => {
@@ -45,7 +68,10 @@ describe("watch-alert", () => {
       ["OE6XRR-9", "—"],
     ]);
     await t.dispatch("on_frame", { peerCall: "OE8APR-7", source: "APRS" }); // a base call catches every SSID
-    expect(t.panel.nodes[0].rows[0]).toEqual(["OE8APR", "0s ago"]);
+    expect(t.panel.nodes[0].rows[0]).toEqual(["OE8APR", expect.stringMatching(/^\d\d:\d\dZ$/)]);
+    expect(t.state.logs).toEqual(["heard OE8APR-7 (watching OE8APR)"]);
+    await t.dispatch("on_frame", { peerCall: "OE8APR-7", source: "APRS" });
+    expect(t.state.logs).toHaveLength(1); // heard again within ten minutes: no second log line
     expect(t.colour({ src: "OE8APR-7" })).toBe("--warn");
     expect(t.colour({ src: "OE8APR" })).toBe("--warn");
     expect(t.colour({ src: "OE6XRR-9" })).toBe("--warn");
@@ -53,15 +79,26 @@ describe("watch-alert", () => {
     expect(await t.run("unwatch", "OE8APR")).toEqual(["Unwatched OE8APR."]);
     expect(t.colour({ src: "OE8APR-7" })).toBeNull();
   });
+
+  it("takes several calls at once", async () => {
+    const t = loadTool("watch-alert");
+    expect(await t.run("watch", "OE8APR oe6xrr,DL1ABC")).toEqual(["Watching OE8APR OE6XRR DL1ABC."]);
+    expect(t.panel.nodes[0].rows.map((r) => r[0])).toEqual(["OE8APR", "OE6XRR", "DL1ABC"]);
+    expect(await t.run("unwatch", "OE8APR DL1ABC")).toEqual(["Unwatched OE8APR DL1ABC."]);
+    expect(await t.run("watch")).toEqual(["Watching: OE6XRR"]);
+  });
 });
 
 describe("mheard", () => {
   it("records heard stations from on_frame across sources, once each, newest first", async () => {
+    vi.useFakeTimers();
     const t = loadTool("mheard");
     expect(t.panel.nodes[0].text).toBe("Nothing heard yet.");
     await t.dispatch("on_frame", { peerCall: "OE8XBM-7", source: "RF" });
     await t.dispatch("on_frame", { peerCall: "oe8xbm-7", source: "RF" }); // the same station collapses
     await t.dispatch("on_frame", { peerCall: "OE1XDS-1", source: "APRS" });
+    expect(t.panel.nodes[0].text).toBe("Nothing heard yet."); // a burst redraws once, a second later
+    vi.advanceTimersByTime(1000);
     const rows = t.panel.nodes.find((n) => n.kind === "table").rows;
     expect(rows.map((r) => r[0]).sort()).toEqual(["OE1XDS-1", "OE8XBM-7"]);
     expect(rows.find((r) => r[0] === "OE1XDS-1")[1]).toBe("APRS");
@@ -92,6 +129,26 @@ describe("station-db and info-responder", () => {
     expect(await bus.call("station.type", "ZZ9ZZZ")).toBe("");
   });
 
+  it("refuses a second provider of a held service, as the app's bus does", () => {
+    const bus = createBus();
+    loadTool("station-db", { bus });
+    expect(() => loadTool("station-db", { bus })).toThrow(/service "station.type" is held already/);
+  });
+
+  it("station-db and the colouriser classify a station alike, the destination included", async () => {
+    vi.useFakeTimers();
+    const bus = createBus();
+    const db = loadTool("station-db", { bus });
+    const colours = loadTool("monitor-colouriser");
+    const frame = { peerCall: "OE8XBM-1", dst: "NODES", text: "", source: "RF" };
+    await db.dispatch("on_frame", frame);
+    await colours.dispatch("on_frame", frame);
+    vi.advanceTimersByTime(1000);
+    const type = await bus.call("station.type", "OE8XBM-1");
+    expect(type).toBe("node");
+    expect(colours.colour({ src: "OE8XBM-1" })).toBe("--st-node");
+  });
+
   it("info-responder's WHOIS asks station-db over the bus; a peer reaches INFO but not /setinfo", async () => {
     const bus = createBus();
     const db = loadTool("station-db", { bus });
@@ -103,9 +160,7 @@ describe("station-db and info-responder", () => {
     expect(await info.run("info", "", { remote: true })).toEqual([
       "APRScaching shack station. Type MENU for commands. 73!",
     ]);
-    expect(await info.run("menu", "", { remote: true })).toEqual([
-      "Commands: INFO  MENU  WHOIS <call>  GRID <loc> [loc]  CONV <n> <from> <to>",
-    ]);
+    expect(await info.run("menu", "", { remote: true })).toEqual(["Commands: INFO  MENU  WHOIS <call>"]);
     expect(await info.run("setinfo", "hax", { remote: true })).toBeNull();
     expect(await info.run("setinfo", "QRV on 2m")).toEqual(["Info text updated."]);
     expect(await info.run("info", "", { remote: true })).toEqual(["QRV on 2m"]);

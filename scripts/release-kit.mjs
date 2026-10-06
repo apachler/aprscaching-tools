@@ -41,7 +41,8 @@ export function defaultRunner(cmd, args, { cwd = repoRoot, env, inherit = false,
  */
 export function keyFiles(env = process.env) {
   const home = env.HOME || os.homedir();
-  const config = env.XDG_CONFIG_HOME && path.isAbsolute(env.XDG_CONFIG_HOME) ? env.XDG_CONFIG_HOME : path.join(home, ".config");
+  const config =
+    env.XDG_CONFIG_HOME && path.isAbsolute(env.XDG_CONFIG_HOME) ? env.XDG_CONFIG_HOME : path.join(home, ".config");
   const dir = env.TOOL_KEYS_DIR || path.join(config, "aprscaching-tools", "keys");
   return {
     dir,
@@ -85,7 +86,9 @@ export function inspectKeyFolder(files) {
     const tree = workTreeOf(d);
     if (tree && !trees.has(tree)) {
       trees.add(tree);
-      fails.push(`the key folder ${d} lies inside a git working tree (${tree}); move the keys to a folder outside every repository`);
+      fails.push(
+        `the key folder ${d} lies inside a git working tree (${tree}); move the keys to a folder outside every repository`,
+      );
     }
   }
   for (const d of folders) {
@@ -96,7 +99,8 @@ export function inspectKeyFolder(files) {
       continue;
     }
     const mode = st.mode & 0o777;
-    if (st.isDirectory() && mode !== 0o700) warns.push(`the key folder ${d} has mode ${mode.toString(8)}; run chmod 700 ${d}`);
+    if (st.isDirectory() && mode !== 0o700)
+      warns.push(`the key folder ${d} has mode ${mode.toString(8)}; run chmod 700 ${d}`);
   }
   return { fails, warns };
 }

@@ -7,7 +7,7 @@
 //   1. checks that every committed tool.js matches a fresh build of its sources (scripts/build.mjs --check);
 //   2. signs each listed tool.json in this repository with AUTHOR_KEY (scripts/sign.mjs manifest), which also pins
 //      the script's SHA-256 (entrySha256). A manifest signed by another author's key is left as it is;
-//   3. copies each local manifest's pubkey, title, author and version into its registry entry;
+//   3. copies each local manifest's pubkey, title, author, version and description into its registry entry;
 //   4. signs the registry with AUTHORITY_KEY (scripts/sign.mjs registry);
 //   5. runs scripts/verify.mjs --strict.
 //
@@ -62,7 +62,7 @@ async function signedAsIs(m, script) {
   if (typeof m.signature !== "string") return "it carries no signature";
   const rest = { ...m };
   delete rest.signature;
-  let ok = false;
+  let ok;
   try {
     const key = await crypto.subtle.importKey("raw", b64(m.pubkey), { name: "Ed25519" }, false, ["verify"]);
     ok = await crypto.subtle.verify("Ed25519", key, b64(m.signature), new TextEncoder().encode(stable(rest)));
@@ -110,6 +110,10 @@ for (const e of reg.entries) {
     process.exit(1);
   }
   const own = !m.pubkey || m.pubkey === authorPub;
+  if (own && !fs.existsSync(path.join(path.dirname(file), m.entry ?? "tool.js"))) {
+    console.error(`sign-all: ${e.name}'s script ${m.entry ?? "tool.js"} is missing; nothing was signed`);
+    process.exit(1);
+  }
   if (!own) {
     const why = await signedAsIs(m, path.join(path.dirname(file), m.entry ?? "tool.js"));
     if (why) {
@@ -127,7 +131,13 @@ step(`signing the tools with the author key ${authorPub}`);
 for (const { e, file, own } of plan) {
   if (own) node(["scripts/sign.mjs", "manifest", e.entry], process.env.AUTHOR_KEY);
   const signed = JSON.parse(fs.readFileSync(file, "utf8"));
-  Object.assign(e, { pubkey: signed.pubkey, title: signed.title, author: signed.author, version: signed.version });
+  Object.assign(e, {
+    pubkey: signed.pubkey,
+    title: signed.title,
+    author: signed.author,
+    version: signed.version,
+    description: signed.description,
+  });
 }
 fs.writeFileSync(regPath, JSON.stringify(reg, null, 2) + "\n");
 

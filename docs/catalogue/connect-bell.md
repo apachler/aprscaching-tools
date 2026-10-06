@@ -5,7 +5,7 @@ BBS or the node open in a tab.
 
 ## What it does
 
-On every connect, the tool writes `*ring* <call> connected` to the tool log and shows the last connect in its panel.
+On every connect, the tool writes `*ring* <call> connected` to the tool log and shows the last connect, with its UTC time, in its panel.
 It pairs with [Watch & alert](watch-alert.md), which follows stations heard rather than connected.
 
 ## Use it

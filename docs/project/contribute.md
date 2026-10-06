@@ -38,8 +38,9 @@ checks.
     `new-tool.mjs` writes everything the review and the documentation build check, as a working `/cw-trainer`
     command that asks only for `command`:
 
-    - `tools/<name>/tool.json`, with `"entry": "tool.js"`, `"api": "1.0"`, version `1.0.0` and the MIT licence
-      ([The manifest](../write/manifest.md));
+    - `tools/<name>/tool.json`, with `"entry": "tool.js"`, `"api": "1.0"` and version `1.0.0`
+      ([The manifest](../write/manifest.md)); the MIT licence is in the script's SPDX line and the README's
+      **Licence** section;
     - `tools/<name>/src/index.js`, the source, and the built `tool.js`
       ([Build with the shared libraries](../write/build.md));
     - `tools/<name>/README.md`, with a **Permissions** table and a **Licence** section;

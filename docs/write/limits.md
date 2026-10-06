@@ -29,7 +29,7 @@ It is for tool authors who want a tool that never hits one by surprise. Every nu
 | A `table` node | 8 columns of 40 characters; 100 rows of 8 cells of 80 characters |
 | A `blocks` node | 1 to 200 columns; 4000 cells of one character |
 | Colour rules in `register()` | 40, with `src` or without |
-| Colour rules in `tool.setColourRules()` | 40 without `src`, and 2000 with `src`, one per callsign |
+| Colour rules in `tool.setColourRules()` | 40 without `src`, and 2000 with `src`, one per callsign; all of them travel in one message, which may hold 64 KB of JSON, so about 1200 rules of long callsigns fit |
 | Points in a map layer | 2000, each with a label of 40 characters and a glyph of 2 |
 
 ## The message budget

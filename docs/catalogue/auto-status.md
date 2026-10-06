@@ -13,8 +13,8 @@ has passed, asks the app to transmit `>text`, an APRS status. The tool log says 
 
 | Command | Does |
 |---|---|
-| `/autostatus <minutes> <text>` | Starts: every `<minutes>`, 10 or more (10 when left out), the status `<text>` (`APRScaching` when left out, cut to 62 characters) |
-| `/autostatus off` | Stops |
+| `/autostatus <minutes> <text>` | Starts: every `<minutes>`, 10 or more, the status `<text>` (`APRScaching` when left out, cut to 62 characters). Without a number first it answers with its usage and transmits nothing |
+| `/autostatus off` | Stops, in any letter case |
 
 For example, `/autostatus 30 QRV on 144.800, 73` answers `Auto-status every 30 min: "QRV on 144.800, 73" (TX-gated).`
 

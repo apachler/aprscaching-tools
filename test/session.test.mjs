@@ -2,7 +2,7 @@
 // The tools that answer connected sessions, transmit or run on the minute tick: Auto-responder, Connect bell, Link
 // ping, Scheduled query, Auto-status and the Beacon scheduler.
 import { describe, expect, it } from "vitest";
-import { createBus, loadTool } from "./harness.mjs";
+import { createBus, loadTool, readManifest } from "./harness.mjs";
 
 describe("auto-responder", () => {
   it("greets an incoming connect by callsign through the session's reply", async () => {
@@ -24,7 +24,11 @@ describe("connect-bell", () => {
     expect(t.panel.nodes[0].text).toMatch(/Waiting for a connect/);
     await t.dispatch("on_connect", { peerCall: "OE3ABC" });
     expect(t.state.logs).toEqual(["*ring* OE3ABC connected"]);
-    expect(t.panel.nodes[0]).toEqual({ kind: "kv", key: "Last connect", value: "OE3ABC (0s ago)" });
+    expect(t.panel.nodes[0]).toEqual({
+      kind: "kv",
+      key: "Last connect",
+      value: expect.stringMatching(/^OE3ABC at \d\d:\d\dZ$/),
+    });
   });
 });
 
@@ -64,13 +68,19 @@ describe("sched-query", () => {
     expect(await t.run("gpauto", "run")).toEqual(["Running 3 steps…"]);
   });
 
-  it("says why a session.script refusal stopped it", async () => {
+  it("says why a session.script refusal stopped it: without 'tx' the app refuses the call", async () => {
     const bus = createBus();
+    let ran = false;
     bus.provide("session.script", () => {
-      throw new Error("service \"session.script\" needs the 'tx' permission");
+      ran = true;
+      return { ok: true };
     });
-    const t = loadTool("sched-query", { bus });
-    expect((await t.run("gpauto", "connect HB9W-8"))[0]).toMatch(/^Refused: .*'tx' permission/);
+    const manifest = readManifest("sched-query");
+    const t = loadTool("sched-query", { bus, permissions: manifest.permissions.filter((p) => p !== "tx") });
+    expect((await t.run("gpauto", "connect HB9W-8"))[0]).toBe(
+      "Refused: service \"session.script\" needs the 'tx' permission, which sched-query does not hold",
+    );
+    expect(ran).toBe(false);
   });
 
   it("runs a scheduled script on every Nth minute tick, and renders the terminal's progress", async () => {
@@ -83,14 +93,59 @@ describe("sched-query", () => {
     const t = loadTool("sched-query", { bus });
     expect(t.panel.nodes[0].text).toMatch(/^Idle/);
     expect((await t.run("gpauto", "every 2 connect HB9W-8; disconnect"))[0]).toBe(
-      "Scheduled every 2 min. Running 2 steps…",
+      "Scheduled every 10 min. Running 2 steps…", // 10 minutes at the least
     );
-    for (let i = 0; i < 4; i++) await t.dispatch("on_tick");
-    expect(runs).toBe(3); // at once, then on ticks 2 and 4
-    bus.emit("session.progress", { status: "done", step: 2, total: 2, captured: ["DX de OE8APR"], note: "ok" }, "(host)");
+    for (let i = 0; i < 20; i++) await t.dispatch("on_tick");
+    expect(runs).toBe(3); // at once, then on ticks 10 and 20
+    expect(t.state.logs).toEqual(["scheduled run: Running 2 steps…", "scheduled run: Running 2 steps…"]);
+    bus.emit(
+      "session.progress",
+      { status: "done", step: 2, total: 2, captured: ["DX de OE8APR"], note: "ok" },
+      "(host)",
+    );
     expect(t.panel.nodes[0]).toEqual({ kind: "kv", key: "Status", value: "done (2/2)", tone: "ok" });
     expect(t.panel.nodes.at(-1)).toEqual({ kind: "text", text: "DX de OE8APR" });
     expect(await t.run("gpauto", "off")).toEqual(["Scheduled query off."]);
+  });
+
+  it("logs a scheduled run the terminal refuses, and arms no schedule without steps", async () => {
+    const bus = createBus();
+    let refuse = false;
+    bus.provide("session.script", () => {
+      if (refuse) throw new Error("over the transmit budget");
+      return { ok: true };
+    });
+    const t = loadTool("sched-query", { bus });
+    expect((await t.run("gpauto", "every 10"))[0]).toMatch(/^No steps/);
+    expect((await t.run("gpauto", "every 10 bogus"))[0]).toMatch(/^No steps/);
+    for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
+    expect(t.state.logs).toEqual([]);
+    await t.run("gpauto", "every 10 connect HB9W-8");
+    refuse = true;
+    for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
+    expect(t.state.logs).toEqual(["scheduled run: Refused: over the transmit budget"]);
+  });
+});
+
+describe("the transmit format the app accepts", () => {
+  it("allows a status or a message, and holds everything else", async () => {
+    const { txAllowed } = await import("./harness.mjs");
+    expect(txAllowed(">QRV on 144.800")).toBe(true);
+    expect(txAllowed(">" + "x".repeat(62))).toBe(true);
+    expect(txAllowed(">" + "x".repeat(63))).toBe(false);
+    expect(txAllowed(">JN76 QRV")).toBe(false); // led by a grid locator
+    expect(txAllowed(":OE8APR-9 :hello{12}")).toBe(true);
+    expect(txAllowed(":OE8APR:hello")).toBe(false); // the addressee is padded to nine
+    expect(txAllowed(":BLN1     :bulletin")).toBe(false);
+    expect(txAllowed("!4704.41N/01526.27E>")).toBe(false); // a position
+    expect(txAllowed(">two\nlines")).toBe(false);
+  });
+  it("holds a status too long for the app, and the tool hears false", async () => {
+    const t = loadTool("auto-status");
+    await t.run("autostatus", "10 " + "x".repeat(70)); // auto-status cuts it to 62
+    for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
+    expect(t.state.txs).toEqual([">" + "x".repeat(62)]);
+    expect(t.state.txHeld).toEqual([]);
   });
 });
 
@@ -109,6 +164,17 @@ describe("auto-status", () => {
     await t.dispatch("on_tick");
     expect(t.state.txs).toHaveLength(1);
   });
+  it("stops on OFF in any case, and answers its usage without a number first", async () => {
+    const t = loadTool("auto-status");
+    await t.run("autostatus", "10 QRV");
+    expect(await t.run("autostatus", "OFF")).toEqual(["Auto-status off."]);
+    expect(await t.run("autostatus", "QRV on 144.800")).toEqual([
+      "Usage: /autostatus <minutes> <text>  |  /autostatus off",
+    ]);
+    expect(await t.run("autostatus", "")).toEqual(["Usage: /autostatus <minutes> <text>  |  /autostatus off"]);
+    for (let i = 0; i < 20; i++) await t.dispatch("on_tick");
+    expect(t.state.txs).toEqual([]);
+  });
   it("logs a held status when the host's gate refuses it", async () => {
     const t = loadTool("auto-status", { tx: () => false });
     await t.run("autostatus", "10");
@@ -125,10 +191,18 @@ describe("beacon-scheduler", () => {
     expect(t.state.beacons.at(-1)).toEqual({ comment: "test", intervalSec: 1800 });
     expect(await t.run("beacon", "1 fast")).toEqual(["Beacon scheduled every 10 min."]);
     expect(t.state.beacons.at(-1)).toEqual({ comment: "fast", intervalSec: 600 });
-    expect(await t.run("beacon", "")).toEqual(["Beacon scheduled every 30 min."]);
-    expect(t.state.beacons.at(-1)).toEqual({ comment: "APRScaching", intervalSec: 1800 });
+    expect(await t.run("beacon", "2000 daily")).toEqual(["Beacon scheduled every 1440 min."]);
+    expect(t.state.beacons.at(-1)).toEqual({ comment: "daily", intervalSec: 86400 });
+    expect(await t.run("beacon", "60")).toEqual(["Beacon scheduled every 60 min."]);
+    expect(t.state.beacons.at(-1)).toEqual({ comment: "APRScaching", intervalSec: 3600 });
     expect(await t.run("beacon", "off")).toEqual(["Beacon off."]);
     expect(t.state.beacons.at(-1)).toBeNull();
+  });
+  it("answers its usage, and schedules nothing, without a number first", async () => {
+    const t = loadTool("beacon-scheduler");
+    expect(await t.run("beacon", "")).toEqual(["Usage: /beacon <minutes> <comment>  |  /beacon off"]);
+    expect(await t.run("beacon", "of")).toEqual(["Usage: /beacon <minutes> <comment>  |  /beacon off"]);
+    expect(t.state.beacons).toEqual([]);
   });
   it("says why the host refused a beacon", async () => {
     const t = loadTool("beacon-scheduler", {

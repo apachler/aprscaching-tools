@@ -28,7 +28,15 @@ import {
   repoSlug,
 } from "./release-kit.mjs";
 
-export function doctor({ root = repoRoot, run = defaultRunner, env = process.env, log = console.log, release = false, install = true, nodeVersion = process.versions.node } = {}) {
+export function doctor({
+  root = repoRoot,
+  run = defaultRunner,
+  env = process.env,
+  log = console.log,
+  release = false,
+  install = true,
+  nodeVersion = process.versions.node,
+} = {}) {
   let failures = 0;
   let warnings = 0;
   const pass = (m) => log(`pass  ${m}`);
@@ -89,12 +97,16 @@ export function doctor({ root = repoRoot, run = defaultRunner, env = process.env
   const have = (read("vendor/aprscaching/.lib-ref") ?? "").trim();
   if (!have) warn("vendor/ is empty: run node scripts/fetch-libs.mjs (--source <APRScaching clone> works offline)");
   else if (have !== lock.ref)
-    warn(`vendor/ holds ${have.slice(0, 12)}, lib.lock pins ${String(lock.ref).slice(0, 12)}: run node scripts/fetch-libs.mjs`);
+    warn(
+      `vendor/ holds ${have.slice(0, 12)}, lib.lock pins ${String(lock.ref).slice(0, 12)}: run node scripts/fetch-libs.mjs`,
+    );
   else pass(`vendor/ holds the libraries at ${have.slice(0, 12)}`);
 
   // the lockfile
   if (install) {
-    const i = exec(PNPM[0], [...PNPM[1], "install", "--frozen-lockfile", "--ignore-scripts"], { env: corepackEnv(env) });
+    const i = exec(PNPM[0], [...PNPM[1], "install", "--frozen-lockfile", "--ignore-scripts"], {
+      env: corepackEnv(env),
+    });
     if (i.status === 0) pass("pnpm install --frozen-lockfile --ignore-scripts");
     else fail(`the lockfile does not install: ${(i.stderr || i.stdout).trim().split("\n").slice(-2).join(" / ")}`);
   }

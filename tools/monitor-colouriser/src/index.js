@@ -3,11 +3,14 @@
 // Monitor colouriser: classifies each heard station by its NAMES.GP type (BBS, node, digi, weather, …) and colours
 // its monitor lines with that type's colour token. The host colours a line from rules the tool publishes, so the
 // tool keeps one exact-callsign rule per station it heard, newest last, and republishes them at most once a second.
-import { StationRegistry } from "aprscaching/packages/packet/src/names.ts";
+import { StationRegistry, TYPE_COLOR_VAR } from "aprscaching/packages/packet/src/names.ts";
 import { asStr, callOf } from "../../../lib/text.js";
 
-/** Stations kept; the oldest goes first. The host takes up to 2000 exact-callsign rules. */
-const MAX_STATIONS = 2000;
+/**
+ * Stations kept; the oldest goes first. All rules travel in one message, and a message may hold 64 KB of JSON: 1200
+ * rules of the longest callsign and colour token stay under it.
+ */
+const MAX_STATIONS = 1200;
 const PUBLISH_MS = 1000;
 
 const registry = new StationRegistry();
@@ -16,7 +19,9 @@ let timer = null;
 
 function publish() {
   timer = null;
-  tool.setColourRules([...types].map(([src, type]) => ({ src, colorVar: `--st-${type}` })));
+  tool.setColourRules(
+    [...types].map(([src, type]) => ({ src, colorVar: TYPE_COLOR_VAR[type] ?? TYPE_COLOR_VAR.user })),
+  );
 }
 
 tool.on("on_frame", (p) => {

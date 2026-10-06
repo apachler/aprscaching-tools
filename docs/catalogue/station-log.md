@@ -16,7 +16,7 @@ the panel.
 
 | Command | Does |
 |---|---|
-| `/seen` | The stations heard, newest first, with type and source |
+| `/seen` | The ten stations heard most recently, newest first, with type and source |
 | `/whois <call>` | Asks Station DB for the station's type; the panel shows it, or `not heard` |
 
 For example, `/whois OE6XRR-9` answers `Asked Station DB about OE6XRR-9; the answer shows in the panel.`

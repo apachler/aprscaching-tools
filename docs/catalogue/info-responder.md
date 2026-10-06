@@ -10,7 +10,7 @@ A connected station, or you, may type:
 | Command | Answer |
 |---|---|
 | `info` | The info text you set; by default `APRScaching shack station. Type MENU for commands. 73!` |
-| `menu` | The commands a station can use |
+| `menu` | The commands this tool answers: `INFO`, `MENU` and `WHOIS <call>` |
 | `whois <call>` | The station's type, from Station DB's `station.type` service |
 
 `/setinfo <text>` sets the info text, up to 240 characters. It is yours alone: a connected station cannot run it.

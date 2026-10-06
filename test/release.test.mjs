@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { doctor } from "../scripts/doctor.mjs";
-import { createContext, datedChangelog, release, unreleasedBody } from "../scripts/release.mjs";
+import { createContext, datedChangelog, parseArgs, release, unreleasedBody } from "../scripts/release.mjs";
 import { fingerprint, inspectKeyFolder, keyFiles, redact, workTreeOf } from "../scripts/release-kit.mjs";
 import { repoRoot } from "./harness.mjs";
 
@@ -54,14 +54,22 @@ function fixture(opts = {}) {
   w("vendor/aprscaching/.lib-ref", "a".repeat(40) + "\n");
   w("node_modules/.modules.yaml", "");
   w("authority.pub", (opts.authorityPub ?? pubOf(authority)) + "\n");
-  const entry = { name: "foo", title: "Foo", author: "OE8APR", version: "1.0.0", pubkey: pubOf(author), entry: "tools/foo/tool.json" };
+  const entry = {
+    name: "foo",
+    title: "Foo",
+    author: "OE8APR",
+    version: "1.0.0",
+    pubkey: pubOf(author),
+    entry: "tools/foo/tool.json",
+  };
   w("registry.json", JSON.stringify({ format: 1, entries: [entry] }));
   w("tools/foo/tool.json", JSON.stringify({ name: "foo" }));
   for (const t of opts.unlisted ?? []) w(`tools/${t}/tool.json`, JSON.stringify({ name: t }));
   const keys = opts.keysInside ? path.join(root, ".keys") : path.join(base, "keys");
   fs.mkdirSync(keys);
   fs.chmodSync(keys, opts.dirMode ?? 0o700);
-  if (!opts.noAuthorKey) fs.writeFileSync(path.join(keys, "oe8apr-tool-author.key"), author, { mode: opts.mode ?? 0o600 });
+  if (!opts.noAuthorKey)
+    fs.writeFileSync(path.join(keys, "oe8apr-tool-author.key"), author, { mode: opts.mode ?? 0o600 });
   fs.writeFileSync(path.join(keys, "registry-authority.key"), authority, { mode: 0o600 });
   return { base, root, keys, author, authority };
 }
@@ -99,15 +107,19 @@ function world(s = {}) {
     if (line.startsWith("git rev-parse --verify --quiet ")) return st.refs.has(args.at(-1)) ? ok("1234\n") : no();
     if (line === "git show origin/dev:CHANGELOG.md") return ok(st.devChangelog);
     if (line === "git show origin/main:CHANGELOG.md") return ok(st.mainChangelog);
-    if (line.startsWith("git ls-remote --tags")) return ok(st.tagged ? `abc\trefs/tags/${args.at(-1).split("/").pop()}\n` : "");
+    if (line.startsWith("git ls-remote --tags"))
+      return ok(st.tagged ? `abc\trefs/tags/${args.at(-1).split("/").pop()}\n` : "");
     if (line === "git tag --list v*") return ok(st.tags.join("\n"));
     if (line === "git remote get-url origin") return ok(`${st.url}\n`);
     if (line === "git diff --stat") return ok(" registry.json | 2 +-\n");
     if (line === "git rev-parse origin/main") return ok("feedface\n");
+    if (line.startsWith("git rev-parse v") && line.endsWith("^{commit}")) return ok(`${st.localTagAt ?? "0ld"}\n`);
     if (line === "git merge-base --is-ancestor origin/dev origin/main") return st.devMovedOn ? no() : ok();
     if (line.startsWith("gh pr create")) st.prOpen = true;
-    if (line.startsWith("gh pr list")) return ok(st.prOpen ? JSON.stringify([{ number: 7, url: "pr/7", headRefOid: "h7" }]) : "[]");
-    if (line.startsWith("gh pr checks") && args.includes("--json")) return ok(JSON.stringify([{ name: "verify", bucket: "pass" }]));
+    if (line.startsWith("gh pr list"))
+      return ok(st.prOpen ? JSON.stringify([{ number: 7, url: "pr/7", headRefOid: "h7" }]) : "[]");
+    if (line.startsWith("gh pr checks") && args.includes("--json"))
+      return ok(JSON.stringify([{ name: "verify", bucket: "pass" }]));
     if (line.startsWith("gh pr view")) return ok(JSON.stringify({ headRefOid: "h7" }));
     if (line === "gh auth status") return st.ghAuth === 0 ? ok() : no("not logged in");
     if (line === "node scripts/verify.mjs --strict") return { status: st.verifyStrict, stdout: "", stderr: "" };
@@ -145,7 +157,8 @@ function harness(fx, w, o = {}) {
 function doctorRun(cmd, args) {
   const ok = () => ({ status: 0, stdout: "", stderr: "" });
   const line = `${cmd} ${args.join(" ")}`;
-  if (line === "git remote get-url origin") return { ...ok(), stdout: "git@github.com:apachler/aprscaching-tools.git\n" };
+  if (line === "git remote get-url origin")
+    return { ...ok(), stdout: "git@github.com:apachler/aprscaching-tools.git\n" };
   if (line === "corepack pnpm --version") return { ...ok(), stdout: "11.9.0\n" };
   return ok();
 }
@@ -175,8 +188,8 @@ describe("release.mjs --dry-run", () => {
     expect(await release(h.ctx)).toBe(0);
     const t = h.text();
     for (const step of ["prepare", "sign", "changelog", "pr-main"]) expect(t).toMatch(new RegExp(`done  ${step}`));
-    expect(t).toMatch(/todo  tag/);
-    expect(t).toMatch(/todo  sync-dev/);
+    expect(t).toMatch(/todo {2}tag/);
+    expect(t).toMatch(/todo {2}sync-dev/);
   });
 
   it("finds a tagged release that dev does not hold yet", async () => {
@@ -185,18 +198,23 @@ describe("release.mjs --dry-run", () => {
     const h = harness(fx, w, { dryRun: true });
     expect(await release(h.ctx)).toBe(0);
     expect(h.text()).toMatch(/v1\.2\.0 is tagged on origin: dev still needs it \(sync-dev\)/);
-    expect(h.text()).toMatch(/done  tag/);
-    expect(h.text()).toMatch(/todo  sync-dev/);
+    expect(h.text()).toMatch(/done {2}tag/);
+    expect(h.text()).toMatch(/todo {2}sync-dev/);
   });
 
   it("finds a tagged release in dev done but for the handover", async () => {
     const fx = fixture({ changelog: DATED("1.2.0") });
-    const w = world({ devChangelog: DATED("1.2.0"), mainChangelog: DATED("1.2.0"), tagged: true, tags: ["v1.1.0", "v1.2.0"] });
+    const w = world({
+      devChangelog: DATED("1.2.0"),
+      mainChangelog: DATED("1.2.0"),
+      tagged: true,
+      tags: ["v1.1.0", "v1.2.0"],
+    });
     const h = harness(fx, w, { dryRun: true });
     expect(await release(h.ctx)).toBe(0);
     expect(h.text()).toMatch(/v1\.2\.0 is tagged on origin: only the handover is left/);
-    expect(h.text()).toMatch(/done  sync-dev/);
-    expect(h.text()).toMatch(/todo  handover/);
+    expect(h.text()).toMatch(/done {2}sync-dev/);
+    expect(h.text()).toMatch(/todo {2}handover/);
   });
 
   it("on the release branch, finds prepare and sign done once verify --strict holds", async () => {
@@ -205,9 +223,9 @@ describe("release.mjs --dry-run", () => {
     w.st.refs.add("refs/heads/release/v1.2.0");
     const h = harness(fx, w, { dryRun: true });
     expect(await release(h.ctx)).toBe(0);
-    expect(h.text()).toMatch(/done  prepare/);
-    expect(h.text()).toMatch(/done  sign/);
-    expect(h.text()).toMatch(/todo  changelog/);
+    expect(h.text()).toMatch(/done {2}prepare/);
+    expect(h.text()).toMatch(/done {2}sign/);
+    expect(h.text()).toMatch(/todo {2}changelog/);
   });
 });
 
@@ -323,7 +341,9 @@ describe("release.mjs steps", () => {
     expect(signAll[0].env.AUTHOR_KEY).toBe(fx.author);
     expect(signAll[0].env.AUTHORITY_KEY).toBe(fx.authority);
     for (const c of w.calls.filter((x) => x.line !== "node scripts/sign-all.mjs"))
-      expect(JSON.stringify(c.env ?? {})).not.toMatch(new RegExp(`${fx.author.slice(0, 20)}|${fx.authority.slice(0, 20)}`));
+      expect(JSON.stringify(c.env ?? {})).not.toMatch(
+        new RegExp(`${fx.author.slice(0, 20)}|${fx.authority.slice(0, 20)}`),
+      );
     expect(h.text()).toContain("sign-all: done [redacted]");
     expect(h.text()).not.toContain(fx.author);
     expect(process.env).toEqual(before);
@@ -404,11 +424,18 @@ describe("the key folder", () => {
     expect(k.author).toBe("/srv/config/aprscaching-tools/keys/oe8apr-tool-author.key");
     expect(k.authority).toBe("/srv/config/aprscaching-tools/keys/registry-authority.key");
     expect(keyFiles({ HOME: "/home/op" }).dir).toBe("/home/op/.config/aprscaching-tools/keys");
-    expect(keyFiles({ HOME: "/home/op", XDG_CONFIG_HOME: "relative" }).dir).toBe("/home/op/.config/aprscaching-tools/keys");
+    expect(keyFiles({ HOME: "/home/op", XDG_CONFIG_HOME: "relative" }).dir).toBe(
+      "/home/op/.config/aprscaching-tools/keys",
+    );
   });
 
   it("takes TOOL_KEYS_DIR and the per-file overrides", () => {
-    const k = keyFiles({ HOME: "/home/op", XDG_CONFIG_HOME: "/srv/config", TOOL_KEYS_DIR: "/vault", TOOL_AUTHORITY_KEY_FILE: "/usb/a.key" });
+    const k = keyFiles({
+      HOME: "/home/op",
+      XDG_CONFIG_HOME: "/srv/config",
+      TOOL_KEYS_DIR: "/vault",
+      TOOL_AUTHORITY_KEY_FILE: "/usb/a.key",
+    });
     expect(k.author).toBe("/vault/oe8apr-tool-author.key");
     expect(k.authority).toBe("/usb/a.key");
   });
@@ -446,7 +473,14 @@ describe("the key folder", () => {
     fs.writeFileSync(path.join(fx.root, "package.json"), JSON.stringify({ packageManager: "pnpm@11.9.0" }));
     const run = (env) => {
       const out = [];
-      const code = doctor({ root: fx.root, run: doctorRun, env, log: (l) => out.push(l), nodeVersion: "24.0.0", install: false });
+      const code = doctor({
+        root: fx.root,
+        run: doctorRun,
+        env,
+        log: (l) => out.push(l),
+        nodeVersion: "24.0.0",
+        install: false,
+      });
       return { code, t: out.join("\n") };
     };
     const ok = run({ HOME: path.join(fx.base, "nohome"), XDG_CONFIG_HOME: config });
@@ -458,6 +492,35 @@ describe("the key folder", () => {
     expect(inside.code).toBe(1);
     expect(inside.t).toMatch(/FAIL {2}the key folder .* lies inside a git working tree/);
     expect(inside.t).not.toContain(fx.author);
+  });
+});
+
+describe("release.mjs arguments and resuming", () => {
+  it("parses the options, and refuses one without its value", () => {
+    expect(parseArgs(["1.3.0", "--step", "tag", "--yes"])).toMatchObject({ version: "1.3.0", step: "tag", yes: true });
+    expect(parseArgs(["1.3.1", "--from", "v1.3.0"])).toMatchObject({ from: "v1.3.0" });
+    expect(parseArgs(["1.3.0", "--step"]).error).toBe("--step needs a value");
+    expect(parseArgs(["1.3.0", "--source", "--yes"]).error).toBe("--source needs a value");
+    expect(parseArgs([]).error).toBe("name the version");
+  });
+
+  it("resumes the tag step when a local tag on main was not pushed yet", async () => {
+    const fx = fixture({ changelog: DATED("1.2.0") });
+    const w = world({ mainChangelog: DATED("1.2.0"), localTagAt: "feedface" });
+    w.st.refs.add("refs/tags/v1.2.0");
+    const h = harness(fx, w, { dryRun: true });
+    expect(await release(h.ctx)).toBe(0);
+    expect(h.text()).toMatch(/ok {4}a local tag v1\.2\.0 is on origin\/main; the tag step pushes it/);
+    expect(h.text()).toMatch(/todo {2}tag/);
+  });
+
+  it("refuses a local tag elsewhere than main", async () => {
+    const fx = fixture({ changelog: DATED("1.2.0") });
+    const w = world({ mainChangelog: DATED("1.2.0") });
+    w.st.refs.add("refs/tags/v1.2.0");
+    const h = harness(fx, w, { dryRun: true });
+    expect(await release(h.ctx)).toBe(1);
+    expect(h.text()).toMatch(/a local tag v1\.2\.0 exists but origin has none/);
   });
 });
 
@@ -476,12 +539,17 @@ describe("release.mjs helpers", () => {
 });
 
 describe("doctor.mjs", () => {
-
   it("passes a ready computer and prints only public keys", () => {
     const fx = fixture();
     fs.writeFileSync(path.join(fx.root, "package.json"), JSON.stringify({ packageManager: "pnpm@11.9.0" }));
     const out = [];
-    const code = doctor({ root: fx.root, run: doctorRun, env: { TOOL_KEYS_DIR: fx.keys }, log: (l) => out.push(l), nodeVersion: "24.0.0" });
+    const code = doctor({
+      root: fx.root,
+      run: doctorRun,
+      env: { TOOL_KEYS_DIR: fx.keys },
+      log: (l) => out.push(l),
+      nodeVersion: "24.0.0",
+    });
     const t = out.join("\n");
     expect(code, t).toBe(0);
     expect(t).toContain(`pass  author key: ${pubOf(fx.author)} (fingerprint ${fingerprint(pubOf(fx.author))})`);
@@ -495,7 +563,13 @@ describe("doctor.mjs", () => {
     const other = genkey();
     fs.writeFileSync(path.join(fx.keys, "registry-authority.key"), other, { mode: 0o600 });
     const out = [];
-    const code = doctor({ root: fx.root, run: doctorRun, env: { TOOL_KEYS_DIR: fx.keys }, log: (l) => out.push(l), nodeVersion: "20.1.0" });
+    const code = doctor({
+      root: fx.root,
+      run: doctorRun,
+      env: { TOOL_KEYS_DIR: fx.keys },
+      log: (l) => out.push(l),
+      nodeVersion: "20.1.0",
+    });
     const t = out.join("\n");
     expect(code).toBe(1);
     expect(t).toMatch(/FAIL {2}Node 20\.1\.0/);
@@ -508,7 +582,14 @@ describe("doctor.mjs", () => {
     const fx = fixture({ noAuthorKey: true });
     const run = (release) => {
       const out = [];
-      const code = doctor({ root: fx.root, run: doctorRun, env: { TOOL_KEYS_DIR: fx.keys }, log: (l) => out.push(l), release, install: false });
+      const code = doctor({
+        root: fx.root,
+        run: doctorRun,
+        env: { TOOL_KEYS_DIR: fx.keys },
+        log: (l) => out.push(l),
+        release,
+        install: false,
+      });
       return { code, t: out.join("\n") };
     };
     expect(run(false).t).toMatch(/warn {2}author key: .*does not exist/);

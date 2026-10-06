@@ -44,6 +44,11 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
   a breaking change is a new major. A tool may use newer optional features through `tool.has()`.
 - `registry.json` carries `"format"`; the authority signature covers it.
 
+## Code style
+`pnpm lint` (ESLint and Prettier, 120 columns) runs in CI; `pnpm format` lays the code out. Prettier leaves Markdown,
+`tool.js`, `tool.json`, `registry.json` and the lockfile alone. Formatting a tool's source can change its built
+`tool.js`: rebuild it, and raise its version as for any change.
+
 ## Docs and comments
 Present tense, what the code is and why, no history. Licence MIT unless a tool declares otherwise in its SPDX line.
 The documentation site is `docs/` (MkDocs, `mkdocs.yml`, published from `main`); it follows the APRScaching manual's

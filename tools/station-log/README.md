@@ -24,7 +24,8 @@ node tools/station-log/serve.mjs
 
 ## Signature
 
-Unsigned. The registry lists it once the author signs `tool.json`.
+Signed by OE8APR's author key, the key in `tool.json`'s `pubkey`. The maintainer signs it again at each release that
+changes it, and the registry lists it with that key.
 
 ## Licence
 

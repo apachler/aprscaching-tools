@@ -15,7 +15,16 @@ are covered by tests that run in CI.
 `test/harness.mjs` is a stand-in for the sandbox. `loadTool(name)` reads `tools/<name>/tool.json`, runs its script
 as the body of a function of `register`, `ipc` and `tool`, with the API of tool API 1.0 and the same permission
 checks, and records what the tool asks of the app. Values cross the boundary through `structuredClone`, as
-`postMessage` copies them.
+`postMessage` copies them, and bus payloads travel as JSON, so a `Date` arrives as its string, as in the app. The
+harness keeps the app's rules where a test could otherwise pass wrongly:
+
+- **The bus.** `provide` is refused for a service another tool holds, and for names that start with `session.` or
+  `host.`; a tool may not publish those topics either. A call to `session.script` without `tx` is refused with the
+  app's reason ([The tool bus](tool-bus.md)).
+- **Transmit format.** `requestTx()` holds what the app would not send, such as a status over 62 characters or one
+  that starts with a grid locator, and resolves `false` ([The sandbox API](sandbox-api.md#toolrequesttxinfo)).
+- **Message size.** A colour-rule set over 64 KB of JSON is dropped and logged, as the app drops a message over its
+  budget ([Limits and budgets](limits.md)).
 
 | Call | Does |
 |---|---|
@@ -26,7 +35,7 @@ checks, and records what the tool asks of the app. Values cross the boundary thr
 | `t.dispatch(event, payload?, reply?)` | Raises an event; `reply` stands for the connected session's reply. Resolves once every handler settled. |
 | `t.panel`, `t.map` | The tool's panel and map layer. |
 | `t.colour(line)` | The colour token the monitor draws for `{ src, dst, text }`, from the tool's colour rules. |
-| `t.state` | What the tool did: `logs`, `txs`, `beacons`, `colourRules`, `commands`, `decoders`. |
+| `t.state` | What the tool did: `logs`, `txs` (sent), `txHeld` (held for their format), `beacons`, `colourRules` and `colourPublishes` (how often it published them), `commands`, `decoders`. |
 | `t.commands()` | The registered command words. |
 
 ## Steps
@@ -96,12 +105,12 @@ checks, and records what the tool asks of the app. Values cross the boundary thr
 
 - a manifest the app accepts, with `"api": "1.0"` and `"entry": "tool.js"`; a tool built here lives in a folder of
   its manifest's name;
-- an entry in `registry.json` with the manifest's name, title, author and version;
+- an entry in `registry.json` with the manifest's name, title, author, version and description;
 - a README with a row for every permission and a **Licence** section, and an `SPDX-License-Identifier: MIT` first
   line in the script and its source.
 
 A new tool has no registry entry until the maintainer adds it. Until then the check prints a warning and passes; with
-`STRICT=1`, which CI sets on `main` and on release tags, it fails.
+`STRICT=1`, which CI sets on `main`, on pull requests into it and on release tags, it fails.
 
 ## Check that it worked
 
