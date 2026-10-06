@@ -5,6 +5,8 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-06
+
 - **Pull requests into `main`.** They come from a `release/vX.Y.Z` branch: `verify`, now a required check on `main`,
   fails any other. Dependabot opens its pull requests against `dev`.
 - **Changelog per pull request.** Each pull request adds its line under Unreleased, and a release dates that section.
