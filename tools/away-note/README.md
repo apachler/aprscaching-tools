@@ -8,7 +8,7 @@ While you are away, a station that connects is told so and may leave a short not
 - `/notes` — read the notes
 - `note <text>` — what a connected peer sends
 
-It shows on: terminal, bbs, node. Connected peers may run its commands, except the ones it keeps for the operator.
+It shows on: terminal, bbs, node. Stations connected to your packet terminal may run its commands, except the ones it keeps for the operator.
 
 ## Permissions
 

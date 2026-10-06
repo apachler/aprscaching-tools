@@ -3,8 +3,8 @@
 // sandbox's worker does (the body of a function of `register`, `ipc` and `tool`), with the API the tool reference
 // documents and the same permission checks, and records what the tool asks of the host. Values cross the boundary
 // through structuredClone, as postMessage copies them; bus payloads travel as JSON, as the app sends them. Several
-// tools can share one bus, with the app's bus rules: no takeover of a held service, `session.` and `host.` names for
-// the app alone, and `tx` for a service that transmits.
+// tools can share one bus, with the app's bus rules: no takeover of a held service, `session.`, `host.` and `link.`
+// names for the app alone (but the `link.ping.request` a tool may publish), and `tx` for a service that transmits.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,8 +34,9 @@ const FEATURES = [
 /** A bus payload as the app delivers it: plain JSON, so a Date arrives as its string. */
 const asJson = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 
-/** Names only the app may provide or publish on. */
-export const RESERVED = /^(session|host)\./;
+/** Names only the app may provide or publish on, and the one request under them a tool may publish. */
+export const RESERVED = /^(session|host|link)\./;
+const TOOL_REQUESTS = new Set(["link.ping.request"]);
 /** The app's services that make the radio transmit: a caller needs 'tx'. */
 const TRANSMITTING = new Set(["session.script"]);
 
@@ -171,7 +172,8 @@ export function loadTool(name, opts = {}) {
     },
     emit: (topic, data) => {
       need("ipc");
-      if (RESERVED.test(String(topic))) throw new Error(`topic "${topic}" is the app's alone`);
+      if (RESERVED.test(String(topic)) && !TOOL_REQUESTS.has(String(topic)))
+        throw new Error(`topic "${topic}" is the app's alone`);
       bus.emit(String(topic), clone(data), name);
     },
     subscribe: (topic, fn) => {

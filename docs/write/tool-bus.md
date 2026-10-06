@@ -37,7 +37,8 @@ const grid = await tool.call("qth.lookup", "OE8APR-9");
   `(host)`. A player cannot install a second tool under a name an installed tool already has, so the name
   identifies the tool.
 - **No takeover.** `provide` is refused for a name another tool or the app holds. Names and topics that start with
-  `session.` or `host.` are the app's alone: a tool may call them or listen to them, never provide or publish them.
+  `session.`, `host.` or `link.` are the app's alone: a tool may call them or listen to them, never provide or publish
+  them, except `link.ping.request`, the one request a tool may publish.
 - **Transmitting services need `tx`.** A service that makes the radio transmit needs `tx` as well as `ipc`. A call
   from a tool without `tx` is refused with `service "<name>" needs the 'tx' permission, which <tool> does not hold`,
   and the service does not run. Holding `tx` does not open the transmit gate: the packet terminal still transmits
@@ -55,8 +56,8 @@ Name your own topics and services after your tool, such as `my-tool.result`, so 
 | `render.blocks` | topic | listened to by [Block art (GIP)](../catalogue/block-art.md) | `ipc` | `{ text }`, or `{ cols, cells }` as in a `blocks` panel node |
 | `session.progress` | topic | the packet terminal, while a TNC is open | `ipc` | The state of a running session script: `{ status, step, total, captured, note }` |
 | `session.script` | service | the packet terminal, while a TNC is open | `ipc` and `tx` | Takes `{ steps }`, a connected-mode script ([below](#sessionscript)); answers `{ ok: true }` |
-| `link.ping.request` | topic | published by [Link ping (RTT)](../catalogue/link-ping.md)'s `/ping` | `ipc` | `{}` |
-| `link.rtt` | topic | the connected surface; listened to by [Link ping (RTT)](../catalogue/link-ping.md) | `ipc` | `{ ms }` |
+| `link.ping.request` | topic | published by [Link ping (RTT)](../catalogue/link-ping.md)'s `/ping`; listened to by the packet terminal while a TNC is open | `ipc` | `{}`. The terminal sends one poll on the channel in view, under its transmit gate and at most one every 10 s; the answer arrives on `link.rtt` |
+| `link.rtt` | topic | the packet terminal, while a TNC is open; listened to by [Link ping (RTT)](../catalogue/link-ping.md) | `ipc` | `{ ms, kind, peerCall, channel, surface }`: the round trip in milliseconds, from a frame's acknowledgement (`kind: "ack"`) or a poll (`"poll"`) |
 
 ### `session.script`
 

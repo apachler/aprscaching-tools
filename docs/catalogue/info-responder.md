@@ -5,7 +5,7 @@ It is for operators who want their station to answer simple questions while they
 
 ## What it does
 
-A connected station, or you, may type:
+A station connected to your packet terminal, or you, may type:
 
 | Command | Answer |
 |---|---|

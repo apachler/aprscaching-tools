@@ -15,7 +15,7 @@ bearing from the first to the second, and shows them in its panel.
 | `/grid JN76` | `JN76 = 46.5000, 15.0000` |
 | `/grid JN76jx JO30` | `JN76JX → JO30: <km> km, bearing <degrees>°`, also in the panel |
 
-A connected station may send `grid <locator> [locator]` and gets the same answer.
+A station connected to your packet terminal may send `grid <locator> [locator]` and gets the same answer.
 
 ## Permissions
 

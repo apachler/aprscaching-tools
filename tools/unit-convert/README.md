@@ -6,7 +6,7 @@ Converts the common ham units: km, mi, m, ft, yd, kn, km/h, nautical miles, and 
 
 - `/conv <value> <from> <to>` — for example `/conv 100 km mi` or `/conv 20 c f`
 
-It shows on: web, terminal, bbs, node. Connected peers may run its commands, except the ones it keeps for the operator.
+It shows on: web, terminal, bbs, node. Stations connected to your packet terminal may run its commands, except the ones it keeps for the operator.
 
 ## Permissions
 
