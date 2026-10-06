@@ -1,6 +1,7 @@
 name: docs
 
-# Builds the documentation site (mkdocs.yml) with --strict on every pull request and push, and publishes it to
+# Builds the documentation site (mkdocs.yml) with --strict on pull requests and pushes to dev and main that touch
+# the paths below, and publishes it to
 # GitHub Pages from main only. main holds only released states, so the site describes the latest release. The
 # catalogue pages read each tool's tool.json and registry.json at build time, so a change there rebuilds the site.
 on:

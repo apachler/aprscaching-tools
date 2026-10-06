@@ -47,7 +47,8 @@ release branch after step 4.
 1. **Doctor.** Run `node scripts/doctor.mjs --release`. Stop on any `FAIL` and tell the user how to fix it; the
    doctor names the command.
 2. **Where the release stands.** Run `node scripts/release.mjs $V --dry-run`. It lists each step as `done` or `todo`;
-   a rerun continues where an earlier one stopped. If everything but `handover` is done, go to step 11.
+   a rerun continues where an earlier one stopped. If everything but `sync-dev` and `handover` is done, go to step
+   11; if only `handover` is left, go to step 12.
 3. **Check the CHANGELOG entry** (skip it when `changelog` is done). Each PR adds its own line under
    `## [Unreleased]`, so that section on `origin/dev` is the draft. Compare it with the PRs merged since the last tag:
 

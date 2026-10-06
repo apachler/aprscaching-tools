@@ -6,7 +6,8 @@
 //
 // The steps, in order:
 //   check      the tree is clean, gh is signed in, the version is new semver, CHANGELOG.md's Unreleased section has
-//              content, the key files exist with mode 600 and match authority.pub and the project's author key;
+//              content, the key files exist with mode 600 in a folder outside every git working tree and match
+//              authority.pub and the project's author key, and every tool folder has a registry entry;
 //   prepare    release/vX.Y.Z from origin/dev (or --from, such as a tag for a hotfix); pnpm install, fetch-libs
 //              --source, build --check;
 //   sign       sign-all with the two keys, which ends in verify --strict;

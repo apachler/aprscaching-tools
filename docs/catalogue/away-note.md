@@ -12,7 +12,7 @@ tool keeps at most 20 notes of 120 characters each, in this page only; they end 
 
 | Command | Who | Does |
 |---|---|---|
-| `/away [message]` | you | Sets you away, with an optional message (`Operator is away.` without one) |
+| `/away [message]` | you | Sets you away, with a message of up to 160 characters. Without one it keeps the last message, `Operator is away.` at first |
 | `/away off` | you | Sets you back |
 | `/notes` | you | Reads the notes |
 | `note <text>` | a connected station | Leaves a note; it answers `Note saved - 73!` |

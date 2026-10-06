@@ -8,6 +8,8 @@
 //   node scripts/fetch-libs.mjs                  # from the repository lib.lock names: a shallow, sparse fetch
 //   node scripts/fetch-libs.mjs --source <dir>   # from a local clone that holds the pinned commit
 //
+// Without --source it reads the clone APRSCACHING_SOURCE names, when that is set.
+//
 // Exits 1 on any failure and leaves no partial vendor/ behind.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";

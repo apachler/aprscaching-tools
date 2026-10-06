@@ -18,7 +18,9 @@ A script is up to 20 steps, separated by `;` or one per line:
 | `waitfor <text> [seconds]` | Waits until a received line contains `<text>`; 60 seconds when left out |
 | `send <line>` | Sends one line |
 | `wait <seconds>` | Waits |
-| `disconnect` | Disconnects |
+| `disconnect` or `bye` | Disconnects |
+
+A line that starts with `#` or `rem` is a comment, and the parser skips a line it does not know.
 
 ## Use it
 

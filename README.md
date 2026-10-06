@@ -68,7 +68,7 @@ locator maths) lives in `lib/` here; `lib.lock` names only libraries the app its
 
 To bump `lib.lock` safely: set `ref` to a full commit (a release tag's commit) that exists on GitHub, then run
 `node scripts/fetch-libs.mjs` and `node scripts/build.mjs --check`. A tool whose check fails changed with its
-libraries: rebuild it, run the tests and sign it again.
+libraries: rebuild it, run the tests, raise its `version` and sign it again.
 
 The app checks the registry's signature against the authority key it pins, and shows a tool as registry-listed
 only when its `tool.json` comes from the address its entry names and carries a signature by the key the entry
@@ -78,8 +78,9 @@ lists.
 
 - **Bundled.** Each APRScaching release ships a tagged release of this registry, so every instance shows it with
   no setup.
-- **Added by source.** A sysop adds `github:apachler/aprscaching-tools@<tag>` under **Instance settings → Tools**
-  to follow a newer tag than the bundled one. Players add the same source in their own **Tools** settings.
+- **Added by address.** A sysop adds `github:apachler/aprscaching-tools@<tag>` under **Instance settings → Tools**
+  to follow a newer tag than the bundled one. Players add the same address in their own **Tools** settings, when
+  the sysop allows it.
 
 Entry addresses are relative to `registry.json`, so the same files work bundled with an instance and served from
 `https://raw.githubusercontent.com/apachler/aprscaching-tools/<tag>/registry.json`.
