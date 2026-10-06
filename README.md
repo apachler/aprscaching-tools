@@ -51,7 +51,7 @@ Worker. The same sources give the same bytes on any machine; CI fails when a com
 fresh build.
 
 ```bash
-corepack enable && pnpm install
+corepack enable && pnpm install --frozen-lockfile --ignore-scripts
 node scripts/fetch-libs.mjs        # or: --source <a local aprscaching clone>
 node scripts/build.mjs             # writes each tools/<name>/tool.js
 pnpm test                          # runs every built tool in a stand-in for the sandbox

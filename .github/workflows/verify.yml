@@ -1,8 +1,12 @@
 name: verify
 
+# On dev, a changed tool stays unsigned until the next release: verify lists unsigned or stale signatures without
+# failing. main holds only fully signed states: there, and in PRs into it, every signature must hold (--strict).
 on:
   push:
+    branches: [dev, main]
   pull_request:
+    branches: [dev, main]
 
 permissions:
   contents: read
@@ -15,12 +19,18 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-      # pnpm is pinned through packageManager; the lockfile is frozen and pnpm-workspace.yaml holds the release-age floor.
-      - run: corepack enable && pnpm install --frozen-lockfile
+      # pnpm is pinned through packageManager; the lockfile is frozen and pnpm-workspace.yaml holds the release-age
+      # floor. No dependency runs an install script: esbuild ships its binary as an optional package.
+      - run: corepack enable && pnpm install --frozen-lockfile --ignore-scripts
       # The MIT libraries the tools bundle, from aprscaching at the commit lib.lock pins.
       - run: node scripts/fetch-libs.mjs
       # Every committed tool.js must be exactly what its sources build to, so the signed bytes are the reviewed ones.
       - run: node scripts/build.mjs --check
       - run: pnpm test
-      # Checks the registry against the authority key in authority.pub and every listed tool against its author key.
-      - run: node scripts/verify.mjs --strict
+      # The registry against the authority key in authority.pub, every listed tool against its author key.
+      - name: verify (dev, unsigned tools listed)
+        if: github.base_ref != 'main' && github.ref != 'refs/heads/main'
+        run: node scripts/verify.mjs
+      - name: verify --strict (main)
+        if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
+        run: node scripts/verify.mjs --strict
