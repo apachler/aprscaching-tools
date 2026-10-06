@@ -90,23 +90,42 @@ node(["scripts/build.mjs", "--check"]);
 
 const regPath = path.join(root, "registry.json");
 const reg = JSON.parse(fs.readFileSync(regPath, "utf8"));
-step(`signing the tools with the author key ${authorPub}`);
+const hosted = (e) => /^[a-z][a-z0-9+.-]*:/i.test(e.entry);
+
+// Check everything before anything is written: a manifest left to another author must still verify as it is, and
+// every local manifest must exist and parse, so a failure never leaves some tool.json files signed and others not.
+step("checking every listed manifest before signing");
+const plan = [];
 for (const e of reg.entries) {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(e.entry)) {
+  if (hosted(e)) {
     console.log(`skip  ${e.name}: hosted by its author at ${e.entry}`);
     continue;
   }
   const file = path.join(root, e.entry);
-  const m = JSON.parse(fs.readFileSync(file, "utf8"));
-  if (m.pubkey && m.pubkey !== authorPub) {
-    // another author's tool keeps its own signature, which must still cover the manifest and the script as they are
+  let m;
+  try {
+    m = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (err) {
+    console.error(`sign-all: ${e.entry} can't be read (${err.message}); nothing was signed`);
+    process.exit(1);
+  }
+  const own = !m.pubkey || m.pubkey === authorPub;
+  if (!own) {
     const why = await signedAsIs(m, path.join(path.dirname(file), m.entry ?? "tool.js"));
     if (why) {
-      console.error(`sign-all: ${e.name} is signed by ${m.pubkey}, not this author key, and ${why}; ask its author to sign it again`);
+      console.error(
+        `sign-all: ${e.name} is signed by ${m.pubkey}, not this author key, and ${why}; ask its author to sign it again. Nothing was signed.`,
+      );
       process.exit(1);
     }
-    console.log(`skip  ${e.name}: signed by its own author key ${m.pubkey}, and the signature holds`);
-  } else node(["scripts/sign.mjs", "manifest", e.entry], process.env.AUTHOR_KEY);
+    console.log(`ok    ${e.name}: signed by its own author key ${m.pubkey}, and the signature holds`);
+  }
+  plan.push({ e, file, own });
+}
+
+step(`signing the tools with the author key ${authorPub}`);
+for (const { e, file, own } of plan) {
+  if (own) node(["scripts/sign.mjs", "manifest", e.entry], process.env.AUTHOR_KEY);
   const signed = JSON.parse(fs.readFileSync(file, "utf8"));
   Object.assign(e, { pubkey: signed.pubkey, title: signed.title, author: signed.author, version: signed.version });
 }
