@@ -27,16 +27,18 @@ tool.on("on_connect", (p) => {
 
 register({
   commands: {
-    note: (args) => {
-      const t = args.trim();
-      if (!t) return ["Usage: NOTE <text>"];
-      notes.push(t.slice(0, 120));
-      if (notes.length > MAX_NOTES) notes.shift();
-      rebuild();
-      return ["Note saved - 73!"];
+    note: {
+      remote: true,
+      run: (args) => {
+        const t = args.trim();
+        if (!t) return ["Usage: NOTE <text>"];
+        notes.push(t.slice(0, 120));
+        if (notes.length > MAX_NOTES) notes.shift();
+        rebuild();
+        return ["Note saved - 73!"];
+      },
     },
     away: {
-      remote: false,
       run: (args) => {
         const a = args.trim();
         if (a.toLowerCase() === "off") {
@@ -50,7 +52,7 @@ register({
         return [`Away on: "${message()}"`];
       },
     },
-    notes: { remote: false, run: () => (notes.length ? [...notes] : ["No notes."]) },
+    notes: () => (notes.length ? [...notes] : ["No notes."]),
   },
 });
 

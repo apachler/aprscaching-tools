@@ -131,8 +131,9 @@ export function loadTool(name, opts = {}) {
   const register = (t) => {
     s.commands = {};
     for (const [w, v] of Object.entries(t?.commands ?? {})) {
-      if (typeof v === "function") s.commands[w] = { run: v, remote: true };
-      else if (v && typeof v.run === "function") s.commands[w] = { run: v.run, remote: v.remote !== false };
+      // as the sandbox does: a command is the operator's alone unless it opts in with { run, remote: true }
+      if (typeof v === "function") s.commands[w] = { run: v, remote: false };
+      else if (v && typeof v.run === "function") s.commands[w] = { run: v.run, remote: v.remote === true };
     }
     if (Array.isArray(t?.colourRules)) s.colourRules = clone(t.colourRules);
     if (t?.panel !== undefined) s.panel = clone(t.panel);

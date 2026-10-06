@@ -95,10 +95,11 @@ describe("sched-query", () => {
 });
 
 describe("auto-status", () => {
-  it("transmits the status as an APRS status packet every N minute ticks", async () => {
+  it("transmits the status as an APRS status packet every N minute ticks, 10 or more", async () => {
     const t = loadTool("auto-status");
-    expect(await t.run("autostatus", "2 QRV on 2m")).toEqual(['Auto-status every 2 min: "QRV on 2m" (TX-gated).']);
-    await t.dispatch("on_tick");
+    expect(await t.run("autostatus", "2 QRV on 2m")).toEqual(['Auto-status every 10 min: "QRV on 2m" (TX-gated).']);
+    expect(await t.run("autostatus", "12 QRV on 2m")).toEqual(['Auto-status every 12 min: "QRV on 2m" (TX-gated).']);
+    for (let i = 0; i < 11; i++) await t.dispatch("on_tick");
     expect(t.state.txs).toEqual([]);
     await t.dispatch("on_tick");
     expect(t.state.txs).toEqual([">QRV on 2m"]);
@@ -110,8 +111,8 @@ describe("auto-status", () => {
   });
   it("logs a held status when the host's gate refuses it", async () => {
     const t = loadTool("auto-status", { tx: () => false });
-    await t.run("autostatus", "1");
-    await t.dispatch("on_tick");
+    await t.run("autostatus", "10");
+    for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
     expect(t.state.txs).toEqual([">APRScaching"]);
     expect(t.state.logs).toEqual(["auto-status held (TX gate closed)"]);
   });

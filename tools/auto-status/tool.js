@@ -3,6 +3,8 @@
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // tools/auto-status/src/index.js
+  var MIN_MINUTES = 10;
+  var STATUS_MAX = 62;
   var everyMin = 0;
   var text = "APRScaching";
   var ticks = 0;
@@ -14,8 +16,8 @@
           everyMin = 0;
           return ["Auto-status off."];
         }
-        everyMin = Math.max(1, Number(parts[0]) || 10);
-        text = parts.slice(1).join(" ") || "APRScaching";
+        everyMin = Math.max(MIN_MINUTES, Math.round(Number(parts[0]) || MIN_MINUTES));
+        text = (parts.slice(1).join(" ") || "APRScaching").slice(0, STATUS_MAX);
         ticks = 0;
         return [`Auto-status every ${everyMin} min: "${text}" (TX-gated).`];
       }

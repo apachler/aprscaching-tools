@@ -19,7 +19,9 @@ const FACTOR = {
 
 register({
   commands: {
-    conv: (args) => {
+    conv: {
+      remote: true,
+      run: (args) => {
       const [nS, from, to] = args.trim().split(/\s+/);
       const n = Number(nS);
       const f = (from ?? "").toLowerCase();
@@ -30,6 +32,7 @@ register({
       const factor = FACTOR[`${f}>${t}`];
       if (factor == null) return [`Can't convert ${from} -> ${to}. Known: km mi m ft yd kn kmh nm, c f.`];
       return [`${n} ${f} = ${(n * factor).toFixed(2)} ${t}`];
+      },
     },
   },
 });

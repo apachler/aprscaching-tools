@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 /* global register, tool */
-// Auto-status: /autostatus <minutes> <text> transmits an APRS status (`>text`) every so many minutes, counted on
-// the host's one-minute tick. Each transmission passes the host's gate: a control-verified callsign and this tab's
+// Auto-status: /autostatus <minutes> <text> transmits an APRS status (`>text`) every so many minutes, 10 or more,
+// counted on the host's one-minute tick. Each transmission passes the host's gate: a control-verified callsign and this tab's
 // transmit consent, at most once a minute. Without them the status is held and the log says so.
 
+const MIN_MINUTES = 10;
+const STATUS_MAX = 62; // an APRS status text
 let everyMin = 0;
 let text = "APRScaching";
 let ticks = 0;
@@ -16,8 +18,8 @@ register({
         everyMin = 0;
         return ["Auto-status off."];
       }
-      everyMin = Math.max(1, Number(parts[0]) || 10);
-      text = parts.slice(1).join(" ") || "APRScaching";
+      everyMin = Math.max(MIN_MINUTES, Math.round(Number(parts[0]) || MIN_MINUTES));
+      text = (parts.slice(1).join(" ") || "APRScaching").slice(0, STATUS_MAX);
       ticks = 0;
       return [`Auto-status every ${everyMin} min: "${text}" (TX-gated).`];
     },

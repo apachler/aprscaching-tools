@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /* global register, tool */
 // Info / menu responder: answers a connected peer's INFO, MENU and WHOIS <call>. WHOIS asks the Station DB tool over
-// the bus. /setinfo, which sets the text peers see, is the operator's alone: a remote peer cannot reach it.
+// the bus; those three opt in to remote peers. /setinfo, which sets the text peers see, is the operator's alone.
 import { asStr } from "../../../lib/text.js";
 
 const DEFAULT_INFO = "APRScaching shack station. Type MENU for commands. 73!";
@@ -20,9 +20,9 @@ function panel() {
 
 register({
   commands: {
-    info: () => [info()],
-    menu: () => ["Commands: INFO  MENU  WHOIS <call>  GRID <loc> [loc]  CONV <n> <from> <to>"],
-    whois: async (args) => {
+    info: { remote: true, run: () => [info()] },
+    menu: { remote: true, run: () => ["Commands: INFO  MENU  WHOIS <call>  GRID <loc> [loc]  CONV <n> <from> <to>"] },
+    whois: { remote: true, run: async (args) => {
       const c = args.trim().toUpperCase();
       if (!c) return ["Usage: WHOIS <CALL>"];
       let type = "";
@@ -32,9 +32,9 @@ register({
         // no Station DB answer: the call reads as not heard
       }
       return [type ? `${c}: ${type}` : `${c}: not heard yet (enable Station DB to classify).`];
-    },
+    } },
+    // the operator's alone: a command without `remote: true` never answers a peer
     setinfo: {
-      remote: false,
       run: (args) => {
         const t = args.trim();
         if (!t) return ["Usage: /setinfo <text peers see>"];

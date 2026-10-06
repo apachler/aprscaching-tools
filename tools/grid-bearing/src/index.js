@@ -24,7 +24,9 @@ function panel(a, pa, b, pb) {
 
 register({
   commands: {
-    grid: (args) => {
+    grid: {
+      remote: true,
+      run: (args) => {
       const [a, b] = args.trim().split(/\s+/);
       const pa = gridToLatLon(a ?? "");
       if (!pa) return ["Usage: grid <locatorA> [locatorB]   e.g.  grid JN76jx JO30"];
@@ -37,6 +39,7 @@ register({
       const db = distBearing(pa, pb);
       tool.setPanel(panel(a, pa, b, { ...pb, ...db }));
       return [`${a.toUpperCase()} → ${b.toUpperCase()}: ${db.km.toFixed(0)} km, bearing ${db.bearing.toFixed(0)}°`];
+      },
     },
   },
 });

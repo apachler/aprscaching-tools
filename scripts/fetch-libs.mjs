@@ -58,10 +58,13 @@ try {
 
 // Every listed path arrived, and every file in it is MIT.
 const files = [];
+// lstat, so a symbolic link is seen as one and refused: it could point outside the pinned paths.
 const walk = (p) => {
-  const st = fs.statSync(p);
+  const st = fs.lstatSync(p);
+  if (st.isSymbolicLink()) fail(`${path.relative(dest, p)} is a symbolic link`);
   if (st.isDirectory()) for (const d of fs.readdirSync(p).sort()) walk(path.join(p, d));
-  else files.push(p);
+  else if (st.isFile()) files.push(p);
+  else fail(`${path.relative(dest, p)} is not a regular file`);
 };
 for (const p of lock.paths) {
   const abs = path.join(dest, p);

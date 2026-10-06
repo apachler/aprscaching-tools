@@ -13,6 +13,7 @@
 //
 // Both values come from genkey.mjs. They stay in the environment of this one command and are never written.
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,6 +44,38 @@ if (authorityPub !== pinned) {
   process.exit(2);
 }
 
+// The canonical bytes, as scripts/verify.mjs and the app build them.
+const stable = (v) =>
+  v === null || typeof v !== "object"
+    ? JSON.stringify(v)
+    : Array.isArray(v)
+      ? `[${v.map(stable).join(",")}]`
+      : `{${Object.keys(v)
+          .filter((k) => v[k] !== undefined)
+          .sort()
+          .map((k) => `${JSON.stringify(k)}:${stable(v[k])}`)
+          .join(",")}}`;
+const b64 = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+
+/** Why a manifest signed by another key no longer holds as it is (its signature or its script hash), or null. */
+async function signedAsIs(m, script) {
+  if (typeof m.signature !== "string") return "it carries no signature";
+  const rest = { ...m };
+  delete rest.signature;
+  let ok = false;
+  try {
+    const key = await crypto.subtle.importKey("raw", b64(m.pubkey), { name: "Ed25519" }, false, ["verify"]);
+    ok = await crypto.subtle.verify("Ed25519", key, b64(m.signature), new TextEncoder().encode(stable(rest)));
+  } catch {
+    ok = false;
+  }
+  if (!ok) return "its signature does not verify (the manifest changed after it was signed)";
+  if (!fs.existsSync(script)) return "its script is missing";
+  const hash = createHash("sha256").update(fs.readFileSync(script)).digest("base64");
+  if (m.entrySha256 !== hash) return "its script does not match the signed entrySha256";
+  return null;
+}
+
 /** Run a script of this repository; `key` is the private value it signs with, passed to it alone. */
 function node(args, key) {
   const env = { ...process.env };
@@ -66,7 +99,13 @@ for (const e of reg.entries) {
   const file = path.join(root, e.entry);
   const m = JSON.parse(fs.readFileSync(file, "utf8"));
   if (m.pubkey && m.pubkey !== authorPub) {
-    console.log(`skip  ${e.name}: signed by its own author key ${m.pubkey}`);
+    // another author's tool keeps its own signature, which must still cover the manifest and the script as they are
+    const why = await signedAsIs(m, path.join(path.dirname(file), m.entry ?? "tool.js"));
+    if (why) {
+      console.error(`sign-all: ${e.name} is signed by ${m.pubkey}, not this author key, and ${why}; ask its author to sign it again`);
+      process.exit(1);
+    }
+    console.log(`skip  ${e.name}: signed by its own author key ${m.pubkey}, and the signature holds`);
   } else node(["scripts/sign.mjs", "manifest", e.entry], process.env.AUTHOR_KEY);
   const signed = JSON.parse(fs.readFileSync(file, "utf8"));
   Object.assign(e, { pubkey: signed.pubkey, title: signed.title, author: signed.author, version: signed.version });

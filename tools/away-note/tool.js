@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Away note 1.0.0, built by scripts/build.mjs from tools/away-note/src, lib/ and the
+// Away note 1.1.0, built by scripts/build.mjs from tools/away-note/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // tools/away-note/src/index.js
@@ -23,16 +23,18 @@
   });
   register({
     commands: {
-      note: (args) => {
-        const t = args.trim();
-        if (!t) return ["Usage: NOTE <text>"];
-        notes.push(t.slice(0, 120));
-        if (notes.length > MAX_NOTES) notes.shift();
-        rebuild();
-        return ["Note saved - 73!"];
+      note: {
+        remote: true,
+        run: (args) => {
+          const t = args.trim();
+          if (!t) return ["Usage: NOTE <text>"];
+          notes.push(t.slice(0, 120));
+          if (notes.length > MAX_NOTES) notes.shift();
+          rebuild();
+          return ["Note saved - 73!"];
+        }
       },
       away: {
-        remote: false,
         run: (args) => {
           const a = args.trim();
           if (a.toLowerCase() === "off") {
@@ -46,7 +48,7 @@
           return [`Away on: "${message()}"`];
         }
       },
-      notes: { remote: false, run: () => notes.length ? [...notes] : ["No notes."] }
+      notes: () => notes.length ? [...notes] : ["No notes."]
     }
   });
   rebuild();

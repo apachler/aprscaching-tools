@@ -69,6 +69,7 @@ for (const name of names) {
       minify: false,
       sourcemap: false,
       alias: { aprscaching: "./vendor/aprscaching" },
+      metafile: true,
       banner: {
         js: [
           "// SPDX-License-Identifier: MIT",
@@ -79,6 +80,11 @@ for (const name of names) {
       logLevel: "silent",
     });
     text = r.outputFiles[0].text;
+    // Only the tool's own source, lib/ and the pinned libraries may enter a bundle: nothing from node_modules or
+    // anywhere else on the machine that builds it.
+    const allowed = [`tools/${name}/src/`, "lib/", "vendor/aprscaching/"];
+    const stray = Object.keys(r.metafile.inputs).filter((f) => !allowed.some((a) => f.startsWith(a)));
+    if (stray.length) throw new Error(`imports from outside its sources: ${stray.join(", ")}`);
   } catch (e) {
     failures++;
     console.error(`FAIL  ${name}: ${e.message}`);
