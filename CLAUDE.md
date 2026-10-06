@@ -27,3 +27,5 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 
 ## Docs and comments
 Present tense, what the code is and why, no history. Licence MIT unless a tool declares otherwise in its SPDX line.
+The documentation site is `docs/` (MkDocs, `mkdocs.yml`, published from `main`); it follows the aprscaching manual's
+style guide, and `mkdocs build --strict` plus Vale gate it. A new tool needs its page `docs/catalogue/<folder>.md`.

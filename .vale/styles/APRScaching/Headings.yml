@@ -1,0 +1,122 @@
+# Headings are sentence case: "Log a find", not "Log A Find". Names keep their capitals (the vocabulary).
+extends: capitalization
+message: "Use sentence case for '%s'."
+level: warning
+scope: heading
+match: $sentence
+indicators:
+  - ":"
+exceptions:
+  - APRS
+  - APRS-IS
+  - APRScaching
+  - aprscaching
+  - Shack
+  - MeshCom
+  - Meshtastic
+  - IGate
+  - Tier A
+  - Tier B
+  - Tier C
+  - NET/ROM
+  - BBS
+  - FBB
+  - AX.25
+  - KISS
+  - TNC
+  - TCP
+  - UDP
+  - HTTP
+  - HTTPS
+  - API
+  - CLI
+  - R2
+  - Cloudflare
+  - Docker
+  - Caddy
+  - Pocket
+  - Termux
+  - Android
+  - Bun
+  - SQLite
+  - Raspberry Pi
+  - OCI
+  - Oracle
+  - Oracle Cloud
+  - WireGuard
+  - HAMNET
+  - 44Net Connect
+  - CAT
+  - CWOP
+  - PWS
+  - WX
+  - SOTA
+  - POTA
+  - WWFF
+  - TAK
+  - CoT
+  - AGPL
+  - GDPR
+  - DSGVO
+  - Maidenhead
+  - LoTW
+  - Mermaid
+  - MkDocs
+  - Vale
+  - Web Serial
+  - Web Bluetooth
+  - Bluetooth
+  - BLE
+  - USB
+  - SDR
+  - RF
+  - ExtUDP
+  - T-Deck
+  - T-Beam
+  - Direwolf
+  - SSID
+  - JSON
+  - CBOR
+  - Ed25519
+  - DNS
+  - TLS
+  - VM
+  - CI
+  - OE8APR
+  - FAQ
+  - LAN
+  - AXUDP
+  - AXIP
+  - 44Net
+  - AMPRNet
+  - CW
+  - PSK31
+  - WA8DED
+  - TheFirmware
+  - TFPCX
+  - Via-Calls
+  - AGWPE
+  - SoundModem
+  - UZ7HO
+  - INP3
+  - ARDC
+  - LoRa
+  - Cloudflare Tunnel
+  - LilyGO
+  - T-Deck Plus
+  - SD
+  - GitHub
+  - GitHub Pages
+  - MHeard
+  - CTEXT
+  - DB
+  - Station DB
+  - NAMES.GP
+  - GIP
+  - RTT
+  - GPAUTO
+  - 7PLUS
+  - ANSI
+  - CP437
+  - ROT13
+  - GitHub Actions

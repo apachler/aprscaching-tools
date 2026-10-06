@@ -1,0 +1,78 @@
+name: docs
+
+# Builds the documentation site (mkdocs.yml) with --strict on every pull request and push, and publishes it to
+# GitHub Pages from main only. main holds only released states, so the site describes the latest release. The
+# catalogue pages read each tool's tool.json and registry.json at build time, so a change there rebuilds the site.
+on:
+  push:
+    branches: [dev, main]
+    paths: &paths
+      - "docs/**"
+      - "docs-hooks/**"
+      - "mkdocs.yml"
+      - "tools/**"
+      - "registry.json"
+      - "authority.pub"
+      - "scripts/fetch-mermaid.mjs"
+      - ".vale.ini"
+      - ".vale/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [dev, main]
+    paths: *paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: mkdocs build --strict
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Vale, pinned by version and checksum: an error (filler words, terminology) fails, the rest is shown
+      - name: vale (house style)
+        env:
+          VALE: "3.24.0"
+          VALE_SHA256: 867534ddb678abca7f214bc4706ead0922bd5252ffe8035fc227013f66c8b214
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/vale.tgz" \
+            "https://github.com/errata-ai/vale/releases/download/v${VALE}/vale_${VALE}_Linux_64-bit.tar.gz"
+          echo "$VALE_SHA256  $RUNNER_TEMP/vale.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/vale.tgz" -C "$RUNNER_TEMP" vale
+          "$RUNNER_TEMP/vale" docs
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      # Mermaid for the diagrams, checked against its pinned integrity; the site serves its own copy
+      - run: node scripts/fetch-mermaid.mjs
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+      - run: pip install -r docs/requirements.txt
+      - run: mkdocs build --strict
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    name: publish to Pages
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write # publish the built site
+      id-token: write # OIDC token deploy-pages exchanges for the deployment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

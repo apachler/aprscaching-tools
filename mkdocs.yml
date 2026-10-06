@@ -1,0 +1,146 @@
+# The documentation site of the aprscaching tool registry.
+# Serve it locally:  python3 -m venv .venv && .venv/bin/pip install -r docs/requirements.txt
+#                    node scripts/fetch-mermaid.mjs && .venv/bin/mkdocs serve
+# Build it:          mkdocs build --strict      (.github/workflows/docs.yml publishes main to GitHub Pages)
+site_name: aprscaching tools
+site_description: >-
+  The tool registry for aprscaching: the tools, how to write one, the tool API and how to publish a registry.
+site_url: https://apachler.github.io/aprscaching-tools/
+repo_url: https://github.com/apachler/aprscaching-tools
+repo_name: apachler/aprscaching-tools
+edit_uri: edit/dev/docs/
+copyright: >-
+  The documentation, the registry and the scripts are MIT; each tool is under the licence it declares. APRS® is a
+  registered trademark (U.S. Reg. No. 2058846). aprscaching is not affiliated with or endorsed by the holder of the
+  APRS® mark.
+
+docs_dir: docs
+
+# The build's own inputs, not pages
+exclude_docs: |
+  requirements.txt
+
+# A link to a missing heading fails `mkdocs build --strict`, the same as a link to a missing page.
+validation:
+  anchors: warn
+
+# Facts read from the repository (versions, the authority key) and the house-style checks Vale cannot make.
+hooks:
+  - docs-hooks/site.py
+
+theme:
+  name: material
+  # The aprscaching app's look, as its manual has it: colours, type and shape from the app's design tokens
+  # (docs/stylesheets/tokens.css). The schemes are the app's Dark (slate), Light (default) and Phosphor themes;
+  # the first two follow the system until the reader picks one.
+  font: false # the fonts are bundled; nothing is fetched from Google Fonts
+  logo: assets/brand/beacon-green.png
+  favicon: assets/brand/favicon.png
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/console
+        name: Switch to Phosphor
+    - scheme: phosphor
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - content.code.copy
+    - search.highlight
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  # ```mermaid blocks become diagrams. Material draws them with the site's own copy of Mermaid, which the hooks
+  # load only on a page that has one (scripts/fetch-mermaid.mjs fetches it).
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_css:
+  - stylesheets/tokens.css
+  - stylesheets/aprscaching.css
+
+nav:
+  - Home: index.md
+  - Tool catalogue:
+      - catalogue/index.md
+      - Decoders:
+          - Packet decoder: catalogue/packet-decoder.md
+          - PSK31 + CW decoders: catalogue/digimode-decoders.md
+          - 7PLUS reassembler: catalogue/sevenplus.md
+      - Monitor and station tools:
+          - MHeard: catalogue/mheard.md
+          - Watch & alert: catalogue/watch-alert.md
+          - Monitor colouriser: catalogue/monitor-colouriser.md
+          - Station DB (NAMES.GP): catalogue/station-db.md
+          - Station log: catalogue/station-log.md
+          - Connect bell: catalogue/connect-bell.md
+          - Link ping (RTT): catalogue/link-ping.md
+      - Responders:
+          - Auto-responder: catalogue/auto-responder.md
+          - Away note: catalogue/away-note.md
+          - Info / menu responder: catalogue/info-responder.md
+      - Transmit tools:
+          - Auto-status: catalogue/auto-status.md
+          - Beacon scheduler: catalogue/beacon-scheduler.md
+          - Scheduled query (GPAUTO): catalogue/sched-query.md
+      - Utilities:
+          - CTEXT macro pack: catalogue/ctext-macros.md
+          - Grid & bearing: catalogue/grid-bearing.md
+          - Unit converter: catalogue/unit-convert.md
+          - CW encoder: catalogue/cw-encoder.md
+          - Map waypoints: catalogue/map-waypoints.md
+          - Block art (GIP): catalogue/block-art.md
+          - APRS SSID guide: catalogue/aprs-ssid-guide.md
+          - Hello tool: catalogue/hello.md
+  - Write a tool:
+      - Write your first tool: write/first-tool.md
+      - How a tool runs: write/how-a-tool-runs.md
+      - The manifest: write/manifest.md
+      - The sandbox API: write/sandbox-api.md
+      - The tool bus: write/tool-bus.md
+      - Limits and budgets: write/limits.md
+      - Build with the shared libraries: write/build.md
+      - Test a tool: write/test.md
+      - Sign a tool: write/sign.md
+  - Tool API versions:
+      - Versions and compatibility: api/index.md
+      - API changelog: api/changelog.md
+  - Publish a registry:
+      - How registries work: publish/index.md
+      - Host a registry on GitHub: publish/github.md
+      - The registry file: publish/registry-file.md
+      - Keys, rotation and release practice: publish/keys-and-releases.md
+  - The project registry:
+      - Contribute a tool: project/contribute.md
+      - Maintain the registry: project/maintain.md
