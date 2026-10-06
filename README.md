@@ -1,5 +1,7 @@
 # APRScaching tools
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/apachler/aprscaching-tools/badge)](https://scorecard.dev/viewer/?uri=github.com/apachler/aprscaching-tools)
+
 The project's tool registry for APRScaching 1.x: a signed list of tools for the Shack's **Tools** app, and the
 tools it lists. The app ships no tools of its own: every tool, the project's first-party ones included, comes from
 a registry, is installed by the player on demand and runs in the app's sandbox.
@@ -66,7 +68,7 @@ locator maths) lives in `lib/` here; `lib.lock` names only libraries the app its
 
 To bump `lib.lock` safely: set `ref` to a full commit (a release tag's commit) that exists on GitHub, then run
 `node scripts/fetch-libs.mjs` and `node scripts/build.mjs --check`. A tool whose check fails changed with its
-libraries: rebuild it, run the tests and sign it again.
+libraries: rebuild it, run the tests, raise its `version` and sign it again.
 
 The app checks the registry's signature against the authority key it pins, and shows a tool as registry-listed
 only when its `tool.json` comes from the address its entry names and carries a signature by the key the entry
@@ -76,8 +78,9 @@ lists.
 
 - **Bundled.** Each APRScaching release ships a tagged release of this registry, so every instance shows it with
   no setup.
-- **Added by source.** A sysop adds `github:apachler/aprscaching-tools@<tag>` under **Instance settings → Tools**
-  to follow a newer tag than the bundled one. Players add the same source in their own **Tools** settings.
+- **Added by address.** A sysop adds `github:apachler/aprscaching-tools@<tag>` under **Instance settings → Tools**
+  to follow a newer tag than the bundled one. Players add the same address in their own **Tools** settings, when
+  the sysop allows it.
 
 Entry addresses are relative to `registry.json`, so the same files work bundled with an instance and served from
 `https://raw.githubusercontent.com/apachler/aprscaching-tools/<tag>/registry.json`.
@@ -127,5 +130,9 @@ node scripts/fetch-mermaid.mjs
 
 ## Licence
 
-The registry file, the scripts and the documentation are MIT ([LICENSE](LICENSE)). Each tool is under the licence
-it declares in its own directory.
+The repository's own files are MIT ([LICENSE](LICENSE)): `registry.json`, `authority.pub`, the scripts, `lib/`, the
+tests, the workflows, the documentation site and its stylesheets.
+
+The tools are not covered by that licence. Each directory under `tools/` is its author's work under the licence the
+tool declares: an `SPDX-License-Identifier` line at the top of its script and a **Licence** section in its
+`README.md`. That licence applies to every file in the tool's directory.

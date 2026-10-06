@@ -10,6 +10,7 @@ It is for tool authors who want a tool that never hits one by surprise. Every nu
 | A command's answer | 200 lines of 1000 characters | The rest is cut |
 | A command, decoder, service or bus call | Settles within 10 seconds | The caller gets an error; a command reads `error: the tool did not answer` |
 | Loading | The script registers within 15 seconds | `Install failed: the tool did not start in time` |
+| A decoder's answer | 20,000 characters | Cut |
 | A decoder's `sample` | 2000 characters | Cut |
 | A decoder's `placeholder` | 120 characters | Cut |
 | A `tool.log()` line | 300 characters | Cut |
@@ -27,8 +28,8 @@ It is for tool authors who want a tool that never hits one by surprise. Every nu
 | A `badge` node | 40 characters |
 | A `table` node | 8 columns of 40 characters; 100 rows of 8 cells of 80 characters |
 | A `blocks` node | 1 to 200 columns; 4000 cells of one character |
-| Colour rules without `src` | 40 |
-| Colour rules with `src` | 2000, one per callsign |
+| Colour rules in `register()` | 40, with `src` or without |
+| Colour rules in `tool.setColourRules()` | 40 without `src`, and 2000 with `src`, one per callsign; all of them travel in one message, which may hold 64 KB of JSON, so about 1200 rules of long callsigns fit |
 | Points in a map layer | 2000, each with a label of 40 characters and a glyph of 2 |
 
 ## The message budget

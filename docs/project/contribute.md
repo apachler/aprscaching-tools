@@ -38,8 +38,9 @@ checks.
     `new-tool.mjs` writes everything the review and the documentation build check, as a working `/cw-trainer`
     command that asks only for `command`:
 
-    - `tools/<name>/tool.json`, with `"entry": "tool.js"`, `"api": "1.0"`, version `1.0.0` and the MIT licence
-      ([The manifest](../write/manifest.md));
+    - `tools/<name>/tool.json`, with `"entry": "tool.js"`, `"api": "1.0"` and version `1.0.0`
+      ([The manifest](../write/manifest.md)); the MIT licence is in the script's SPDX line and the README's
+      **Licence** section;
     - `tools/<name>/src/index.js`, the source, and the built `tool.js`
       ([Build with the shared libraries](../write/build.md));
     - `tools/<name>/README.md`, with a **Permissions** table and a **Licence** section;
@@ -52,7 +53,9 @@ checks.
     `tool.json` and to both **Permissions** tables, with why it needs it; give a tool with `tx` or `beacon` a
     **What it transmits** section; extend the test; move the catalogue row and the nav entry to the group that fits.
     `--author <callsign>` sets the author, which is OE8APR by default. In Claude Code, `/new-tool <name>` takes you
-    through these steps to the pull request (`.claude/skills/new-tool/SKILL.md`).
+    through these steps to the pull request (`.claude/skills/new-tool/SKILL.md`). A tool you built with
+    [Write your first tool](../write/first-tool.md) has all of this already; bring its files onto the branch and go
+    on with the next step.
 
 4. Sign the manifest with your author key. The signature covers the script through `entrySha256`; sign again after
    every change:

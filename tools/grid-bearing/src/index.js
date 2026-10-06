@@ -27,18 +27,18 @@ register({
     grid: {
       remote: true,
       run: (args) => {
-      const [a, b] = args.trim().split(/\s+/);
-      const pa = gridToLatLon(a ?? "");
-      if (!pa) return ["Usage: grid <locatorA> [locatorB]   e.g.  grid JN76jx JO30"];
-      if (!b) {
-        tool.setPanel(panel(a, pa));
-        return [`${a.toUpperCase()} = ${fix(pa)}`];
-      }
-      const pb = gridToLatLon(b);
-      if (!pb) return [`Bad locator: ${b}`];
-      const db = distBearing(pa, pb);
-      tool.setPanel(panel(a, pa, b, { ...pb, ...db }));
-      return [`${a.toUpperCase()} → ${b.toUpperCase()}: ${db.km.toFixed(0)} km, bearing ${db.bearing.toFixed(0)}°`];
+        const [a, b] = args.trim().split(/\s+/);
+        const pa = gridToLatLon(a ?? "");
+        if (!pa) return ["Usage: grid <locatorA> [locatorB]   e.g.  grid JN76jx JO30"];
+        if (!b) {
+          tool.setPanel(panel(a, pa));
+          return [`${a.toUpperCase()} = ${fix(pa)}`];
+        }
+        const pb = gridToLatLon(b);
+        if (!pb) return [`Bad locator: ${b}`];
+        const db = distBearing(pa, pb);
+        tool.setPanel(panel(a, pa, b, { ...pb, ...db }));
+        return [`${a.toUpperCase()} → ${b.toUpperCase()}: ${db.km.toFixed(0)} km, bearing ${db.bearing.toFixed(0)}°`];
       },
     },
   },

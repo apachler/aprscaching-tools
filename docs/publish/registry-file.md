@@ -16,7 +16,7 @@ anyone who checks a registry by hand.
       "version": "1.0.0",
       "pubkey": "uibFUCjcBnxAe8mRQ1v2neJd0fPV_7Vs0Y59K5vH5Oc",
       "entry": "tools/hello/tool.json",
-      "description": "Example signed tool: command, colour rule, panel, ROT13 decoder."
+      "description": "Example signed tool: a command, colour rule, panel and a ROT13 decoder."
     }
   ],
   "authority": "<!-- authority-key -->",

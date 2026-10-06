@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // SPDX-License-Identifier: MIT
 // Generate an Ed25519 tool-author (or registry-authority) signing key — the key used to sign a tool.json
 // manifest or a signed tool registry. WebCrypto Ed25519, same algorithm as everywhere else.

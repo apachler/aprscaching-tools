@@ -6,8 +6,9 @@ operators who collect binary files from a packet BBS.
 ## What it does
 
 7PLUS is the packet-BBS way to move a binary file as 7-bit text, split across numbered messages. The decoder finds
-the `go_7+.` and `stop_7+` markers and the `part N of M` header in what you paste, and reports the file name, the
-part and whether the block is complete. It does not rebuild the binary file.
+the `go_7+.` and `stop_7+` markers and every part header in what you paste, either `go_7+. 001 of 003 NAME` or
+`part N of M`, and reports the file name, the parts found and the parts still missing. It does not rebuild the
+binary file.
 
 ## Use it
 
@@ -15,7 +16,8 @@ part and whether the block is complete. It does not rebuild the binary file.
 2. Paste one or more parts as the BBS shows them.
 3. Select **Decode**.
 
-The answer names the file, the parts it found and whether each block is complete.
+The answer names the file, the parts it found and the parts still missing, such as `status: incomplete — missing
+part(s) 2, 3`. Once every part is there and each ends in its `stop_7+` line, it reads `status: complete`.
 
 ## Permissions
 

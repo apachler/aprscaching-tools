@@ -9,8 +9,8 @@ The tool classifies every station it hears with the NAMES.GP rules (BBS, node, d
 IGate and more) and colours that station's lines with the type's colour token, such as `--st-bbs`. The app's theme
 decides the actual colours.
 
-It publishes one colour rule per heard station, at most once a second, so a station takes its colour from the first
-frame the tool classified. It keeps the last 2000 stations.
+It publishes one colour rule per heard station, at most once a second, so a station takes its colour from the latest
+frame the tool classified. It keeps the 1200 stations heard most recently, so that the rules fit in one message.
 
 ## Use it
 

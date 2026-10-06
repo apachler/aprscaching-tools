@@ -5,7 +5,7 @@ Runs a connect / waitfor / send / disconnect script against a BBS or a DX cluste
 ## Use it
 
 - `/gpauto connect HB9W-8; waitfor Cluster; send sh/dx; disconnect` — run now
-- `/gpauto every <minutes> <steps>` — run now and then on schedule; `/gpauto off` stops it
+- `/gpauto every <minutes> <steps>` — run now and then every `<minutes>`, 10 or more, each run's outcome in the tool log; `/gpauto off` stops it
 - `/gpauto run` — run the stored script again
 
 It shows on: terminal, node.
@@ -30,7 +30,8 @@ fresh build.
 
 ## Signature
 
-Unsigned until the maintainer signs `tool.json` with the author key; the registry lists it once it is signed.
+Signed by OE8APR's author key, the key in `tool.json`'s `pubkey`. The maintainer signs it again at each release that
+changes it, and the registry lists it with that key.
 
 ## Licence
 

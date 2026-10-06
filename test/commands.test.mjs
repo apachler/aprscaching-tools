@@ -35,6 +35,7 @@ describe("unit-convert", () => {
     expect((await t.run("conv", "100 km mi"))[0]).toMatch(/62\.14 mi/);
     expect((await t.run("conv", "0 c f"))[0]).toMatch(/32\.0 F/);
     expect((await t.run("conv", "212 f c", { remote: true }))[0]).toBe("212 F = 100.0 C");
+    expect((await t.run("conv", "10 kn km/h"))[0]).toBe("10 kn = 18.52 kmh");
     expect((await t.run("conv", "1 km parsec"))[0]).toMatch(/^Can't convert km -> parsec/);
     expect((await t.run("conv", "x"))[0]).toMatch(/^Usage/);
   });
@@ -59,7 +60,17 @@ describe("block-art", () => {
     expect(b.cells.map((c) => c.ch).join("")).toBe("ABCD");
     bus.emit("render.blocks", { text: "XY" }, "another-tool");
     expect(t.panel.nodes[0].cells.map((c) => c.ch).join("")).toBe("XY");
-    bus.emit("render.blocks", { cols: 999, cells: [{ ch: "QZ", c: 3 }, { ch: "!", c: 99 }] }, "another-tool");
+    bus.emit(
+      "render.blocks",
+      {
+        cols: 999,
+        cells: [
+          { ch: "QZ", c: 3 },
+          { ch: "!", c: 99 },
+        ],
+      },
+      "another-tool",
+    );
     b = t.panel.nodes[0];
     expect(b.cols).toBe(200);
     expect(b.cells).toEqual([{ ch: "Q", c: 3 }, { ch: "!" }]);

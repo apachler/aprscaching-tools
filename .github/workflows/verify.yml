@@ -32,6 +32,8 @@ jobs:
       # pnpm is pinned through packageManager; the lockfile is frozen and pnpm-workspace.yaml holds the release-age
       # floor. No dependency runs an install script: esbuild ships its binary as an optional package.
       - run: corepack enable && pnpm install --frozen-lockfile --ignore-scripts
+      # ESLint for code mistakes, Prettier for the layout (Markdown and the signed and built files are left out)
+      - run: pnpm lint
       # The MIT libraries the tools bundle, from APRScaching at the commit lib.lock pins.
       - run: node scripts/fetch-libs.mjs
       # Every committed tool.js must be exactly what its sources build to, so the signed bytes are the reviewed ones.

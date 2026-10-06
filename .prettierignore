@@ -1,0 +1,12 @@
+# Prettier formats the code. Markdown keeps its hand-aligned tables; signed, built and generated files are left as
+# they are, since their bytes are signed or reproduced exactly.
+*.md
+node_modules/
+vendor/
+site/
+docs/assets/vendor/
+pnpm-lock.yaml
+registry.json
+tools/*/tool.json
+tools/*/tool.js
+docs/stylesheets/

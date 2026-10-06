@@ -1,0 +1,34 @@
+name: Tool proposal
+description: Propose a tool for the project registry, before or instead of writing it.
+labels: ["tool proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ready to submit a working tool? Open a pull request into `dev` instead; the steps are in
+        [Contribute a tool](https://apachler.github.io/aprscaching-tools/project/contribute/).
+  - type: textarea
+    id: what
+    attributes:
+      label: What the tool does
+      description: Who uses it, and what for. Its commands, panels or decoders.
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Permissions it needs, and why
+      description: |
+        From command, monitor, event, decoder, panel, map, ipc, beacon, network, tx, geo. For `tx` or `beacon`:
+        what it transmits, when and how often. For `network`: which origins and what it sends there.
+    validations:
+      required: true
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who writes it
+      options:
+        - I will write it and open a pull request
+        - I am looking for someone to write it
+    validations:
+      required: true

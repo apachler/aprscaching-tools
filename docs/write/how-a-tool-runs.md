@@ -69,7 +69,7 @@ sequenceDiagram
     participant Tool as Tool worker
     App->>Frame: create, with its CSP
     Frame-->>App: ready
-    App->>Tool: load (script, network, ipc, permissions)
+    App->>Tool: load (script, network, ipc, permissions, api, features)
     Tool->>Tool: run the script, which calls register()
     Tool-->>App: loaded (commands, remoteOff, colourRules, panel, decoders)
     App->>Tool: cmd (id, word, args)
@@ -84,11 +84,11 @@ sequenceDiagram
 | Message | Direction | Payload | Notes |
 |---|---|---|---|
 | `ready` | frame → app | none | The frame is up; the app answers with `load`. |
-| `load` | app → worker | `script`, `network`, `ipc`, `permissions` | Without `network`, the worker removes the network APIs before it runs the script. |
+| `load` | app → worker | `script`, `network`, `ipc`, `permissions`, `api`, `features` | Without `network`, the worker removes the network APIs before it runs the script. `api` (`{ major, minor }`) becomes `tool.api`, and `features` is the list `tool.has()` checks. |
 | `loaded` | worker → app | `commands`, `remoteOff`, `colourRules`, `panel`, `decoders` | Lists are cut to 200 entries, colour rules to 40. |
 | `error` | worker or frame → app | `error` | The script threw while loading, or the worker failed. Cut to 500 characters. |
 | `cmd` · `cmdResult` | app → worker · back | `id`, `word`, `args` · `id`, `lines` | |
-| `decode` · `decodeResult` | app → worker · back | `id`, `decId`, `input` · `id`, `out` | |
+| `decode` · `decodeResult` | app → worker · back | `id`, `decId`, `input` · `id`, `out` | `out` is cut to 20,000 characters. |
 | `panel` | worker → app | `spec` | Trimmed to the panel limits before display; needs `panel`. |
 | `map` | worker → app | `spec` | Trimmed; needs `map`. |
 | `colours` | worker → app | `rules` | Needs `monitor`. |

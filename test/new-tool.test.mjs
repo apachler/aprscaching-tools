@@ -28,17 +28,34 @@ describe("new-tool.mjs", () => {
     const { written } = createTool(dir, { name: "qso-timer", title: "QSO timer: A & B" });
     expect(written).toContain("tools/qso-timer/src/index.js");
     const m = JSON.parse(fs.readFileSync(path.join(dir, "tools/qso-timer/tool.json"), "utf8"));
-    expect(m).toMatchObject({ name: "qso-timer", author: "OE8APR", version: "1.0.0", api: "1.0", permissions: ["command"] });
+    expect(m).toMatchObject({
+      name: "qso-timer",
+      author: "OE8APR",
+      version: "1.0.0",
+      api: "1.0",
+      permissions: ["command"],
+    });
     const page = fs.readFileSync(path.join(dir, "docs/catalogue/qso-timer.md"), "utf8");
     expect(page.split("\n")[0]).toBe("# QSO timer: A & B");
     expect(page).toContain("| `command` | Registers `/qso-timer` |");
     expect(page).toContain("<!-- tool-facts -->");
-    expect(page.trimEnd().split("\n").filter((l) => l.startsWith("## ")).at(-1)).toBe("## Next");
+    expect(
+      page
+        .trimEnd()
+        .split("\n")
+        .filter((l) => l.startsWith("## "))
+        .at(-1),
+    ).toBe("## Next");
     const index = fs.readFileSync(path.join(dir, "docs/catalogue/index.md"), "utf8");
     const utilities = index.slice(index.indexOf("## Utilities"), index.indexOf("## Next"));
-    expect(utilities).toContain("| [QSO timer: A & B](qso-timer.md) | Answers /qso-timer with a line of its own | `command` |");
+    expect(utilities).toContain(
+      "| [QSO timer: A & B](qso-timer.md) | Answers /qso-timer with a line of its own | `command` |",
+    );
     const nav = fs.readFileSync(path.join(dir, "mkdocs.yml"), "utf8");
-    expect(nav).toMatch(/\n {10}- Hello tool: catalogue\/hello\.md\n {10}- "QSO timer: A & B": catalogue\/qso-timer\.md\n/);
+    // right after the group's last page, whichever tool that is
+    expect(nav).toMatch(
+      /\n {10}- [^\n]+: catalogue\/[a-z0-9-]+\.md\n {10}- "QSO timer: A & B": catalogue\/qso-timer\.md\n/,
+    );
   });
 
   it("writes a source that answers its command", () => {
@@ -58,6 +75,35 @@ describe("new-tool.mjs", () => {
     const index = fs.readFileSync(path.join(dir, "docs/catalogue/index.md"), "utf8");
     expect(() => createTool(dir, { name: "twice" })).toThrow(/exists already/);
     expect(fs.readFileSync(path.join(dir, "docs/catalogue/index.md"), "utf8")).toBe(index);
+  });
+
+  it("writes working code for a title with quotes, backticks and brackets", () => {
+    const dir = scratch();
+    const title = 'Bob\'s "best" `tool` [x|y]';
+    createTool(dir, { name: "odd-title", title });
+    let registered;
+    const src = fs.readFileSync(path.join(dir, "tools/odd-title/src/index.js"), "utf8");
+    new Function("register", "ipc", "tool", src)((t) => (registered = t), undefined, {});
+    expect(registered.commands["odd-title"]("hi")).toEqual([`${title}: hi`]);
+    const test = fs.readFileSync(path.join(dir, "test/odd-title.test.mjs"), "utf8");
+    expect(() => new Function(test.replace(/^import .*$/gm, ""))).not.toThrow(); // the test file parses
+    const index = fs.readFileSync(path.join(dir, "docs/catalogue/index.md"), "utf8");
+    expect(index).toContain('| [Bob\'s "best" `tool` \\[x\\|y\\]](odd-title.md) |');
+  });
+
+  it("escapes a backslash and a pipe in the description's catalogue row", () => {
+    const dir = scratch();
+    createTool(dir, { name: "slashy", description: "Splits a|b on C:\\path\\" });
+    const index = fs.readFileSync(path.join(dir, "docs/catalogue/index.md"), "utf8");
+    expect(index).toContain("| Splits a\\|b on C:\\\\path\\\\ | `command` |");
+  });
+
+  it("refuses a name another tool's manifest holds, and a title over one line", () => {
+    const dir = scratch();
+    fs.mkdirSync(path.join(dir, "tools/hello"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "tools/hello/tool.json"), JSON.stringify({ name: "hello-tool" }));
+    expect(() => createTool(dir, { name: "hello-tool" })).toThrow(/a tool named "hello-tool" exists already/);
+    expect(() => createTool(dir, { name: "two-lines", title: "a\nb" })).toThrow(/one line/);
   });
 
   it("titles a name", () => {

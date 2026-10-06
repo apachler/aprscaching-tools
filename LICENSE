@@ -19,14 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----------------------------------------------------------------------------
-
-Scope. This MIT licence covers the repository's own files: registry.json,
-authority.pub, the scripts under scripts/, the workflow under .github/ and the
-documentation at the top level.
-
-It does not cover the tools. Each directory under tools/ is its author's work
-under the licence that tool declares: an SPDX-License-Identifier line at the top
-of its script and a "Licence" section in its README.md. A tool's licence applies
-to every file in its directory.

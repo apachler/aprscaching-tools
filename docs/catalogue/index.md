@@ -43,8 +43,8 @@ Answer a station that connects to you.
 
 ## Transmit tools
 
-Transmit under your callsign. Each needs your control-verified callsign and your transmit consent for the tab, and
-each tool may transmit at most once a minute and six times an hour.
+Transmit under your callsign. Each needs your control-verified callsign and a transmit consent (the tab's, or for
+Scheduled query the packet terminal's own), and each tool may transmit at most once a minute and six times an hour.
 
 | Tool | What it does | Permissions |
 |---|---|---|

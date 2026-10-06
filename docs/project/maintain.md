@@ -31,14 +31,14 @@ on the computer that signs, holding the value `node scripts/genkey.mjs --raw` pr
 
 - `TOOL_KEYS_DIR` when it is set;
 - otherwise `$XDG_CONFIG_HOME/aprscaching-tools/keys`, which is `~/.config/aprscaching-tools/keys` when
-  `XDG_CONFIG_HOME` is unset.
+  `XDG_CONFIG_HOME` is unset or not an absolute path.
 
 `TOOL_AUTHOR_KEY_FILE` and `TOOL_AUTHORITY_KEY_FILE` point at one file elsewhere. The folder has mode 700 and each
-file mode 600. To move keys from another folder, such as `~/Development/github/aprscaching-keys`, into the key folder:
+file mode 600:
 
 ```bash
 mkdir -p ~/.config/aprscaching-tools/keys && chmod 700 ~/.config/aprscaching-tools/keys
-mv ~/Development/github/aprscaching-keys/*.key ~/.config/aprscaching-tools/keys/ && rmdir ~/Development/github/aprscaching-keys
+chmod 600 ~/.config/aprscaching-tools/keys/*.key
 ```
 
 | Key | File | Signs |
@@ -105,14 +105,14 @@ Each pull request adds its own line under `## [Unreleased]` in `CHANGELOG.md`. B
 against the pull requests merged since the last tag and fill any gap, then:
 
 ```bash
-node scripts/release.mjs 1.2.0 --dry-run    # where the release stands; changes nothing
-node scripts/release.mjs 1.2.0              # every step that is not done, asking before each change
+node scripts/release.mjs 1.3.0 --dry-run    # where the release stands; changes nothing but a git fetch
+node scripts/release.mjs 1.3.0              # every step that is not done, asking before each change
 ```
 
 | Step | What it does |
 |---|---|
 | `check` | A clean tree, `gh` signed in, a new X.Y.Z version, a non-empty Unreleased section, the key files and their folder outside every working tree, a registry entry for every tool folder |
-| `prepare` | `release/vX.Y.Z` from `origin/dev`, or from `--from <ref>`; `pnpm install --frozen-lockfile --ignore-scripts`, `fetch-libs --source`, `build --check` |
+| `prepare` | `release/vX.Y.Z` from `origin/dev`, or from `--from <ref>`; `pnpm install --frozen-lockfile --ignore-scripts`, `fetch-libs` (from the local clone when there is one, else from GitHub), `build --check` |
 | `sign` | `sign-all` with the two key files, ending in `verify --strict` |
 | `changelog` | Dates Unreleased as `## [X.Y.Z] - <date>` under a new empty Unreleased, and sets `package.json`'s version |
 | `pr-main` | Commits with a sign-off, pushes, opens the PR into `main`, watches the strict checks, merges it as a merge commit |
@@ -124,12 +124,13 @@ Each step checks its precondition, says what it will do and asks `y/N` before it
 release where it is. A rerun finds the steps already done (the release branch, a strict verify, the dated section on
 `origin/main` and on `origin/dev`, the tag) and continues from the first one that is not. `--step <name>` runs one
 step; `--yes` answers that step's questions, for a step already confirmed. `--source <dir>` names the APRScaching
-clone `fetch-libs` reads; it defaults to `APRSCACHING_SOURCE`, then `~/Development/github/aprscaching`.
+clone `fetch-libs` reads; it defaults to `APRSCACHING_SOURCE`, then `~/Development/github/aprscaching`, and without a
+clone there the libraries come from GitHub. Without a terminal every question is answered no, and the run exits 1.
 
 The script reads the key files in the `sign` step only, and passes their values to `sign-all` in that one process's
 environment. Every line it prints passes through a filter that removes them.
 
-In Claude Code, `/release 1.2.0` runs the doctor, checks the Unreleased entry against the pull requests merged since
+In Claude Code, `/release 1.3.0` runs the doctor, checks the Unreleased entry against the pull requests merged since
 the last tag for your approval, and runs the steps one by one. You run the `sign` step yourself, and it merges into
 `main` only on your go-ahead: before that step, or once for the whole release when nothing needs signing and every
 check passes (`.claude/skills/release/SKILL.md`).
@@ -139,10 +140,10 @@ check passes (`.claude/skills/release/SKILL.md`).
 A fix that cannot wait for what is on `dev` starts from the tag it fixes. `--from` names it:
 
 ```bash
-node scripts/release.mjs 1.2.2 --from v1.2.1
+node scripts/release.mjs 1.3.1 --from v1.3.0
 ```
 
-`prepare` cuts `release/v1.2.2` from `v1.2.1`; write the fix and its Unreleased entry there, then go on as for any
+`prepare` cuts `release/v1.3.1` from `v1.3.0`; write the fix and its Unreleased entry there, then go on as for any
 release. `sync-dev` finds that `dev` has moved on and brings `main` in through a pull request. When `CHANGELOG.md`
 conflicts there, resolve it on a branch from `dev`: merge `origin/main` into it with a merge commit, keep both the
 dated hotfix section and `dev`'s Unreleased lines, and open that as the pull request into `dev`.
@@ -174,12 +175,14 @@ The script runs these steps; when it cannot, run them yourself. The steps for v1
     ```
 
     `sign-all` checks that every `tool.js` matches its sources; signs each listed `tool.json` with the author key,
-    including its `api` and the script's `entrySha256`; copies each manifest's key, title, author and version into
+    including its `api` and the script's `entrySha256`; copies each manifest's key, title, author, version and
+    description into
     its registry entry; signs the registry's `format` and `entries` with the authority key; and runs
     `verify.mjs --strict`. A manifest signed by another author's key is left alone, and `sign-all` stops when that
     signature does not hold. The authority key must be the one in `authority.pub`.
 
-4. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [1.1.0] - <date>` and open a new empty `Unreleased` section.
+4. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [1.1.0] - <date>` and open a new empty `Unreleased` section,
+   and set `version` in `package.json` to `1.1.0`.
 5. Commit, push and open the pull request into `main`; once its strict checks pass, merge it as a merge commit:
 
     ```bash
@@ -203,8 +206,23 @@ The script runs these steps; when it cannot, run them yourself. The steps for v1
     ```
 
 The tag becomes a GitHub Release, with the CHANGELOG section as its notes (`.github/workflows/release.yml`, which
-checks that the tag is on `main` and runs `verify.mjs --strict`). A tag never moves: a fix is a new tag. Instances
-that follow `github:apachler/aprscaching-tools@<tag>` read the files at that tag.
+checks that the tag is on `main` and runs `verify.mjs --strict`). A tag never moves: a fix is a new tag. A ruleset
+refuses to delete or move a `v*` tag, and releases are immutable, so a published release and its files stay as they
+were published. Instances that follow `github:apachler/aprscaching-tools@<tag>` read the files at that tag.
+
+### The release files
+
+Each release carries `aprscaching-tools-vX.Y.Z.tar.gz` (the registry, `authority.pub`, the licence and the tools at
+the tag), its SHA-256, and a build-provenance attestation (`.intoto.jsonl`) that names the workflow run which made
+the archive. Check a download with:
+
+```bash
+sha256sum -c aprscaching-tools-vX.Y.Z.tar.gz.sha256
+gh attestation verify aprscaching-tools-vX.Y.Z.tar.gz -R apachler/aprscaching-tools
+```
+
+The archive is a convenience: instances read the files at the tag, and the registry and manifest signatures are what
+they check.
 
 ## Verify
 
@@ -242,8 +260,8 @@ When the new tag needs a newer tool API than the app implements, it waits for th
 
 ## The documentation site
 
-This site is built from `docs/` with MkDocs (`mkdocs.yml`). Every pull request builds it with
-`mkdocs build --strict`, and a push to `main` publishes it to GitHub Pages (`.github/workflows/docs.yml`). A new tool
+This site is built from `docs/` with MkDocs (`mkdocs.yml`). Every pull request into `dev` or `main` that touches the
+docs, the tools or the registry builds it with `mkdocs build --strict`, and a push to `main` publishes it to GitHub Pages (`.github/workflows/docs.yml`). A new tool
 needs its catalogue page: the build fails for a tool folder without one.
 
 ## The repository checks on dev and main

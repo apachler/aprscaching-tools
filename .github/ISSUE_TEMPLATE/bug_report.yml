@@ -1,0 +1,46 @@
+name: Bug report
+description: A script, the build, the checks or a tool does something wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A **security** problem goes through the private advisory (see SECURITY.md), not this form. A tool that does
+        something its permissions do not explain goes into **Report a tool**.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - A tool
+        - scripts (build, fetch-libs, verify, sign, release, doctor, new-tool)
+        - The registry file or its signatures
+        - The documentation site
+        - CI
+    validations:
+      required: true
+  - type: input
+    id: tool
+    attributes:
+      label: Tool and version
+      description: For a tool, its name and version as the app's Tools list or its tool.json shows them.
+  - type: input
+    id: version
+    attributes:
+      label: Registry tag or commit
+      description: The tag your instance uses (such as v1.2.2), or `git rev-parse --short HEAD`.
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead. The smallest reproduction you can.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: The command's output or the browser console. Never paste a private key.
+      render: text

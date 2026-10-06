@@ -1,11 +1,11 @@
 # Watch & alert
 
-Watch for callsigns. When a watched station is heard, from the packet terminal or the live APRS layer, the panel records when, and its monitor lines turn the warning colour. Watching a base call (`OE8APR`) catches every SSID of it; watching `OE8APR-9` catches that station only.
+Watch for callsigns. When a watched station is heard, from the packet terminal or the live APRS layer, the panel records when (UTC), the tool log notes it, and its monitor lines turn the warning colour. Watching a base call (`OE8APR`) catches every SSID of it; watching `OE8APR-9` catches that station only.
 
 ## Use it
 
-- `/watch <call>` — watch a call; `/watch` lists them
-- `/unwatch <call>` — stop watching it
+- `/watch <call> …` — watch one or more calls; `/watch` lists them
+- `/unwatch <call> …` — stop watching them
 
 It shows on: terminal, web.
 
@@ -25,7 +25,8 @@ fresh build.
 
 ## Signature
 
-Unsigned until the maintainer signs `tool.json` with the author key; the registry lists it once it is signed.
+Signed by OE8APR's author key, the key in `tool.json`'s `pubkey`. The maintainer signs it again at each release that
+changes it, and the registry lists it with that key.
 
 ## Licence
 

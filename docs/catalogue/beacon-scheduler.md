@@ -13,8 +13,8 @@ the app keeps the schedule, so the beacon needs no tool event.
 
 | Command | Does |
 |---|---|
-| `/beacon <minutes> <comment>` | Starts the beacon: every `<minutes>`, 10 or more (30 when left out), with `<comment>` (`APRScaching` when left out) |
-| `/beacon off` | Ends it |
+| `/beacon <minutes> <comment>` | Starts the beacon: every `<minutes>`, 10 through 1440 (one day), with `<comment>` (`APRScaching` when left out). Without a number first it answers with its usage and schedules nothing |
+| `/beacon off` | Ends it, in any letter case |
 
 For example, `/beacon 60 OE8APR shack, QRV 144.800` beacons once an hour.
 

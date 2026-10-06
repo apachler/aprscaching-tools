@@ -1,6 +1,6 @@
 # 7PLUS reassembler
 
-Reads pasted 7PLUS parts, the packet-BBS way to move binary files as text, and reports the file, the part and whether the block is complete, so scattered parts can be collected. It does not rebuild the file.
+Reads pasted 7PLUS parts, the packet-BBS way to move binary files as text, and reports the file, the parts found and the parts still missing, so scattered parts can be collected. It does not rebuild the file.
 
 ## Use it
 
@@ -22,7 +22,8 @@ fresh build.
 
 ## Signature
 
-Unsigned until the maintainer signs `tool.json` with the author key; the registry lists it once it is signed.
+Signed by OE8APR's author key, the key in `tool.json`'s `pubkey`. The maintainer signs it again at each release that
+changes it, and the registry lists it with that key.
 
 ## Licence
 

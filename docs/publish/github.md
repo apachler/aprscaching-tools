@@ -72,6 +72,7 @@ and players can add your registry by address and pin its key.
 
     ```bash
     node scripts/verify.mjs --strict
+    git add registry.json tools && git commit -s -m "chore(release): v1.0.0" && git push
     git tag -a v1.0.0 -m "registry v1.0.0" && git push origin v1.0.0
     ```
 

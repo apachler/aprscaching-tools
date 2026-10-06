@@ -4,7 +4,7 @@ Transmits a status beacon at a fixed interval. The host sends it over the browse
 
 ## Use it
 
-- `/beacon <minutes> <comment>` — every so many minutes, 10 or more (default 30, comment `APRScaching`)
+- `/beacon <minutes> <comment>` — every `<minutes>`, 10 through 1440 (comment `APRScaching` when left out)
 - `/beacon off` — stop
 
 It shows on: terminal.
@@ -26,7 +26,8 @@ fresh build.
 
 ## Signature
 
-Unsigned until the maintainer signs `tool.json` with the author key; the registry lists it once it is signed.
+Signed by OE8APR's author key, the key in `tool.json`'s `pubkey`. The maintainer signs it again at each release that
+changes it, and the registry lists it with that key.
 
 ## Licence
 

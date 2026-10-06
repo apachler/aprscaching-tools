@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /* global register */
-// 7PLUS reassembler: a decoder that reads pasted 7PLUS parts and reports the file, the part and what is missing.
+// 7PLUS reassembler: a decoder that reads pasted 7PLUS parts and reports the file, the parts found and the parts missing.
 import { decode7plus } from "../../../lib/sevenplus.js";
 
 register({
