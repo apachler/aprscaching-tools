@@ -13,5 +13,6 @@ Title: a Conventional Commit, e.g. "feat(grid-bearing): bearing in mils". PRs go
 ## Housekeeping
 
 - [ ] Commits are Conventional Commits and signed off (`git commit -s`)
-- [ ] A changed tool has its version raised and a CHANGELOG line
+- [ ] A line under `## [Unreleased]` in CHANGELOG.md says what this changes (not needed for CI or dependencies only)
+- [ ] A changed tool has its version raised
 - [ ] Permissions are the fewest the tool needs; any `tx`, `beacon` or `network` has its reason in the README

@@ -50,7 +50,8 @@ permissions.
 6. **Tests.** Extend `test/<name>.test.mjs` with the harness (`docs/write/test.md`): every command, event and decoder,
    a remote peer where `remote` is set, and fewer grants than the manifest asks for.
 7. **Docs.** Fill in the catalogue page: what it does, how to use it, the permissions, ending in `## Next`. Move its
-   index row and nav entry to the group that fits. Add a row to the README's tools table.
+   index row and nav entry to the group that fits. Add a row to the README's tools table. Add the tool's line under
+   `## [Unreleased]` in `CHANGELOG.md`, the way the released sections name new tools.
 8. **Check**, all of them:
 
     ```bash
@@ -72,7 +73,7 @@ permissions.
 10. **Pull request.** Show the diff summary, then commit, push and open the PR into `dev`:
 
     ```bash
-    git add tools/<name> test/<name>.test.mjs docs/catalogue mkdocs.yml README.md
+    git add tools/<name> test/<name>.test.mjs docs/catalogue mkdocs.yml README.md CHANGELOG.md
     git commit -s -m "feat(tools): add <name>"
     git push -u origin feat/<slug>
     gh pr create -R apachler/aprscaching-tools --base dev --title "feat(tools): add <name>" --body "<what it does, its permissions and why; the author key and how to confirm it, when signed>"

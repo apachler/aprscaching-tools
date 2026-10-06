@@ -83,6 +83,8 @@ function world(s = {}) {
     verifyStrict: 1,
     url: "https://github.com/apachler/aprscaching-tools.git",
     echo: null,
+    devMovedOn: false,
+    prOpen: false,
     ...s,
   };
   const calls = [];
@@ -101,6 +103,12 @@ function world(s = {}) {
     if (line === "git tag --list v*") return ok(st.tags.join("\n"));
     if (line === "git remote get-url origin") return ok(`${st.url}\n`);
     if (line === "git diff --stat") return ok(" registry.json | 2 +-\n");
+    if (line === "git rev-parse origin/main") return ok("feedface\n");
+    if (line === "git merge-base --is-ancestor origin/dev origin/main") return st.devMovedOn ? no() : ok();
+    if (line.startsWith("gh pr create")) st.prOpen = true;
+    if (line.startsWith("gh pr list")) return ok(st.prOpen ? JSON.stringify([{ number: 7, url: "pr/7", headRefOid: "h7" }]) : "[]");
+    if (line.startsWith("gh pr checks") && args.includes("--json")) return ok(JSON.stringify([{ name: "verify", bucket: "pass" }]));
+    if (line.startsWith("gh pr view")) return ok(JSON.stringify({ headRefOid: "h7" }));
     if (line === "gh auth status") return st.ghAuth === 0 ? ok() : no("not logged in");
     if (line === "node scripts/verify.mjs --strict") return { status: st.verifyStrict, stdout: "", stderr: "" };
     if (line === "node scripts/sign-all.mjs")
@@ -127,6 +135,7 @@ function harness(fx, w, o = {}) {
     today: "2026-10-07",
     dryRun: o.dryRun,
     yes: o.yes,
+    from: o.from,
     source: path.join(fx.root, "no-clone"),
   });
   return { ctx, out, asked, text: () => out.join("\n") };
@@ -151,7 +160,7 @@ describe("release.mjs --dry-run", () => {
     expect(await release(h.ctx)).toBe(0);
     const t = h.text();
     expect(t).toMatch(/dry run for v1\.2\.0/);
-    for (const step of ["prepare", "sign", "changelog", "pr-dev", "pr-main", "tag", "handover"])
+    for (const step of ["prepare", "sign", "changelog", "pr-main", "tag", "sync-dev", "handover"])
       expect(t).toMatch(new RegExp(`todo  ${step}`));
     expect(t).toContain(`author key ${pubOf(fx.author)} (${fingerprint(pubOf(fx.author))})`);
     expect(w.calls.filter((c) => MUTATING.test(c.line))).toEqual([]);
@@ -159,24 +168,34 @@ describe("release.mjs --dry-run", () => {
     expect(fs.readFileSync(path.join(fx.root, "CHANGELOG.md"), "utf8")).toBe(CHANGELOG);
   });
 
-  it("resumes after the release PR merged into dev", async () => {
+  it("resumes after the release PR merged into main", async () => {
     const fx = fixture();
-    const w = world({ devChangelog: DATED("1.2.0") });
+    const w = world({ mainChangelog: DATED("1.2.0") });
     const h = harness(fx, w, { dryRun: true });
     expect(await release(h.ctx)).toBe(0);
     const t = h.text();
-    for (const step of ["prepare", "sign", "changelog", "pr-dev"]) expect(t).toMatch(new RegExp(`done  ${step}`));
-    expect(t).toMatch(/todo  pr-main/);
+    for (const step of ["prepare", "sign", "changelog", "pr-main"]) expect(t).toMatch(new RegExp(`done  ${step}`));
     expect(t).toMatch(/todo  tag/);
+    expect(t).toMatch(/todo  sync-dev/);
   });
 
-  it("finds a tagged release done but for the handover", async () => {
+  it("finds a tagged release that dev does not hold yet", async () => {
+    const fx = fixture({ changelog: DATED("1.2.0") });
+    const w = world({ mainChangelog: DATED("1.2.0"), tagged: true, tags: ["v1.1.0", "v1.2.0"] });
+    const h = harness(fx, w, { dryRun: true });
+    expect(await release(h.ctx)).toBe(0);
+    expect(h.text()).toMatch(/v1\.2\.0 is tagged on origin: dev still needs it \(sync-dev\)/);
+    expect(h.text()).toMatch(/done  tag/);
+    expect(h.text()).toMatch(/todo  sync-dev/);
+  });
+
+  it("finds a tagged release in dev done but for the handover", async () => {
     const fx = fixture({ changelog: DATED("1.2.0") });
     const w = world({ devChangelog: DATED("1.2.0"), mainChangelog: DATED("1.2.0"), tagged: true, tags: ["v1.1.0", "v1.2.0"] });
     const h = harness(fx, w, { dryRun: true });
     expect(await release(h.ctx)).toBe(0);
     expect(h.text()).toMatch(/v1\.2\.0 is tagged on origin: only the handover is left/);
-    expect(h.text()).toMatch(/done  tag/);
+    expect(h.text()).toMatch(/done  sync-dev/);
     expect(h.text()).toMatch(/todo  handover/);
   });
 
@@ -321,11 +340,54 @@ describe("release.mjs steps", () => {
 
   it("reports a step that is done and does nothing", async () => {
     const fx = fixture();
-    const w = world({ devChangelog: DATED("1.2.0") });
+    const w = world({ mainChangelog: DATED("1.2.0") });
     const h = harness(fx, w, { yes: true });
-    expect(await release(h.ctx, { only: "pr-dev" })).toBe(0);
-    expect(h.text()).toMatch(/pr-dev: done already/);
+    expect(await release(h.ctx, { only: "pr-main" })).toBe(0);
+    expect(h.text()).toMatch(/pr-main: done already/);
     expect(w.calls.filter((c) => MUTATING.test(c.line))).toEqual([]);
+  });
+
+  it("opens the release PR into main and merges it as a merge commit", async () => {
+    const fx = fixture({ changelog: DATED("1.2.0") });
+    const w = world({ current: "release/v1.2.0", porcelain: " M CHANGELOG.md\n", verifyStrict: 0 });
+    w.st.refs.add("refs/heads/release/v1.2.0");
+    const h = harness(fx, w, { yes: true });
+    expect(await release(h.ctx, { only: "pr-main" })).toBe(0);
+    const lines = w.calls.map((c) => c.line);
+    expect(lines).toContain("git commit -s -m chore(release): v1.2.0");
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr create --base main --head release\/v1\.2\.0 /));
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 7 --merge --match-head-commit h7/));
+    expect(lines.filter((l) => /--base dev|--squash/.test(l))).toEqual([]);
+  });
+
+  it("fast-forwards dev to main when dev has not moved on", async () => {
+    const fx = fixture();
+    const w = world({ mainChangelog: DATED("1.2.0"), tagged: true });
+    const h = harness(fx, w, { yes: true });
+    expect(await release(h.ctx, { only: "sync-dev" })).toBe(0);
+    const lines = w.calls.map((c) => c.line);
+    expect(lines).toContain("git push origin feedface:refs/heads/dev");
+    expect(lines.filter((l) => l.startsWith("gh pr"))).toEqual([]);
+  });
+
+  it("brings main into dev through a merge-commit PR when dev has moved on", async () => {
+    const fx = fixture();
+    const w = world({ mainChangelog: DATED("1.2.0"), tagged: true, devMovedOn: true });
+    const h = harness(fx, w, { yes: true });
+    expect(await release(h.ctx, { only: "sync-dev" })).toBe(0);
+    const lines = w.calls.map((c) => c.line);
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr create --base dev --head main /));
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 7 --merge /));
+    expect(lines.filter((l) => l.startsWith("git push"))).toEqual([]);
+  });
+
+  it("starts a hotfix from a tag, with its entry written on the release branch", async () => {
+    const fx = fixture();
+    const w = world({ devChangelog: CHANGELOG.replace("- A new tool.\n\n", ""), tags: ["v1.1.0", "v1.2.0"] });
+    const h = harness(fx, w, { version: "1.2.1", from: "v1.2.0" });
+    expect(await release(h.ctx)).toBe(0);
+    expect(h.text()).toMatch(/info {2}release\/v1\.2\.1 starts from v1\.2\.0: write its Unreleased entry there/);
+    expect(h.asked).toEqual(["Create release/v1.2.1 from v1.2.0 and switch to it?"]);
   });
 });
 

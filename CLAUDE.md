@@ -5,11 +5,17 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 
 ## Branches and pull requests
 - `dev` is the working branch. Every change is a `<type>/<slug>` branch cut from `dev` (named after its
-  Conventional Commit type, never after a tool), a PR into `dev`, squash-merged. Never push to `dev` or `main`.
-- A release is a PR from `dev` into `main`, merged as a merge commit. `main` holds only fully signed states; a
-  ruleset allows changes to it only by pull request.
+  Conventional Commit type, never after a tool), a PR into `dev`, squash-merged. Never push to `main`; push to
+  `dev` only to fast-forward it to `main` after a release (the `sync-dev` step).
+- A release is a `release/vX.Y.Z` branch from `dev`, a PR into `main` merged as a merge commit, the tag, then `dev`
+  fast-forwarded to `main` (a PR from `main` into `dev`, merged as a merge commit, when `dev` has moved on). A hotfix
+  starts from the tag it fixes. `main` holds only fully signed states, is the default branch, and a ruleset allows
+  changes to it only by pull request.
 - Commits and PR titles are Conventional Commits, signed off (`git commit -s`); no tool attribution in commits or
   PR descriptions (the DCO workflow rejects it). Merged branches are deleted.
+- A PR that changes what a player, tool author or maintainer gets adds its line under `## [Unreleased]` in
+  CHANGELOG.md, written the way the released sections are. A changed tool raises its version and gets its own line.
+  A PR that only touches CI, dependencies or the release itself adds none. A release then only dates that section.
 - Dependency PRs that touch `pnpm-lock.yaml` are merged one at a time, each rebased onto `dev` first.
 
 ## Signing
@@ -19,9 +25,9 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
   fail a key folder inside a git working tree.
 - On `dev` a changed tool is unsigned until the next release: PR CI runs `verify.mjs` without `--strict`. PRs into
   `main` and release tags run `verify.mjs --strict`.
-- A release: a `release/vX.Y.Z` branch from `dev` where the maintainer runs `sign-all` and updates CHANGELOG.md,
-  a PR into `dev`, the `dev` → `main` PR, then the maintainer tags `vX.Y.Z` on `main`; the tag becomes a GitHub
-  Release. An APRScaching release bundles a tag with its `tools/toolkey/bundle-registry.mjs`.
+- A release: on the `release/vX.Y.Z` branch the maintainer runs `sign-all` and dates CHANGELOG.md; after the PR
+  into `main`, the maintainer tags `vX.Y.Z` on `main` and the tag becomes a GitHub Release. An APRScaching release
+  bundles a tag with its `tools/toolkey/bundle-registry.mjs`.
 - `scripts/release.mjs <X.Y.Z>` runs that flow step by step and resumes where it stopped; `/release <X.Y.Z>`
   (`.claude/skills/release/`) drives it. An agent never reads, prints or passes the key files, never runs the `sign`
   step (the user runs it with `!`), and never merges into `main` without the user's go-ahead in the conversation.

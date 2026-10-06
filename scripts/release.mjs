@@ -2,22 +2,24 @@
 // SPDX-License-Identifier: MIT
 // Release a registry tag, step by step, on the computer that holds the signing keys:
 //
-//   node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <name> [--yes]] [--source <APRScaching clone>]
+//   node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <name> [--yes]] [--source <APRScaching clone>] [--from <ref>]
 //
 // The steps, in order:
 //   check      the tree is clean, gh is signed in, the version is new semver, CHANGELOG.md's Unreleased section has
 //              content, the key files exist with mode 600 and match authority.pub and the project's author key;
-//   prepare    release/vX.Y.Z from origin/dev; pnpm install, fetch-libs --source, build --check;
+//   prepare    release/vX.Y.Z from origin/dev (or --from, such as a tag for a hotfix); pnpm install, fetch-libs
+//              --source, build --check;
 //   sign       sign-all with the two keys, which ends in verify --strict;
 //   changelog  Unreleased becomes "## [X.Y.Z] - <date>" under a new empty Unreleased; package.json takes the version;
-//   pr-dev     commit with a sign-off, push, a PR into dev, wait for its checks, squash-merge;
-//   pr-main    a PR from dev into main, wait for the strict checks, merge as a merge commit;
+//   pr-main    commit with a sign-off, push, a PR into main, wait for the strict checks, merge as a merge commit;
 //   tag        tag origin/main as vX.Y.Z, push the tag, wait for the Release workflow;
+//   sync-dev   bring the release into dev: a fast-forward push when dev has not moved on, else a PR from main into
+//              dev merged as a merge commit;
 //   handover   print the APRScaching command that bundles the tag.
 //
 // Every step checks its precondition and says what it will do, and asks y/N before anything that changes git or
-// GitHub. A rerun finds which steps are done (the branch, a strict verify, the dated section on origin/dev and
-// origin/main, the tag) and continues from the first that is not. --dry-run only reports. --step runs one step;
+// GitHub. A rerun finds which steps are done (the branch, a strict verify, the dated section on origin/main and
+// origin/dev, the tag) and continues from the first that is not. --dry-run only reports. --step runs one step;
 // --yes answers its questions, for a step the operator already confirmed (it needs --step).
 //
 // The key files come from TOOL_KEYS_DIR (default $XDG_CONFIG_HOME/aprscaching-tools/keys, else
@@ -44,7 +46,7 @@ import {
   repoSlug,
 } from "./release-kit.mjs";
 
-export const STEPS = ["check", "prepare", "sign", "changelog", "pr-dev", "pr-main", "tag", "handover"];
+export const STEPS = ["check", "prepare", "sign", "changelog", "pr-main", "tag", "sync-dev", "handover"];
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 /** A step that cannot go on: the message says why and what to do. */
@@ -100,6 +102,7 @@ export function createContext(o) {
     version,
     tag: `v${version}`,
     branch: `release/v${version}`,
+    from: o.from ?? "origin/dev",
     root: o.root ?? repoRoot,
     env: o.env ?? process.env,
     dryRun: !!o.dryRun,
@@ -173,6 +176,7 @@ export function detect(ctx, { fetch = true } = {}) {
     installed: fs.existsSync(path.join(ctx.root, "node_modules", ".modules.yaml")),
     devChangelog: show("origin/dev"),
     mainChangelog: show("origin/main"),
+    fromChangelog: show(ctx.from),
     workChangelog: ctx.read("CHANGELOG.md"),
     tagged: ctx.git("ls-remote", "--tags", "origin", `refs/tags/${ctx.tag}`).stdout.trim() !== "",
     localTag: ref(`refs/tags/${ctx.tag}`).status === 0,
@@ -181,7 +185,7 @@ export function detect(ctx, { fetch = true } = {}) {
   s.onMain = hasSection(s.mainChangelog, ctx.version);
   s.dated = onRelease && hasSection(s.workChangelog, ctx.version);
   // a strict verify of the working tree: the signatures of the release branch hold
-  s.strictOk = onRelease && !s.onDev && ctx.run(ctx.node, ["scripts/verify.mjs", "--strict"]).status === 0;
+  s.strictOk = onRelease && !s.onMain && ctx.run(ctx.node, ["scripts/verify.mjs", "--strict"]).status === 0;
   return s;
 }
 
@@ -189,14 +193,14 @@ export function detect(ctx, { fetch = true } = {}) {
 export function doneSteps(s) {
   const done = new Set();
   const add = (...xs) => xs.forEach((x) => done.add(x));
-  if (s.tagged) add("prepare", "sign", "changelog", "pr-dev", "pr-main", "tag");
-  else if (s.onMain) add("prepare", "sign", "changelog", "pr-dev", "pr-main");
-  else if (s.onDev) add("prepare", "sign", "changelog", "pr-dev");
+  if (s.tagged) add("prepare", "sign", "changelog", "pr-main", "tag");
+  else if (s.onMain) add("prepare", "sign", "changelog", "pr-main");
   else {
     if (s.onRelease && s.vendorOk && s.installed) add("prepare");
     if (done.has("prepare") && s.strictOk) add("sign");
     if (s.dated) add("changelog");
   }
+  if (s.onMain && s.onDev) add("sync-dev");
   return done;
 }
 
@@ -257,7 +261,8 @@ steps.check = async (ctx, s) => {
   if (ctx.slug !== UPSTREAM) ctx.log(`warn  origin is ${url}; pull requests and the tag go to ${ctx.slug}`);
   else ok(`origin is ${ctx.slug}`);
 
-  if (s.tagged) ctx.log(`info  ${ctx.tag} is tagged on origin: only the handover is left`);
+  if (s.tagged)
+    ctx.log(`info  ${ctx.tag} is tagged on origin: ${s.onDev ? "only the handover is left" : "dev still needs it (sync-dev), then the handover"}`);
   else if (SEMVER.test(ctx.version)) {
     const tags = ctx
       .git("tag", "--list", "v*")
@@ -266,7 +271,7 @@ steps.check = async (ctx, s) => {
       .filter((t) => SEMVER.test(t));
     const newest = tags.sort(cmp).at(-1);
     if (s.localTag) fail(`a local tag ${ctx.tag} exists but origin has none; delete it (git tag -d ${ctx.tag}) or push it`);
-    else if (newest && cmp(ctx.version, newest) <= 0 && !s.onDev) fail(`${ctx.version} is not newer than v${newest}`);
+    else if (newest && cmp(ctx.version, newest) <= 0 && !s.onMain) fail(`${ctx.version} is not newer than v${newest}`);
     else ok(`${ctx.tag} is not taken${newest ? ` (newest v${newest})` : ""}`);
   }
 
@@ -275,8 +280,10 @@ steps.check = async (ctx, s) => {
   else if (!s.clean) ok(`changes on ${ctx.branch} belong to the release`);
   else ok("the working tree is clean");
 
-  if (!done.has("changelog")) {
-    const text = s.onRelease ? s.workChangelog : s.devChangelog;
+  if (!done.has("changelog") && !s.onRelease && ctx.from !== "origin/dev")
+    ctx.log(`info  ${ctx.branch} starts from ${ctx.from}: write its Unreleased entry there after the prepare step`);
+  else if (!done.has("changelog")) {
+    const text = s.onRelease ? s.workChangelog : s.fromChangelog;
     const body = unreleasedBody(text);
     if (body === null) fail("CHANGELOG.md has no ## [Unreleased] section");
     else if (!body) fail("CHANGELOG.md's Unreleased section is empty: write what this release changes first");
@@ -311,8 +318,8 @@ steps.prepare = async (ctx, s) => {
         ctx.must(ctx.git("switch", "--track", `origin/${ctx.branch}`), "git switch"),
       );
     else
-      await ctx.confirm(`Create ${ctx.branch} from origin/dev and switch to it?`, () =>
-        ctx.must(ctx.git("switch", "--no-track", "-c", ctx.branch, "origin/dev"), "git switch -c"),
+      await ctx.confirm(`Create ${ctx.branch} from ${ctx.from} and switch to it?`, () =>
+        ctx.must(ctx.git("switch", "--no-track", "-c", ctx.branch, ctx.from), "git switch -c"),
       );
   }
   ctx.log("install the build tools from the frozen lockfile");
@@ -409,8 +416,8 @@ async function createPr(ctx, head, base, title, body) {
   return pr;
 }
 
-steps["pr-dev"] = async (ctx, s) => {
-  if (!s.onRelease) throw new StepError(`pr-dev runs on ${ctx.branch}`);
+steps["pr-main"] = async (ctx, s) => {
+  if (!s.onRelease) throw new StepError(`pr-main runs on ${ctx.branch}`);
   if (!s.dated) throw new StepError("CHANGELOG.md has no section for this version; run the changelog step first");
   if (!s.strictOk) throw new StepError("verify --strict fails on this tree; run the sign step first");
   const tracked = s.porcelain.split("\n").filter((l) => l.trim() && !l.startsWith("??"));
@@ -420,7 +427,7 @@ steps["pr-dev"] = async (ctx, s) => {
     ctx.log(tracked.join("\n"));
     await ctx.confirm(`Commit these ${tracked.length} file(s) with a sign-off?`, () => {
       ctx.must(ctx.git("add", "-u"), "git add");
-      ctx.must(ctx.git("commit", "-s", "-m", `chore(release): sign the registry and tools for ${ctx.tag}`), "git commit");
+      ctx.must(ctx.git("commit", "-s", "-m", `chore(release): ${ctx.tag}`), "git commit");
     });
   }
   const head = ctx.git("rev-parse", "HEAD").stdout.trim();
@@ -430,28 +437,8 @@ steps["pr-dev"] = async (ctx, s) => {
       ctx.must(ctx.git("push", "-u", "origin", `${ctx.branch}:${ctx.branch}`), "git push"),
     );
   const pr =
-    openPr(ctx, ctx.branch, "dev") ??
-    (await createPr(ctx, ctx.branch, "dev", `chore(release): ${ctx.tag}`, `Signs the registry and tools for ${ctx.tag}.`));
-  await watchChecks(ctx, pr.number);
-  const sha = ctx.must(ctx.gh("pr", "view", String(pr.number), "--json", "headRefOid"), "gh pr view").stdout;
-  await ctx.confirm(`Squash-merge #${pr.number} into dev?`, () =>
-    ctx.must(
-      ctx.gh("pr", "merge", String(pr.number), "--squash", "--match-head-commit", JSON.parse(sha).headRefOid),
-      "gh pr merge",
-    ),
-  );
-  ctx.git("fetch", "origin", "--prune");
-  if (await ctx.ask(`Switch to dev, fast-forward it to origin/dev and delete the local ${ctx.branch}?`)) {
-    ctx.must(ctx.git("switch", "dev"), "git switch dev");
-    ctx.must(ctx.git("merge", "--ff-only", "origin/dev"), "git merge --ff-only");
-    ctx.must(ctx.git("branch", "-D", ctx.branch), "git branch -D");
-  }
-};
-
-steps["pr-main"] = async (ctx, s) => {
-  if (!s.onDev) throw new StepError(`origin/dev has no CHANGELOG section for ${ctx.version}; finish the pr-dev step first`);
-  const pr =
-    openPr(ctx, "dev", "main") ?? (await createPr(ctx, "dev", "main", `chore(release): ${ctx.tag}`, `Release ${ctx.tag}.`));
+    openPr(ctx, ctx.branch, "main") ??
+    (await createPr(ctx, ctx.branch, "main", `chore(release): ${ctx.tag}`, `Release ${ctx.tag}.`));
   await watchChecks(ctx, pr.number);
   const sha = ctx.must(ctx.gh("pr", "view", String(pr.number), "--json", "headRefOid"), "gh pr view").stdout;
   await ctx.confirm(`Merge #${pr.number} into main as a merge commit? This publishes ${ctx.tag}'s signed state`, () =>
@@ -487,6 +474,38 @@ steps.tag = async (ctx, s) => {
   if (rel.status === 0) ctx.log(`released ${JSON.parse(rel.stdout).url}`);
 };
 
+steps["sync-dev"] = async (ctx, s) => {
+  if (!s.onMain) throw new StepError(`origin/main has no CHANGELOG section for ${ctx.version}; finish the pr-main step first`);
+  const main = ctx.must(ctx.git("rev-parse", "origin/main"), "git rev-parse origin/main").stdout.trim();
+  if (ctx.git("merge-base", "--is-ancestor", "origin/dev", "origin/main").status === 0) {
+    await ctx.confirm(`Fast-forward dev to origin/main (${main.slice(0, 12)})?`, () =>
+      ctx.must(ctx.git("push", "origin", `${main}:refs/heads/dev`), "git push dev"),
+    );
+  } else {
+    ctx.log("dev has moved on since the release branch was cut: main comes in through a pull request");
+    const pr =
+      openPr(ctx, "main", "dev") ??
+      (await createPr(ctx, "main", "dev", `chore(release): merge ${ctx.tag} into dev`, `Brings ${ctx.tag} into dev.`));
+    await watchChecks(ctx, pr.number);
+    const sha = ctx.must(ctx.gh("pr", "view", String(pr.number), "--json", "headRefOid"), "gh pr view").stdout;
+    await ctx.confirm(`Merge #${pr.number} into dev as a merge commit?`, () => {
+      const r = ctx.gh("pr", "merge", String(pr.number), "--merge", "--match-head-commit", JSON.parse(sha).headRefOid);
+      if (r.status !== 0)
+        throw new StepError(
+          `#${pr.number} does not merge (a conflict, most likely in CHANGELOG.md): resolve it on a branch from dev, ` +
+            "merge origin/main there with a merge commit, open that as the PR, then rerun",
+        );
+    });
+  }
+  ctx.git("fetch", "origin", "--prune");
+  const local = ctx.git("rev-parse", "--verify", "--quiet", `refs/heads/${ctx.branch}`).status === 0;
+  if (await ctx.ask(`Switch to dev and fast-forward it to origin/dev${local ? `, deleting the local ${ctx.branch}` : ""}?`)) {
+    ctx.must(ctx.git("switch", "dev"), "git switch dev");
+    ctx.must(ctx.git("merge", "--ff-only", "origin/dev"), "git merge --ff-only");
+    if (local) ctx.must(ctx.git("branch", "-D", ctx.branch), "git branch -D");
+  }
+};
+
 steps.handover = async (ctx) => {
   ctx.log(`${ctx.tag} is released. Bundle it into APRScaching, on a branch cut from its dev:`);
   ctx.log("");
@@ -501,14 +520,14 @@ steps.handover = async (ctx) => {
 const PLAN = {
   check: () => ["clean tree, gh auth, version, Unreleased, key files"],
   prepare: (ctx) => [
-    `git switch --no-track -c ${ctx.branch} origin/dev (or switch to it)`,
+    `git switch --no-track -c ${ctx.branch} ${ctx.from} (or switch to it)`,
     "pnpm install --frozen-lockfile --ignore-scripts; fetch-libs --source <APRScaching>; build --check",
   ],
   sign: () => ["sign-all with the author and authority key files, then verify --strict"],
   changelog: (ctx) => [`## [Unreleased] → ## [${ctx.version}] - ${ctx.today}; package.json version`],
-  "pr-dev": (ctx) => [`commit -s, push ${ctx.branch}, PR into dev, watch checks, squash-merge`],
-  "pr-main": () => ["PR dev → main, watch the strict checks, merge as a merge commit"],
+  "pr-main": (ctx) => [`commit -s, push ${ctx.branch}, PR into main, watch the strict checks, merge as a merge commit`],
   tag: (ctx) => [`git tag -a ${ctx.tag} origin/main, push it, watch the Release workflow`],
+  "sync-dev": () => ["fast-forward dev to origin/main, or a PR main → dev merged as a merge commit when dev moved on"],
   handover: (ctx) => [`print: node tools/toolkey/bundle-registry.mjs ${ctx.tag} --source <tools checkout>`],
 };
 
@@ -582,6 +601,7 @@ export function parseArgs(argv) {
     else if (a === "--yes") o.yes = true;
     else if (a === "--step") o.step = argv[++i];
     else if (a === "--source") o.source = argv[++i];
+    else if (a === "--from") o.from = argv[++i];
     else if (a.startsWith("--")) o.error = `unknown option ${a}`;
     else if (!o.version) o.version = a;
     else o.error = `unexpected argument ${a}`;
@@ -593,7 +613,7 @@ export function parseArgs(argv) {
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const o = parseArgs(process.argv.slice(2));
   if (o.error) {
-    console.error(`release: ${o.error}\nusage: node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <${STEPS.join("|")}> [--yes]] [--source <dir>]`);
+    console.error(`release: ${o.error}\nusage: node scripts/release.mjs <X.Y.Z> [--dry-run] [--step <${STEPS.join("|")}> [--yes]] [--source <dir>] [--from <ref>]`);
     process.exit(2);
   }
   const ctx = createContext(o);
