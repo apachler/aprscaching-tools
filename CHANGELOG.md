@@ -5,6 +5,11 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+- **Community files.** A security policy, a code of conduct, a support guide, code owners and issue forms: a bug
+  report, a tool proposal, and a report about a tool in the registry. `LICENSE` holds the plain MIT text, so GitHub
+  shows the licence as MIT; the README says which files it covers and that each tool carries its own.
+- **OpenSSF Scorecard.** A weekly rating of the repository's supply-chain practice, shown as a README badge.
+
 ## [1.2.2] - 2026-10-06
 
 - **Pull requests into `main`.** They come from a `release/vX.Y.Z` branch: `verify`, now a required check on `main`,

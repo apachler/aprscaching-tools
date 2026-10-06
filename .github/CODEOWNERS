@@ -1,0 +1,14 @@
+# Code owners: requested for review on pull requests that touch these paths.
+# https://docs.github.com/articles/about-code-owners
+
+*                       @apachler
+
+# What decides which code players run: the signed registry, the pinned key, signing, verifying and building.
+/registry.json          @apachler
+/authority.pub          @apachler
+/lib.lock               @apachler
+/scripts/sign*.mjs      @apachler
+/scripts/verify.mjs     @apachler
+/scripts/build.mjs      @apachler
+/scripts/release*.mjs   @apachler
+/.github/               @apachler

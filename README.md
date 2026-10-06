@@ -1,5 +1,7 @@
 # APRScaching tools
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/apachler/aprscaching-tools/badge)](https://scorecard.dev/viewer/?uri=github.com/apachler/aprscaching-tools)
+
 The project's tool registry for APRScaching 1.x: a signed list of tools for the Shack's **Tools** app, and the
 tools it lists. The app ships no tools of its own: every tool, the project's first-party ones included, comes from
 a registry, is installed by the player on demand and runs in the app's sandbox.
@@ -127,5 +129,9 @@ node scripts/fetch-mermaid.mjs
 
 ## Licence
 
-The registry file, the scripts and the documentation are MIT ([LICENSE](LICENSE)). Each tool is under the licence
-it declares in its own directory.
+The repository's own files are MIT ([LICENSE](LICENSE)): `registry.json`, `authority.pub`, the scripts, `lib/`, the
+tests, the workflows, the documentation site and its stylesheets.
+
+The tools are not covered by that licence. Each directory under `tools/` is its author's work under the licence the
+tool declares: an `SPDX-License-Identifier` line at the top of its script and a **Licence** section in its
+`README.md`. That licence applies to every file in the tool's directory.

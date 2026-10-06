@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* The site in the APRScaching app's look, as the app's manual has it (docs/stylesheets/aprscaching.css in
    apachler/aprscaching): maps the app's design tokens (tokens.css) onto Material for MkDocs' variables. Colours,
    fonts and corner radii come from the tokens only; this file decides which token plays which role. */
