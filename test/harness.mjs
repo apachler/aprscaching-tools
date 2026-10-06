@@ -9,6 +9,26 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
+/** What an instance implementing tool API 1.0 offers (`tool.has`). */
+const FEATURES = [
+  "command",
+  "monitor",
+  "event",
+  "decoder",
+  "panel",
+  "map",
+  "ipc",
+  "beacon",
+  "network",
+  "tx",
+  "commands.async",
+  "commands.remote",
+  "decoders.sample",
+  "events.reply",
+  "colours.src",
+  "bus.provide",
+];
+
 /** A tool bus: topics, services (a tool's or the host's) and the sender of each message. */
 export function createBus() {
   const subs = new Map();
@@ -80,6 +100,9 @@ export function loadTool(name, opts = {}) {
   const clone = (v) => structuredClone(v);
   const tool = {
     permissions: [...granted],
+    // the instance's tool API and its features, as the sandbox passes them
+    api: Object.freeze({ major: 1, minor: 0 }),
+    has: (name) => FEATURES.includes(String(name)),
     log: (m) => s.logs.push(String(m)),
     setPanel: (spec) => {
       need("panel");

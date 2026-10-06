@@ -3,6 +3,7 @@
   "title": "MHeard",
   "author": "OE8APR",
   "version": "1.0.0",
+  "api": "1.0",
   "permissions": [
     "monitor",
     "event",

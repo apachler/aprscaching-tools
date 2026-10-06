@@ -3,6 +3,7 @@
   "title": "Block art (GIP)",
   "author": "OE8APR",
   "version": "1.0.0",
+  "api": "1.0",
   "permissions": [
     "command",
     "panel",

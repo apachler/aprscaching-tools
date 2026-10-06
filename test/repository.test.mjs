@@ -20,6 +20,7 @@ describe.each(toolNames())("%s", (name) => {
     expect(m.name).toMatch(/^[a-z0-9][a-z0-9-]{1,39}$/);
     for (const k of ["title", "author", "version", "description"]) expect(typeof m[k] === "string" && m[k].trim()).toBeTruthy();
     expect(m.entry).toBe("tool.js");
+    expect(m.api).toBe("1.0"); // the tool API version it needs; part of the signed manifest
     expect(m.permissions.every((p) => CAPABILITIES.includes(p))).toBe(true);
     expect(new Set(m.permissions).size).toBe(m.permissions.length);
     expect(m.surfaces.every((s) => SURFACES.includes(s))).toBe(true);
@@ -50,6 +51,10 @@ describe.each(toolNames())("%s", (name) => {
     it("is built from its sources and the libraries lib.lock pins", () => {
       expect(read("tools", name, "tool.js")).toContain("aprscaching libraries lib.lock pins");
     });
+});
+
+it("names registry format 1", () => {
+  expect(registry.format).toBe(1);
 });
 
 it("lists each tool once", () => {

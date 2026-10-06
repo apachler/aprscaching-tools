@@ -44,6 +44,9 @@ async function ed25519Verify(pubB64url, sigB64, data) {
   }
 }
 
+/** A manifest's `api`: the tool API version it needs, MAJOR.MINOR (packages/tools api.ts in the app). */
+const API_RE = /^(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$/;
+
 let failures = 0;
 let warnings = 0;
 const ok = (m) => console.log(`ok    ${m}`);
@@ -96,8 +99,9 @@ if (!Array.isArray(reg.entries) || typeof reg.sig !== "string") {
   fail(`${rel(registryPath)}: needs an entries array and a sig`);
   process.exit(1);
 }
+if (reg.format !== 1) fail(`registry format ${reg.format ?? "(none)"}: this verifier and the app read format 1`);
 if (reg.authority !== authority) fail(`registry authority ${reg.authority} is not the pinned key`);
-else if (!(await ed25519Verify(reg.authority, reg.sig, enc(stable(reg.entries)))))
+else if (!(await ed25519Verify(reg.authority, reg.sig, enc(stable({ format: reg.format, entries: reg.entries })))))
   fail("registry signature does not verify over its entries");
 else ok(`registry signature verifies (${reg.entries.length} entries)`);
 
@@ -154,6 +158,8 @@ for (const [i, e] of reg.entries.entries()) {
   }
 
   if (manifest.name !== e.name) fail(`${label}: manifest name is "${manifest.name}"`);
+  if (!API_RE.test(manifest.api ?? ""))
+    fail(`${label}: manifest needs "api": "MAJOR.MINOR", the tool API version it needs (got ${JSON.stringify(manifest.api)})`);
   for (const k of ["title", "author", "version"])
     if (manifest[k] !== e[k]) warn(`${label}: ${k} "${e[k]}" differs from the manifest's "${manifest[k]}"`);
 
