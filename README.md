@@ -58,8 +58,13 @@ pnpm test                          # runs every built tool in a stand-in for the
 node scripts/build.mjs --check     # what CI runs: the committed scripts match their sources
 ```
 
-A change to a tool's source, to `lib/` or to the `lib.lock` commit changes its `tool.js`, so the tool must be
-signed again.
+A change to a tool's source, to `lib/` or to the library code at the `lib.lock` commit changes its `tool.js`, so
+the tool must be signed again. Code only the tools use (the packet decoder's text form, the 7PLUS parser, the
+locator maths) lives in `lib/` here; `lib.lock` names only libraries the app itself still has.
+
+To bump `lib.lock` safely: set `ref` to a full commit (a release tag's commit) that exists on GitHub, then run
+`node scripts/fetch-libs.mjs` and `node scripts/build.mjs --check`. A tool whose check fails changed with its
+libraries: rebuild it, run the tests and sign it again.
 
 The app checks the registry's signature against the authority key it pins, and shows a tool as registry-listed
 only when its `tool.json` comes from the address its entry names and carries a signature by the key the entry
