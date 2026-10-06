@@ -5,10 +5,10 @@ format versions are named where they change.
 
 ## [Unreleased]
 
-- **Lint and format.** ESLint and Prettier check the scripts, tests and tool sources in CI (`pnpm lint`);
-  `pnpm format` lays the code out.
-- **Release files.** Each release carries the registry as an archive, its SHA-256 and a build-provenance attestation;
-  release tags cannot be moved or deleted, and published releases are immutable.
+## [1.3.0] - 2026-10-06
+
+Twelve tools fixed after a full review, a verifier that fails closed, lint, and release files with provenance.
+
 - **Verify.** It fails a manifest that holds no JSON object, an entry address with an encoded slash or one that
   leaves the repository, and, with `--strict`, an entry whose title, author, version or description differs from
   its manifest. `sign-all` copies the description into the registry entry as well.
@@ -16,6 +16,19 @@ format versions are named where they change.
   the manifest's folder. `release.mjs` resumes a tag that was made but not pushed, refuses an option without its
   value, and exits 1 when it stopped for want of a terminal. `new-tool.mjs` writes working code for any one-line
   title and refuses a name another tool holds.
+- **Release files.** Each release carries the registry as an archive, its SHA-256 and a build-provenance attestation;
+  release tags cannot be moved or deleted, and published releases are immutable.
+- **Lint and format.** ESLint and Prettier check the scripts, tests and tool sources in CI (`pnpm lint`);
+  `pnpm format` lays the code out.
+- **Community files.** A security policy, a code of conduct, a support guide, code owners and issue forms: a bug
+  report, a tool proposal, and a report about a tool in the registry. `LICENSE` holds the plain MIT text, so GitHub
+  shows the licence as MIT; the README says which files it covers and that each tool carries its own.
+- **OpenSSF Scorecard.** A weekly rating of the repository's supply-chain practice, shown as a README badge.
+- **Write your first tool** starts from `scripts/new-tool.mjs`, so the tool it builds has its catalogue page and
+  passes `mkdocs build --strict`. The limits page says which colour-rule call takes how many rules and caps a
+  decoder's answer at 20,000 characters; the `load` message names `api` and `features`; the tick test example sets
+  the interval first.
+- **Docs.** The catalogue pages, the tool READMEs and the maintainer's guide match what the code does.
 - Auto-status 1.1.1: `/autostatus OFF` stops it in any letter case, and a command without a number first answers
   with its usage instead of transmitting.
 - Beacon scheduler 1.1.1: a command without a number first answers with its usage instead of starting a beacon, and
@@ -34,15 +47,6 @@ format versions are named where they change.
 - Unit converter 1.1.1: accepts `km/h` as well as `kmh`.
 - Info / menu responder 1.1.1: `MENU` lists the commands this tool answers.
 - PSK31 + CW decoders 1.0.1: the CW example decodes.
-
-- **Community files.** A security policy, a code of conduct, a support guide, code owners and issue forms: a bug
-  report, a tool proposal, and a report about a tool in the registry. `LICENSE` holds the plain MIT text, so GitHub
-  shows the licence as MIT; the README says which files it covers and that each tool carries its own.
-- **OpenSSF Scorecard.** A weekly rating of the repository's supply-chain practice, shown as a README badge.
-- **Write your first tool** starts from `scripts/new-tool.mjs`, so the tool it builds has its catalogue page and
-  passes `mkdocs build --strict`. The limits page says which colour-rule call takes how many rules and caps a
-  decoder's answer at 20,000 characters; the `load` message names `api` and `features`; the tick test example sets
-  the interval first.
 
 ## [1.2.2] - 2026-10-06
 
