@@ -1,7 +1,7 @@
 # Maintain the registry
 
 This page is the registry keeper's guide: listing a reviewed tool, building and signing a release, and getting a
-tag into an aprscaching release. It is for the project registry's maintainer. At the end a signed tag is on `main`,
+tag into an APRScaching release. It is for the project registry's maintainer. At the end a signed tag is on `main`,
 published as a GitHub Release, and bundled into the app.
 
 ## How a release flows
@@ -16,7 +16,7 @@ flowchart LR
   R --> D["PR into dev,<br/>squash-merged"]
   D --> M["PR dev → main,<br/>merge commit"]
   M --> T["Tag vX.Y.Z on main:<br/>GitHub Release"]
-  T --> A["aprscaching PR:<br/>bundle-registry.mjs vX.Y.Z"]
+  T --> A["APRScaching PR:<br/>bundle-registry.mjs vX.Y.Z"]
 ```
 
 ## The keys
@@ -78,7 +78,7 @@ with the new key.
 
 ## Release a tag
 
-Tags follow the aprscaching major: `v1.<minor>.<patch>` is a registry for aprscaching 1.x.
+Tags follow the APRScaching major: `v1.<minor>.<patch>` is a registry for APRScaching 1.x.
 
 ### Check the computer
 
@@ -113,12 +113,12 @@ node scripts/release.mjs 1.2.0              # every step that is not done, askin
 | `pr-dev` | Commits with a sign-off, pushes, opens the PR into `dev`, watches its checks, squash-merges |
 | `pr-main` | Opens the `dev` → `main` PR, watches the strict checks, merges it as a merge commit |
 | `tag` | Tags `origin/main`, pushes the tag, watches the Release workflow |
-| `handover` | Prints the aprscaching command that bundles the tag |
+| `handover` | Prints the APRScaching command that bundles the tag |
 
 Each step checks its precondition, says what it will do and asks `y/N` before it changes git or GitHub. A no stops the
 release where it is. A rerun finds the steps already done (the release branch, a strict verify, the dated section on
 `origin/dev` and on `origin/main`, the tag) and continues from the first one that is not. `--step <name>` runs one
-step; `--yes` answers that step's questions, for a step already confirmed. `--source <dir>` names the aprscaching
+step; `--yes` answers that step's questions, for a step already confirmed. `--source <dir>` names the APRScaching
 clone `fetch-libs` reads; it defaults to `APRSCACHING_SOURCE`, then `~/Development/github/aprscaching`.
 
 The script reads the key files in the `sign` step only, and passes their values to `sign-all` in that one process's
@@ -138,7 +138,7 @@ The script runs these steps; when it cannot, run them yourself. The steps for v1
     git fetch origin && git switch -c release/v1.1.0 origin/dev
     ```
 
-2. Fetch the libraries from a local aprscaching clone that holds the `lib.lock` commit, so signing needs no network
+2. Fetch the libraries from a local APRScaching clone that holds the `lib.lock` commit, so signing needs no network
    (`git -C ~/Development/github/aprscaching fetch origin` first if the clone lacks it):
 
     ```bash
@@ -199,9 +199,9 @@ next release. `--strict` fails on those, and on an entry address that leaves the
 served from a subpath. CI runs the plain check on `dev`, and `--strict` on `main`, on pull requests into it and on
 release tags.
 
-## Bundle a tag into an aprscaching release
+## Bundle a tag into an APRScaching release
 
-Every aprscaching release ships a registry tag. In a checkout of
+Every APRScaching release ships a registry tag. In a checkout of
 [apachler/aprscaching](https://github.com/apachler/aprscaching), on a feature branch cut from `dev`:
 
 ```bash
@@ -212,9 +212,9 @@ The script fetches the tag from GitHub and checks the registry's signature again
 app, each manifest's signature against the author key its entry lists, and each script against its manifest's
 `entrySha256`. It writes nothing when any check fails. It copies `registry.json` and the listed tools into the web
 app's `public/tools/`, keeping the repository's layout, so the instance serves them from its own address with the
-same relative entries. Open the change as a pull request into `dev`; it ships with the next aprscaching release.
+same relative entries. Open the change as a pull request into `dev`; it ships with the next APRScaching release.
 
-In Claude Code in the aprscaching repository, `/bundle-tools v1.1.0` does this on a `chore/bundle-tools-v1.1.0`
+In Claude Code in the APRScaching repository, `/bundle-tools v1.1.0` does this on a `chore/bundle-tools-v1.1.0`
 branch: it reads the tag from a temporary worktree of this repository, runs the gate (`pnpm run verify`, the tool
 sandbox end-to-end test and the visual run of the tools surfaces) and opens the pull request. It merges nothing.
 

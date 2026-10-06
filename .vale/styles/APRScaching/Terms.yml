@@ -15,3 +15,5 @@ swap:
   "Meshcom|MESHCOM": MeshCom
   "Geo-caching|geo-caching": geocaching
   "the shack": the Shack
+  # The wordmark. Lowercase only in names that are identifiers: repositories, paths, URLs, packages, code.
+  "(?<![\\w/.@-])(?:aprscaching|Aprscaching|APRSCaching|APRS[ -][Cc]aching|aprs[ -]caching)(?![\\w/.-])": APRScaching

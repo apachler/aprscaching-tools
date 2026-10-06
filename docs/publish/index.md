@@ -48,7 +48,7 @@ The app trusts a registry only under the key someone confirmed for it, never und
 3. Every later load verifies the file against the pinned key. A file signed by another key shows as **key changed**
    and lists nothing until the same person compares and confirms the new key.
 
-The fingerprint of a key is the first 64 bits of SHA-256 over the raw Ed25519 key, the same form aprscaching's
+The fingerprint of a key is the first 64 bits of SHA-256 over the raw Ed25519 key, the same form APRScaching's
 federation keys use. A publisher states it wherever people find the registry.
 
 ## Fetched through the instance

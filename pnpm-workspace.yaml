@@ -5,5 +5,5 @@ allowBuilds:
   esbuild: true
 
 # Supply-chain: refuse freshly published packages (malware is usually yanked within hours). The same 12 h floor as
-# the aprscaching repository.
+# the APRScaching repository.
 minimumReleaseAge: 720
