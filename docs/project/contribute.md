@@ -73,7 +73,11 @@ checks.
     is: the maintainer adds the entry. Until then `pnpm test` prints a warning that your tool has no registry entry,
     and passes.
 
-6. Commit with a sign-off and a Conventional Commit message, push, and open a pull request into `dev`:
+6. Add a line under `## [Unreleased]` in `CHANGELOG.md` that says what your change gives a player or a tool author,
+   such as `- **New tool.** CW trainer: …` or `- Grid & bearing 1.0.1: bearing in mils.`. The release dates that
+   section as it is.
+
+7. Commit with a sign-off and a Conventional Commit message, push, and open a pull request into `dev`:
 
     ```bash
     git commit -s -m "feat(tools): add cw-trainer"
