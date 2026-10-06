@@ -20,8 +20,9 @@
 // origin/main, the tag) and continues from the first that is not. --dry-run only reports. --step runs one step;
 // --yes answers its questions, for a step the operator already confirmed (it needs --step).
 //
-// The key files come from TOOL_KEYS_DIR (default ~/Development/github/aprscaching-keys), or TOOL_AUTHOR_KEY_FILE and
-// TOOL_AUTHORITY_KEY_FILE. Their values are read only in the sign step and passed to sign-all in that one child
+// The key files come from TOOL_KEYS_DIR (default $XDG_CONFIG_HOME/aprscaching-tools/keys, else
+// ~/.config/aprscaching-tools/keys), or TOOL_AUTHOR_KEY_FILE and TOOL_AUTHORITY_KEY_FILE; check refuses a key folder
+// inside a git working tree. Their values are read only in the sign step and passed to sign-all in that one child
 // process's environment; everything printed passes through a filter that removes them.
 import fs from "node:fs";
 import path from "node:path";
@@ -35,6 +36,7 @@ import {
   defaultRunner,
   fingerprint,
   inspectKey,
+  inspectKeyFolder,
   keyFiles,
   loadKey,
   redact,
@@ -208,12 +210,16 @@ const toolFolders = (root) => {
     .sort();
 };
 
-/** The key files' state: { author, authority } each { file, state, pub?, detail? }, with what is wrong. */
+/**
+ * The key files' state: { author, authority } each { file, state, pub?, detail? }, with what is wrong (`problems`)
+ * and what deserves a look (`warnings`).
+ */
 function keyReport(ctx) {
   const files = keyFiles(ctx.env);
   const author = { file: files.author, ...inspectKey(files.author) };
   const authority = { file: files.authority, ...inspectKey(files.authority) };
-  const problems = [];
+  const where = inspectKeyFolder(files);
+  const problems = [...where.fails];
   for (const [name, k] of [["author", author], ["authority", authority]])
     if (k.state !== "ok") problems.push(`the ${name} key: ${k.detail}`);
   const pinned = (ctx.read("authority.pub") ?? "").trim();
@@ -222,7 +228,7 @@ function keyReport(ctx) {
   const expected = authorKeysOf(JSON.parse(ctx.read("registry.json") ?? "{}"));
   if (author.pub && expected.length && !expected.includes(author.pub))
     problems.push(`the author key file holds ${author.pub}; the registry lists OE8APR's tools under ${expected.join(", ")}`);
-  return { author, authority, problems };
+  return { author, authority, problems, warnings: where.warns };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -280,6 +286,7 @@ steps.check = async (ctx, s) => {
   if (!done.has("sign")) {
     const k = keyReport(ctx);
     for (const p of k.problems) fail(p);
+    for (const w of k.warnings) ctx.log(`warn  ${w}`);
     if (!k.problems.length) {
       ok(`author key ${k.author.pub} (${fingerprint(k.author.pub)})`);
       ok(`authority key ${k.authority.pub} (${fingerprint(k.authority.pub)}), as authority.pub pins`);

@@ -9,7 +9,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { doctor } from "../scripts/doctor.mjs";
 import { createContext, datedChangelog, release, unreleasedBody } from "../scripts/release.mjs";
-import { fingerprint, redact } from "../scripts/release-kit.mjs";
+import { fingerprint, inspectKeyFolder, keyFiles, redact, workTreeOf } from "../scripts/release-kit.mjs";
 import { repoRoot } from "./harness.mjs";
 
 const genkey = () => execFileSync(process.execPath, [path.join(repoRoot, "scripts/genkey.mjs"), "--raw"]).toString();
@@ -32,10 +32,16 @@ afterEach(() => {
   for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
 });
 
-/** A temporary repository and key folder; `opts` changes what the files hold. */
+/**
+ * A temporary repository and key folder; `opts` changes what the files hold. The key folder sits beside the
+ * repository, outside it, unless `keysInside`; `git: true` gives the repository a `.git` folder.
+ */
 function fixture(opts = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "tools-release-"));
-  dirs.push(root);
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "tools-release-"));
+  dirs.push(base);
+  const root = path.join(base, "repo");
+  fs.mkdirSync(root);
+  if (opts.git) fs.mkdirSync(path.join(root, ".git"));
   const author = genkey();
   const authority = genkey();
   const w = (rel, text) => {
@@ -52,11 +58,12 @@ function fixture(opts = {}) {
   w("registry.json", JSON.stringify({ format: 1, entries: [entry] }));
   w("tools/foo/tool.json", JSON.stringify({ name: "foo" }));
   for (const t of opts.unlisted ?? []) w(`tools/${t}/tool.json`, JSON.stringify({ name: t }));
-  const keys = path.join(root, ".keys");
+  const keys = opts.keysInside ? path.join(root, ".keys") : path.join(base, "keys");
   fs.mkdirSync(keys);
+  fs.chmodSync(keys, opts.dirMode ?? 0o700);
   if (!opts.noAuthorKey) fs.writeFileSync(path.join(keys, "oe8apr-tool-author.key"), author, { mode: opts.mode ?? 0o600 });
   fs.writeFileSync(path.join(keys, "registry-authority.key"), authority, { mode: 0o600 });
-  return { root, keys, author, authority };
+  return { base, root, keys, author, authority };
 }
 
 /**
@@ -123,6 +130,15 @@ function harness(fx, w, o = {}) {
     source: path.join(fx.root, "no-clone"),
   });
   return { ctx, out, asked, text: () => out.join("\n") };
+}
+
+/** The stand-in for git, gh and corepack that doctor.mjs asks: a ready computer. */
+function doctorRun(cmd, args) {
+  const ok = () => ({ status: 0, stdout: "", stderr: "" });
+  const line = `${cmd} ${args.join(" ")}`;
+  if (line === "git remote get-url origin") return { ...ok(), stdout: "git@github.com:apachler/aprscaching-tools.git\n" };
+  if (line === "corepack pnpm --version") return { ...ok(), stdout: "11.9.0\n" };
+  return ok();
 }
 
 const MUTATING = /^(git (commit|push|switch|tag -a|add|branch|merge)|gh pr (create|merge)|node scripts\/sign-all)/;
@@ -237,6 +253,20 @@ describe("release.mjs check", () => {
     expect(r.text).toMatch(/but authority\.pub pins/);
   });
 
+  it("fails a key folder inside a git working tree", async () => {
+    const r = await check({ git: true, keysInside: true }, {});
+    expect(r.code).toBe(1);
+    expect(r.text).toMatch(/FAIL {2}the key folder .*\.keys lies inside a git working tree/);
+  });
+
+  it("warns about a key folder others can open", async () => {
+    const fx = fixture({ dirMode: 0o755 });
+    const h = harness(fx, world(), { dryRun: true });
+    await release(h.ctx);
+    expect(h.text()).toMatch(/warn {2}the key folder .* has mode 755; run chmod 700/);
+    expect(h.text()).not.toMatch(/FAIL {2}the key folder/);
+  });
+
   it("fails a tool folder the registry does not list", async () => {
     const r = await check({ unlisted: ["newcomer"] }, {});
     expect(r.code).toBe(1);
@@ -299,6 +329,76 @@ describe("release.mjs steps", () => {
   });
 });
 
+describe("the key folder", () => {
+  const tmp = () => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), "tools-keys-"));
+    dirs.push(d);
+    return d;
+  };
+
+  it("defaults to $XDG_CONFIG_HOME/aprscaching-tools/keys, else ~/.config/aprscaching-tools/keys", () => {
+    const k = keyFiles({ HOME: "/home/op", XDG_CONFIG_HOME: "/srv/config" });
+    expect(k.dir).toBe("/srv/config/aprscaching-tools/keys");
+    expect(k.author).toBe("/srv/config/aprscaching-tools/keys/oe8apr-tool-author.key");
+    expect(k.authority).toBe("/srv/config/aprscaching-tools/keys/registry-authority.key");
+    expect(keyFiles({ HOME: "/home/op" }).dir).toBe("/home/op/.config/aprscaching-tools/keys");
+    expect(keyFiles({ HOME: "/home/op", XDG_CONFIG_HOME: "relative" }).dir).toBe("/home/op/.config/aprscaching-tools/keys");
+  });
+
+  it("takes TOOL_KEYS_DIR and the per-file overrides", () => {
+    const k = keyFiles({ HOME: "/home/op", XDG_CONFIG_HOME: "/srv/config", TOOL_KEYS_DIR: "/vault", TOOL_AUTHORITY_KEY_FILE: "/usb/a.key" });
+    expect(k.author).toBe("/vault/oe8apr-tool-author.key");
+    expect(k.authority).toBe("/usb/a.key");
+  });
+
+  it("finds the working tree above a folder, a file or a path not yet made", () => {
+    const d = tmp();
+    fs.mkdirSync(path.join(d, "repo", "sub"), { recursive: true });
+    fs.mkdirSync(path.join(d, "repo", ".git"));
+    fs.mkdirSync(path.join(d, "wt"));
+    fs.writeFileSync(path.join(d, "wt", ".git"), "gitdir: elsewhere\n");
+    const real = fs.realpathSync(d);
+    expect(workTreeOf(path.join(d, "repo", "sub"))).toBe(path.join(real, "repo"));
+    expect(workTreeOf(path.join(d, "repo", "sub", "not", "yet", "a.key"))).toBe(path.join(real, "repo"));
+    expect(workTreeOf(path.join(d, "wt", "keys"))).toBe(path.join(real, "wt"));
+    expect(workTreeOf(d)).toBe(null);
+  });
+
+  it("fails a per-file override inside a working tree, and passes a mode-700 folder outside one", () => {
+    const d = tmp();
+    fs.mkdirSync(path.join(d, "repo", ".git"), { recursive: true });
+    fs.mkdirSync(path.join(d, "keys"), { mode: 0o700 });
+    fs.chmodSync(path.join(d, "keys"), 0o700);
+    const outside = keyFiles({ HOME: d, TOOL_KEYS_DIR: path.join(d, "keys") });
+    expect(inspectKeyFolder(outside)).toEqual({ fails: [], warns: [] });
+    const r = inspectKeyFolder({ ...outside, authority: path.join(d, "repo", "registry-authority.key") });
+    expect(r.fails).toHaveLength(1);
+    expect(r.fails[0]).toMatch(/repo lies inside a git working tree/);
+  });
+
+  it("is found by default under XDG_CONFIG_HOME, and doctor refuses it inside a working tree", () => {
+    const fx = fixture();
+    const config = path.join(fx.base, "config");
+    fs.mkdirSync(path.join(config, "aprscaching-tools"), { recursive: true });
+    fs.renameSync(fx.keys, path.join(config, "aprscaching-tools", "keys"));
+    fs.writeFileSync(path.join(fx.root, "package.json"), JSON.stringify({ packageManager: "pnpm@11.9.0" }));
+    const run = (env) => {
+      const out = [];
+      const code = doctor({ root: fx.root, run: doctorRun, env, log: (l) => out.push(l), nodeVersion: "24.0.0", install: false });
+      return { code, t: out.join("\n") };
+    };
+    const ok = run({ HOME: path.join(fx.base, "nohome"), XDG_CONFIG_HOME: config });
+    expect(ok.code, ok.t).toBe(0);
+    expect(ok.t).toContain(`pass  author key: ${pubOf(fx.author)}`);
+    expect(ok.t).toMatch(/pass {2}key folder .* is outside every git working tree/);
+    fs.mkdirSync(path.join(config, ".git"));
+    const inside = run({ HOME: path.join(fx.base, "nohome"), XDG_CONFIG_HOME: config });
+    expect(inside.code).toBe(1);
+    expect(inside.t).toMatch(/FAIL {2}the key folder .* lies inside a git working tree/);
+    expect(inside.t).not.toContain(fx.author);
+  });
+});
+
 describe("release.mjs helpers", () => {
   it("reads and dates the Unreleased section", () => {
     expect(unreleasedBody(CHANGELOG)).toBe("- A new tool.");
@@ -314,19 +414,12 @@ describe("release.mjs helpers", () => {
 });
 
 describe("doctor.mjs", () => {
-  const ok = () => ({ status: 0, stdout: "", stderr: "" });
-  const fakeRun = (cmd, args) => {
-    const line = `${cmd} ${args.join(" ")}`;
-    if (line === "git remote get-url origin") return { ...ok(), stdout: "git@github.com:apachler/aprscaching-tools.git\n" };
-    if (line === "corepack pnpm --version") return { ...ok(), stdout: "11.9.0\n" };
-    return ok();
-  };
 
   it("passes a ready computer and prints only public keys", () => {
     const fx = fixture();
     fs.writeFileSync(path.join(fx.root, "package.json"), JSON.stringify({ packageManager: "pnpm@11.9.0" }));
     const out = [];
-    const code = doctor({ root: fx.root, run: fakeRun, env: { TOOL_KEYS_DIR: fx.keys }, log: (l) => out.push(l), nodeVersion: "24.0.0" });
+    const code = doctor({ root: fx.root, run: doctorRun, env: { TOOL_KEYS_DIR: fx.keys }, log: (l) => out.push(l), nodeVersion: "24.0.0" });
     const t = out.join("\n");
     expect(code, t).toBe(0);
     expect(t).toContain(`pass  author key: ${pubOf(fx.author)} (fingerprint ${fingerprint(pubOf(fx.author))})`);
@@ -340,7 +433,7 @@ describe("doctor.mjs", () => {
     const other = genkey();
     fs.writeFileSync(path.join(fx.keys, "registry-authority.key"), other, { mode: 0o600 });
     const out = [];
-    const code = doctor({ root: fx.root, run: fakeRun, env: { TOOL_KEYS_DIR: fx.keys }, log: (l) => out.push(l), nodeVersion: "20.1.0" });
+    const code = doctor({ root: fx.root, run: doctorRun, env: { TOOL_KEYS_DIR: fx.keys }, log: (l) => out.push(l), nodeVersion: "20.1.0" });
     const t = out.join("\n");
     expect(code).toBe(1);
     expect(t).toMatch(/FAIL {2}Node 20\.1\.0/);
@@ -353,7 +446,7 @@ describe("doctor.mjs", () => {
     const fx = fixture({ noAuthorKey: true });
     const run = (release) => {
       const out = [];
-      const code = doctor({ root: fx.root, run: fakeRun, env: { TOOL_KEYS_DIR: fx.keys }, log: (l) => out.push(l), release, install: false });
+      const code = doctor({ root: fx.root, run: doctorRun, env: { TOOL_KEYS_DIR: fx.keys }, log: (l) => out.push(l), release, install: false });
       return { code, t: out.join("\n") };
     };
     expect(run(false).t).toMatch(/warn {2}author key: .*does not exist/);

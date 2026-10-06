@@ -34,15 +34,71 @@ export function defaultRunner(cmd, args, { cwd = repoRoot, env, inherit = false,
   return { status: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
 
-/** The key files: TOOL_KEYS_DIR (default ~/Development/github/aprscaching-keys), each overridable on its own. */
+/**
+ * The key files: in TOOL_KEYS_DIR, by default $XDG_CONFIG_HOME/aprscaching-tools/keys (~/.config/aprscaching-tools/keys
+ * when XDG_CONFIG_HOME is unset or not absolute), each overridable on its own. The folder lies outside every
+ * repository, so no `git add` can pick a key up.
+ */
 export function keyFiles(env = process.env) {
   const home = env.HOME || os.homedir();
-  const dir = env.TOOL_KEYS_DIR || path.join(home, "Development", "github", "aprscaching-keys");
+  const config = env.XDG_CONFIG_HOME && path.isAbsolute(env.XDG_CONFIG_HOME) ? env.XDG_CONFIG_HOME : path.join(home, ".config");
+  const dir = env.TOOL_KEYS_DIR || path.join(config, "aprscaching-tools", "keys");
   return {
     dir,
     author: env.TOOL_AUTHOR_KEY_FILE || path.join(dir, "oe8apr-tool-author.key"),
     authority: env.TOOL_AUTHORITY_KEY_FILE || path.join(dir, "registry-authority.key"),
   };
+}
+
+/**
+ * The git working tree a path lies in, or null: the nearest folder at or above it (from its nearest existing
+ * ancestor, symlinks resolved) that holds a `.git` folder or file. A path that does not exist yet still counts, since
+ * a key written there would land in the tree.
+ */
+export function workTreeOf(p) {
+  let cur = path.resolve(p);
+  while (!fs.existsSync(cur) && path.dirname(cur) !== cur) cur = path.dirname(cur);
+  try {
+    cur = fs.realpathSync(cur);
+  } catch {
+    /* unreadable: walk the path as given */
+  }
+  for (;;) {
+    if (fs.existsSync(path.join(cur, ".git"))) return cur;
+    const up = path.dirname(cur);
+    if (up === cur) return null;
+    cur = up;
+  }
+}
+
+/**
+ * Where the key files live, without reading them: { fails, warns }, each a list of lines. A key folder inside a git
+ * working tree fails; a folder others can open (not mode 700) warns.
+ */
+export function inspectKeyFolder(files) {
+  const fails = [];
+  const warns = [];
+  const trees = new Set();
+  // the folders that hold the two files: TOOL_KEYS_DIR, or wherever a per-file override points
+  const folders = [...new Set([files.author, files.authority].map((f) => path.dirname(path.resolve(f))))];
+  for (const d of folders) {
+    const tree = workTreeOf(d);
+    if (tree && !trees.has(tree)) {
+      trees.add(tree);
+      fails.push(`the key folder ${d} lies inside a git working tree (${tree}); move the keys to a folder outside every repository`);
+    }
+  }
+  for (const d of folders) {
+    let st;
+    try {
+      st = fs.statSync(d);
+    } catch {
+      continue;
+    }
+    const mode = st.mode & 0o777;
+    if (st.isDirectory() && mode !== 0o700) warns.push(`the key folder ${d} has mode ${mode.toString(8)}; run chmod 700 ${d}`);
+  }
+  return { fails, warns };
 }
 
 /** The fingerprint the app and the documentation show: the first 64 bits of SHA-256 over the raw Ed25519 key. */

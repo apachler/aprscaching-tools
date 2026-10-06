@@ -12,8 +12,9 @@ skill runs it one step at a time and keeps the user in charge of the keys and of
 ## Hard rules
 
 - **Never read, `cat`, print, copy or pass the key files or their contents**, nor set `AUTHOR_KEY`, `AUTHORITY_KEY`
-  or `TOOL_PRIVATE_KEY`. Do not list or open `~/Development/github/aprscaching-keys/` or `TOOL_KEYS_DIR`. The scripts
-  read the keys themselves and print public keys and fingerprints only.
+  or `TOOL_PRIVATE_KEY`. Do not list or open the key folder (`TOOL_KEYS_DIR`, by default
+  `~/.config/aprscaching-tools/keys/`). The scripts read the keys themselves and print public keys and fingerprints
+  only.
 - **Never run the `sign` step yourself.** The user runs it (step 6).
 - **Never merge into `main` without the user's go-ahead in this conversation**, asked for right before the `pr-main`
   step, after its checks are listed. Approval of an earlier step does not count.

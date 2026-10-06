@@ -13,7 +13,8 @@ a registry, is installed by the player on demand and runs in the app's sandbox.
   parser) the tools bundle.
 - `scripts/` holds `fetch-libs.mjs` and `build.mjs` to build the tools, `new-tool.mjs` to start one, `genkey.mjs`,
   `sign.mjs` and `sign-all.mjs` to make keys and sign, `verify.mjs` to check the registry and every listed tool,
-  `release.mjs` to release a tag step by step, and `doctor.mjs` to check that a computer can do all of that.
+  `release.mjs` to release a tag step by step, and `doctor.mjs` to check that a computer can do all of that. The
+  signing keys stay in a folder outside every repository, by default `~/.config/aprscaching-tools/keys`.
 
 ## The tools
 

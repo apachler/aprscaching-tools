@@ -14,6 +14,9 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 
 ## Signing
 - Private keys never enter the repository, CI or a log. Only the maintainer signs, offline, with `scripts/sign-all.mjs`.
+- The key files live in the key folder, outside every repository: `TOOL_KEYS_DIR`, by default
+  `$XDG_CONFIG_HOME/aprscaching-tools/keys` (`~/.config/aprscaching-tools/keys`); the doctor and the release `check`
+  fail a key folder inside a git working tree.
 - On `dev` a changed tool is unsigned until the next release: PR CI runs `verify.mjs` without `--strict`. PRs into
   `main` and release tags run `verify.mjs --strict`.
 - A release: a `release/vX.Y.Z` branch from `dev` where the maintainer runs `sign-all` and updates CHANGELOG.md,
