@@ -10,8 +10,10 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 - A release is a `release/vX.Y.Z` branch from `dev`, a PR into `main` merged as a merge commit, the tag, then `dev`
   fast-forwarded to `main` (a PR from `main` into `dev`, merged as a merge commit, when `dev` has moved on). A hotfix
   starts from the tag it fixes. `main` holds only fully signed states and is the default branch; its ruleset allows
-  changes only by pull request with the `check` and `verify` checks passing, and `verify` fails a PR into `main` that
-  does not come from `release/vX.Y.Z`. Dependabot targets `dev`.
+  changes only by pull request, merged as a merge commit, with the `check` and `verify` checks passing, and `verify`
+  fails a PR into `main` that does not come from `release/vX.Y.Z`. The `dev` ruleset asks the same pull request and
+  checks, squash or merge commit; repository admins bypass it for the `sync-dev` fast-forward push. Actions must be
+  pinned to a full commit SHA. Dependabot targets `dev`.
 - Commits and PR titles are Conventional Commits, signed off (`git commit -s`); no tool attribution in commits or
   PR descriptions (the DCO workflow rejects it). Merged branches are deleted.
 - A PR that changes what a player, tool author or maintainer gets adds its line under `## [Unreleased]` in
