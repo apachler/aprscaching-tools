@@ -1,11 +1,11 @@
 # Away note
 
-Away note tells a connecting station that you are away and lets it leave a short note. It is for operators who keep
+Away note tells a station that connects to your packet terminal that you are away, and lets it leave a short note. It is for operators who keep
 a session open while they step away. It is not a mailbox.
 
 ## What it does
 
-While you are away, a station that connects reads your away message and `Leave a note with:  NOTE <text>`. The
+While you are away, a station that connects to your packet terminal reads your away message and `Leave a note with:  NOTE <text>`. The
 tool keeps at most 20 notes of 120 characters each, in this page only; they end when the page closes.
 
 ## Use it

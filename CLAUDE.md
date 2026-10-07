@@ -10,8 +10,10 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 - A release is a `release/vX.Y.Z` branch from `dev`, a PR into `main` merged as a merge commit, the tag, then `dev`
   fast-forwarded to `main` (a PR from `main` into `dev`, merged as a merge commit, when `dev` has moved on). A hotfix
   starts from the tag it fixes. `main` holds only fully signed states and is the default branch; its ruleset allows
-  changes only by pull request with the `check` and `verify` checks passing, and `verify` fails a PR into `main` that
-  does not come from `release/vX.Y.Z`. Dependabot targets `dev`.
+  changes only by pull request, merged as a merge commit, with the `check` and `verify` checks passing, and `verify`
+  fails a PR into `main` that does not come from `release/vX.Y.Z`. The `dev` ruleset asks the same pull request and
+  checks, squash or merge commit; repository admins bypass it for the `sync-dev` fast-forward push. Actions must be
+  pinned to a full commit SHA. Dependabot targets `dev`.
 - Commits and PR titles are Conventional Commits, signed off (`git commit -s`); no tool attribution in commits or
   PR descriptions (the DCO workflow rejects it). Merged branches are deleted.
 - A PR that changes what a player, tool author or maintainer gets adds its line under `## [Unreleased]` in
@@ -29,9 +31,12 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 - A release: on the `release/vX.Y.Z` branch the maintainer runs `sign-all` and dates CHANGELOG.md; after the PR
   into `main`, the maintainer tags `vX.Y.Z` on `main` and the tag becomes a GitHub Release. An APRScaching release
   bundles a tag with its `tools/toolkey/bundle-registry.mjs`.
-- `scripts/release.mjs <X.Y.Z>` runs that flow step by step and resumes where it stopped; `/release <X.Y.Z>`
-  (`.claude/skills/release/`) drives it. An agent never reads, prints or passes the key files, never runs the `sign`
-  step (the user runs it with `!`), and never merges into `main` without the user's go-ahead in the conversation.
+- `scripts/release.mjs [X.Y.Z]` runs that flow step by step and resumes where it stopped; without a version, the
+  Conventional Commits since the newest tag choose it (breaking → major, `feat` → minor, else patch). `/release`
+  (`.claude/skills/release/`) drives it: asking for the release is the go-ahead for the whole run, signing and the
+  merge into `main` included, and it stops for the user only on a failure, a CHANGELOG line it had to write, or
+  something unexpected. An agent never reads, prints or passes the key files (the `sign` step reads them itself), and
+  merges into `main` only after the PR's checks have passed.
 - `scripts/doctor.mjs` checks the computer (Node, pnpm, gh, remote, vendor/, lockfile, key files by public key only).
 
 ## Tools and checks

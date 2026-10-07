@@ -7,7 +7,7 @@ Title: a Conventional Commit, e.g. "feat(grid-bearing): bearing in mils". PRs go
 ## How it was verified
 
 - [ ] `node scripts/build.mjs --check` (the built tool.js matches its source)
-- [ ] The tests pass
+- [ ] The tests pass, and new behaviour or a fixed bug has its test
 - [ ] `node scripts/verify.mjs` lists no failures beyond the signatures this change makes stale
 
 ## Housekeeping

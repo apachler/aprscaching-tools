@@ -19,7 +19,7 @@ checks, and records what the tool asks of the app. Values cross the boundary thr
 harness keeps the app's rules where a test could otherwise pass wrongly:
 
 - **The bus.** `provide` is refused for a service another tool holds, and for names that start with `session.` or
-  `host.`; a tool may not publish those topics either. A call to `session.script` without `tx` is refused with the
+  `host.` or `link.`; a tool may not publish those topics either, except `link.ping.request`. A call to `session.script` without `tx` is refused with the
   app's reason ([The tool bus](tool-bus.md)).
 - **Transmit format.** `requestTx()` holds what the app would not send, such as a status over 62 characters or one
   that starts with a grid locator, and resolves `false` ([The sandbox API](sandbox-api.md#toolrequesttxinfo)).

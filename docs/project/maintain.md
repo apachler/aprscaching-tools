@@ -14,6 +14,10 @@ A release branch is cut from `dev`, signed, and merged into `main` as a merge co
 `main`: a fast-forward push when nothing has landed on `dev` since the release branch was cut, which is the one push
 to `dev` outside a pull request, or a pull request from `main` merged as a merge commit when something has.
 
+Rulesets hold both branches to this. `main` takes a pull request only as a merge commit, `dev` as a squash or a
+merge commit, and both only with the `check` and `verify` checks passing. Repository admins bypass the `dev`
+ruleset, which is what lets the fast-forward push through.
+
 ```mermaid
 flowchart LR
   F["Feature PRs<br/>squash-merged into dev<br/>(unsigned)"] --> R["release/vX.Y.Z from dev:<br/>sign-all, CHANGELOG"]
@@ -51,6 +55,36 @@ The authority's public key is `authority.pub`:
 ```text
 <!-- authority-key -->
 ```
+
+### Back up the keys
+
+A key that is lost cannot be recovered, and the registry depends on both. Without the author key, every project tool
+is signed again under a new key, and players who installed one see **Author key CHANGED**. Without the authority key,
+nothing can sign `registry.json`, and every instance and player that pinned the key has to confirm a new one. Keep
+an encrypted copy of the key folder offline, in a place apart from the computer that signs:
+
+1. Write the encrypted archive straight to the removable medium, never into a git working tree or a folder a cloud
+   service syncs. `gpg` asks for a passphrase; keep it apart from the medium, such as in a password manager:
+
+    ```bash
+    tar -C ~/.config/aprscaching-tools -czf - keys \
+      | gpg --symmetric --cipher-algo AES256 -o /media/<stick>/aprscaching-tools-keys.tar.gz.gpg
+    ```
+
+2. Keep two copies, on two media in two places, and make a new one when a key changes.
+3. Check a copy once a year, and after you make it: restore it into an empty key folder and run the doctor, which
+   compares the authority key with `authority.pub` and the author key with the registry:
+
+    ```bash
+    TOOL_KEYS_DIR="$(mktemp -d)" && chmod 700 "$TOOL_KEYS_DIR"
+    gpg -d /media/<stick>/aprscaching-tools-keys.tar.gz.gpg | tar -C "$TOOL_KEYS_DIR" --strip-components=1 -xzf -
+    TOOL_KEYS_DIR="$TOOL_KEYS_DIR" node scripts/doctor.mjs --release
+    rm -rf "$TOOL_KEYS_DIR"
+    ```
+
+To restore for good, unpack into `~/.config/aprscaching-tools` instead, then `chmod 700` the folder and `chmod 600`
+each file. When no copy is left, the steps for a changed key apply ([Keys, rotation and release
+practice](../publish/keys-and-releases.md#when-a-key-changes-or-leaks)).
 
 ## Add or update an entry
 
@@ -105,9 +139,16 @@ Each pull request adds its own line under `## [Unreleased]` in `CHANGELOG.md`. B
 against the pull requests merged since the last tag and fill any gap, then:
 
 ```bash
-node scripts/release.mjs 1.3.0 --dry-run    # where the release stands; changes nothing but a git fetch
-node scripts/release.mjs 1.3.0              # every step that is not done, asking before each change
+node scripts/release.mjs --dry-run          # the next version and where the release stands; changes nothing but a git fetch
+node scripts/release.mjs                    # every step that is not done, asking before each change
+node scripts/release.mjs 1.4.0              # the same, for a version you name
 ```
+
+Without a version, the script chooses it. A release branch already in progress keeps its version, so a rerun
+finishes the release it started; `--from vX.Y.Z` makes a patch on that tag. Otherwise the commits on `origin/dev`
+since the newest tag decide, by their Conventional Commit type: a breaking change (`feat!:` or a `BREAKING CHANGE:`
+footer) makes the next major, a `feat` the next minor, anything else the next patch. A run with nothing new since
+the newest tag says `nothing to release`.
 
 | Step | What it does |
 |---|---|
@@ -130,10 +171,11 @@ clone there the libraries come from GitHub. Without a terminal every question is
 The script reads the key files in the `sign` step only, and passes their values to `sign-all` in that one process's
 environment. Every line it prints passes through a filter that removes them.
 
-In Claude Code, `/release 1.3.0` runs the doctor, checks the Unreleased entry against the pull requests merged since
-the last tag for your approval, and runs the steps one by one. You run the `sign` step yourself, and it merges into
-`main` only on your go-ahead: before that step, or once for the whole release when nothing needs signing and every
-check passes (`.claude/skills/release/SKILL.md`).
+In Claude Code, `/release` (or `/release 1.4.0`) runs the whole release: asking for it is the go-ahead for every step, signing and
+the merge into `main` included. It checks the Unreleased entry against the pull requests merged since the last tag,
+runs the `sign` step, which reads the key files itself, and merges into `main` only once the pull request's checks
+have passed. It stops for you only when a check or step fails, when it had to write a CHANGELOG line for a pull
+request that brought none, or when something turns up you would want to see (`.claude/skills/release/SKILL.md`).
 
 ### Hotfix
 

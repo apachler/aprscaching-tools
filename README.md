@@ -1,5 +1,9 @@
 # APRScaching tools
 
+[![Verify](https://github.com/apachler/aprscaching-tools/actions/workflows/verify.yml/badge.svg)](https://github.com/apachler/aprscaching-tools/actions/workflows/verify.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/apachler/aprscaching-tools?sort=semver)](https://github.com/apachler/aprscaching-tools/releases)
+[![Docs](https://img.shields.io/badge/docs-apachler.github.io-14b8a6)](https://apachler.github.io/aprscaching-tools/)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/apachler/aprscaching-tools/badge)](https://scorecard.dev/viewer/?uri=github.com/apachler/aprscaching-tools)
 
 The project's tool registry for APRScaching 1.x: a signed list of tools for the Shack's **Tools** app, and the

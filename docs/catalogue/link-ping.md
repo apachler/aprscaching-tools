@@ -5,13 +5,15 @@ link before sending a long message.
 
 ## What it does
 
-The connected surface times each round trip and publishes the sample as `link.rtt` with `{ ms }` on the tool bus.
-The tool keeps the last 50 samples and shows the last and the average in its panel. `/ping` asks the surface for a
-sample by publishing `link.ping.request`.
+While a TNC is open, the packet terminal times each round trip on a connected channel, from a frame's
+acknowledgement or from a poll, and publishes the sample as `link.rtt` on the tool bus. The tool keeps the last 50
+samples and shows the last and the average in its panel. `/ping` asks the terminal for a sample by publishing
+`link.ping.request`: the terminal sends one poll on the channel in view, at most one every 10 seconds, under its
+transmit gate.
 
 ## Use it
 
-1. Connect to a station in the packet terminal or the node.
+1. Connect to a station in the packet terminal.
 2. Type `/ping`.
 
 The panel shows the last round trip and the average.

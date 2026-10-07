@@ -23,7 +23,7 @@ it too.
 | `/conv 100 km mi` | `100 km = 62.14 mi` |
 | `/conv 212 f c` | `212 F = 100.0 C` |
 
-A connected station may send `conv <value> <from> <to>` and gets the same answer.
+A station connected to your packet terminal may send `conv <value> <from> <to>` and gets the same answer.
 
 ## Permissions
 

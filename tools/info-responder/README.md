@@ -7,7 +7,7 @@ Answers a connected peer's `INFO`, `MENU` and `WHOIS <call>`. `WHOIS` asks the S
 - `info`, `menu`, `whois <call>` — for peers and the operator
 - `/setinfo <text>` — the operator sets the info text (up to 240 characters)
 
-It shows on: terminal, bbs, node. Connected peers may run its commands, except the ones it keeps for the operator.
+It shows on: terminal, bbs, node. Stations connected to your packet terminal may run its commands, except the ones it keeps for the operator.
 
 ## Permissions
 

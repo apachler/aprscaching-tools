@@ -1,7 +1,8 @@
 # Connect bell
 
-The connect bell tells you when a station connects to you. It is for operators who leave the packet terminal, the
-BBS or the node open in a tab.
+The connect bell tells you when a session opens in your packet terminal: a station connecting to you, or you
+connecting to a station. It is for operators who leave the packet terminal open in a tab. The BBS and node sessions
+run on the ingest box, where tools do not run.
 
 ## What it does
 
