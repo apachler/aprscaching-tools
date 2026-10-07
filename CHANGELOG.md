@@ -5,6 +5,19 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-07
+
+The docs follow the packet terminal's session events, a release picks its own version, and the docs build installs
+only hashed packages.
+
+- **Session events.** The docs follow the app's packet terminal:
+  - it raises `on_connect` and `on_disconnect` for each connected channel, both ways, with a `direction`, and offers
+    `reply` on a session another station opened;
+  - it runs remote commands from stations connected to it;
+  - it times the link on `link.rtt` and answers `link.ping.request`.
+
+  The BBS and node sessions run on the ingest box, where tools do not run. `link.` names are the app's, except the
+  `link.ping.request` a tool publishes.
 - **Back up the keys.** The maintainer's guide shows how to keep an encrypted offline copy of the signing keys and
   check it, and what a lost key costs without one.
 - **Discussions.** Forms for Q&A and Ideas, and the issue chooser and SUPPORT.md link to each.
@@ -19,14 +32,6 @@ format versions are named where they change.
 - **Docs build.** `docs/requirements.txt` names every file of each pinned package by its SHA-256, and CI installs it
   with `--require-hashes`.
 - **README badges.** CI, licence, latest release, documentation site and OpenSSF Scorecard.
-- **Session events.** The docs follow the app's packet terminal:
-  - it raises `on_connect` and `on_disconnect` for each connected channel, both ways, with a `direction`, and offers
-    `reply` on a session another station opened;
-  - it runs remote commands from stations connected to it;
-  - it times the link on `link.rtt` and answers `link.ping.request`.
-
-  The BBS and node sessions run on the ingest box, where tools do not run. `link.` names are the app's, except the
-  `link.ping.request` a tool publishes.
 
 ## [1.3.0] - 2026-10-06
 
