@@ -48,7 +48,7 @@ it. An install stops on the first error it reports.
 | `api` | string | yes | The [tool API version](../api/index.md) the tool needs, `MAJOR.MINOR`, for example `1.0`. | `api must name the tool API version the tool needs, as "MAJOR.MINOR"` |
 | `permissions` | string array | yes | Each one a [capability](#permissions); duplicates dropped. `[]` is allowed. | `permissions must be a list of known capabilities` |
 | `surfaces` | string array | no | Each one a [surface](#surfaces); duplicates dropped; `["web"]` when left out or empty. | `surfaces must be a list of known surfaces (web/terminal/bbs/node/map)` |
-| `remote` | boolean | no | `true` lets connected stations run the commands the script opens to them. Any other value counts as not set. | none |
+| `remote` | boolean | no | `true` lets stations connected to the player's packet terminal run the commands the script opens to them. Any other value counts as not set. | none |
 | `description` | string | no | One line for the registry and the install prompt. Any other type is dropped. | none |
 | `entry` | string | no | The script's address or path, resolved against the manifest's address. | `entry must be a string URL/path` |
 | `entrySha256` | string | to install | The SHA-256 of the exact bytes `entry` serves, base64 (44 characters). `sign.mjs` sets it. | `entrySha256 must be the base64 SHA-256 of the entry script` |
@@ -84,8 +84,9 @@ origin under **connects to**.
 ### `remote`
 
 A command is the operator's alone. It opens to connected stations only when the manifest says `"remote": true` and
-the script registers the command as `{ run, remote: true }` ([The sandbox API](sandbox-api.md#register)). The
-install prompt says when a tool takes commands from connected stations.
+the script registers the command as `{ run, remote: true }` ([The sandbox API](sandbox-api.md#register)). Connected
+stations are the stations that connect to the player's packet terminal; nothing runs from a session the player
+opened. The install prompt says when a tool takes commands from connected stations.
 
 ## Permissions
 

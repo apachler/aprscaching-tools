@@ -7,7 +7,7 @@ Distance and bearing between two Maidenhead locators, or one locator's position.
 - `/grid <locator>` — the locator's position
 - `/grid <locator> <locator>` — distance and bearing, also shown in a panel
 
-It shows on: web, terminal, bbs, node. Connected peers may run its commands, except the ones it keeps for the operator.
+It shows on: web, terminal, bbs, node. Stations connected to your packet terminal may run its commands, except the ones it keeps for the operator.
 
 ## Permissions
 

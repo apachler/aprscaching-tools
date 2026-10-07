@@ -49,12 +49,14 @@ A handler that throws or rejects answers `error: <message>`. A command the tool 
 ### Commands
 
 `handler(args)` receives the text after the word, as a string, and returns a string, a string array, or a `Promise`
-of one. Its value becomes the output lines. The word is matched exactly as typed, so register it in lower case:
-`/whois OE8APR` calls `commands.whois("OE8APR")`.
+of one. Its value becomes the output lines. Words match without regard to case: `/WHOIS OE8APR` calls
+`commands.whois("OE8APR")`.
 
 A command is the operator's alone. To let a connected station run it, register it as `{ run: handler, remote: true }`
-and set `"remote": true` in the manifest; a station that connects to the packet terminal, the BBS or the node then
-types the word without the slash:
+and set `"remote": true` in the manifest. A station connected to the packet terminal then types the word without the
+slash, on a session it opened; the line is read up to its 256th character. The surface's own commands win over a
+tool's. Up to 4 lines of output go back under the terminal's transmit gate. Commands run in order, with at most 4
+waiting per session; nothing runs from the far end of a session the player opened:
 
 ```js
 register({
@@ -144,18 +146,20 @@ if (tool.has("events.reply")) {
 ## Events
 
 `tool.on(event, handler)` asks the app to forward an event. The handler receives the payload the surface supplied:
-the strings `surface`, `source`, `peerCall`, `myCall`, `dst` and `text`, the number `channel`, and `station` when it
-is plain data.
+the strings `surface`, `source`, `peerCall`, `myCall`, `direction`, `dst` and `text`, the number `channel`, and
+`station` when it is plain data.
 
 | Event | Needs | Raised by | Payload |
 |---|---|---|---|
 | `on_frame` | `monitor` | Every heard frame: the packet terminal (`source: "RF"`, with `dst` and `text`) and the map's live stations (`source: "APRS"`) | `peerCall` is the heard station |
 | `on_tick` | `event` | The app, once a minute | none |
-| `on_connect`, `on_disconnect` | `event` | A surface with connected sessions | `peerCall`, `myCall`, `channel`, `surface`, and `reply` |
+| `on_connect`, `on_disconnect` | `event` | The packet terminal, for each connected channel, both ways. The BBS and node sessions run on the ingest box, where tools do not run | `peerCall`, `myCall`, `channel`, `surface`, `direction` (`"incoming"` or `"outgoing"`), and `reply` on an incoming session |
 | `on_beacon`, `on_find`, `on_spot` | `event` | Reserved for the surfaces that raise them | |
 
-When the surface offers one, `payload.reply(text)` answers the connected session with one line. The reply travels
-through that surface, under its own transmit gate:
+On a session another station opened, `payload.reply(text)` sends one line on it through the packet terminal, under
+the terminal's transmit gate: a control-verified callsign and the tab's consent. A tool may send at most 4 lines of
+256 characters within 2 minutes of the event. A refused reply is logged with the reason, and each line shows in
+**Recent transmissions** under the tool's title. A session the player opened offers no `reply`:
 
 ```js
 tool.on("on_connect", (p) => {
