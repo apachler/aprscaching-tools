@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Grid & bearing 1.1.0, built by scripts/build.mjs from tools/grid-bearing/src, lib/ and the
+// Grid & bearing 1.1.1, built by scripts/build.mjs from tools/grid-bearing/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // lib/geo.js
@@ -37,6 +37,8 @@
 
   // tools/grid-bearing/src/index.js
   var fix = (p) => `${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}`;
+  var deg = (b) => `${Math.round(b) % 360}°`;
+  var echo = (s) => String(s).slice(0, 10);
   function panel(a, pa, b, pb) {
     return {
       title: "Grid & bearing",
@@ -45,7 +47,7 @@
         ...b && pb ? [
           { kind: "kv", key: b.toUpperCase(), value: fix(pb) },
           { kind: "kv", key: "Distance", value: `${pb.km.toFixed(0)} km`, tone: "accent" },
-          { kind: "kv", key: "Bearing", value: `${pb.bearing.toFixed(0)}°`, tone: "accent" }
+          { kind: "kv", key: "Bearing", value: deg(pb.bearing), tone: "accent" }
         ] : []
       ]
     };
@@ -63,10 +65,10 @@
             return [`${a.toUpperCase()} = ${fix(pa)}`];
           }
           const pb = gridToLatLon(b);
-          if (!pb) return [`Bad locator: ${b}`];
+          if (!pb) return [`Bad locator: ${echo(b)}`];
           const db = distBearing(pa, pb);
           tool.setPanel(panel(a, pa, b, { ...pb, ...db }));
-          return [`${a.toUpperCase()} → ${b.toUpperCase()}: ${db.km.toFixed(0)} km, bearing ${db.bearing.toFixed(0)}°`];
+          return [`${a.toUpperCase()} → ${b.toUpperCase()}: ${db.km.toFixed(0)} km, bearing ${deg(db.bearing)}`];
         }
       }
     }

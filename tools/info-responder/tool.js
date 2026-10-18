@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Info / menu responder 1.1.1, built by scripts/build.mjs from tools/info-responder/src, lib/ and the
+// Info / menu responder 1.1.2, built by scripts/build.mjs from tools/info-responder/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // lib/text.js
@@ -9,6 +9,7 @@
   var DEFAULT_INFO = "APRScaching shack station. Type MENU for commands. 73!";
   var infoText = "";
   var info = () => infoText || DEFAULT_INFO;
+  var CALL = /^[A-Z0-9]{1,6}(-[0-9]{1,2})?$/;
   function panel() {
     tool.setPanel({
       title: "Info responder",
@@ -26,7 +27,7 @@
         remote: true,
         run: async (args) => {
           const c = args.trim().toUpperCase();
-          if (!c) return ["Usage: WHOIS <CALL>"];
+          if (!CALL.test(c)) return ["Usage: WHOIS <CALL>"];
           let type = "";
           try {
             type = asStr(await tool.call("station.type", c));

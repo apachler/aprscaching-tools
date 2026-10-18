@@ -7,7 +7,8 @@ want their station's status text on the air at a steady interval.
 
 `/autostatus` sets the interval and the text. On the app's minute tick the tool counts down and, when the interval
 has passed, asks the app to transmit `>text`, an APRS status. The tool log says `auto-status sent`, or
-`auto-status held (TX gate closed)` when the app held it.
+`auto-status held (TX gate, transmit budget or format)` when the app held it. A text that starts with a grid
+locator is refused when you set it, since APRS reads it as a position.
 
 ## Use it
 

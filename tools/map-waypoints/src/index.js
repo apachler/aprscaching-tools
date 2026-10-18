@@ -11,7 +11,11 @@ const push = () => tool.setMapLayer({ id: "waypoints", points: points.map((p) =>
 register({
   commands: {
     wp: (args) => {
-      const [loc, ...rest] = args.trim().split(/\s+/);
+      // `47.07, 15.44` and `47.07,15.44` are one position
+      const [loc, ...rest] = args
+        .trim()
+        .replace(/^(-?[\d.]+),\s+/, "$1,")
+        .split(/\s+/);
       const label = rest.join(" ") || undefined;
       let p = gridToLatLon(loc ?? "");
       if (!p) {
@@ -22,7 +26,9 @@ register({
       points.push({ ...p, ...(label ? { label } : {}) });
       if (points.length > MAX_POINTS) points.shift();
       push();
-      return [`Waypoint ${points.length}: ${p.lat.toFixed(4)},${p.lon.toFixed(4)}${label ? ` (${label})` : ""}`];
+      return [
+        `Waypoint ${points.length} of ${MAX_POINTS}: ${p.lat.toFixed(4)},${p.lon.toFixed(4)}${label ? ` (${label})` : ""}`,
+      ];
     },
     wpclear: () => {
       points.length = 0;

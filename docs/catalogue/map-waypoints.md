@@ -16,7 +16,7 @@ markers; they last while the tool runs.
 | `/wp <lat>,<lon> [label]` | Adds a marker at a position, for example `/wp 47.07,15.44 Graz` |
 | `/wpclear` | Removes every marker |
 
-`/wp JN76jx Home` answers `Waypoint 1: <lat>,<lon> (Home)`.
+`/wp JN76jx Home` answers `Waypoint 1 of 500: <lat>,<lon> (Home)`.
 
 ## Permissions
 

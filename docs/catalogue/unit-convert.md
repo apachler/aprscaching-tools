@@ -5,16 +5,13 @@ it too.
 
 ## What it does
 
-`/conv <value> <from> <to>` converts between these pairs, in either direction:
+`/conv <value> <from> <to>` converts between any two units of one kind:
 
-| Units | Names |
+| Kind | Names |
 |---|---|
-| kilometres and miles | `km`, `mi` |
-| metres and feet | `m`, `ft` |
-| metres and yards | `m`, `yd` |
-| knots and kilometres an hour | `kn`, `kmh` |
-| nautical miles and kilometres | `nm`, `km` |
-| Celsius and Fahrenheit | `c`, `f` |
+| Distance | `km`, `m`, `mi`, `ft`, `yd`, `nm` (nautical miles) |
+| Speed | `kn`, `kmh` (or `km/h`) |
+| Temperature | `c`, `f` |
 
 ## Use it
 

@@ -6,7 +6,7 @@ run on the ingest box, where tools do not run.
 
 ## What it does
 
-On every connect, the tool writes `*ring* <call> connected` to the tool log and shows the last connect, with its UTC time, in its panel.
+On every connect another station opens to yours, the tool writes `*ring* <call> connected` to the tool log and shows the last connect, with its UTC time, in its panel. Your own outgoing connects stay quiet.
 It pairs with [Watch & alert](watch-alert.md), which follows stations heard rather than connected.
 
 ## Use it

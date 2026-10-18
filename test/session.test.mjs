@@ -30,6 +30,13 @@ describe("connect-bell", () => {
       value: expect.stringMatching(/^OE3ABC at \d\d:\d\dZ$/),
     });
   });
+  it("stays quiet on the operator's own outgoing connect", async () => {
+    const t = loadTool("connect-bell");
+    await t.dispatch("on_connect", { peerCall: "HB9W-8", direction: "outgoing" });
+    expect(t.state.logs).toEqual([]);
+    await t.dispatch("on_connect", { peerCall: "OE3ABC", direction: "incoming" });
+    expect(t.state.logs).toEqual(["*ring* OE3ABC connected"]);
+  });
 });
 
 describe("link-ping", () => {
@@ -125,6 +132,20 @@ describe("sched-query", () => {
     for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
     expect(t.state.logs).toEqual(["scheduled run: Refused: over the transmit budget"]);
   });
+
+  it("schedules no tighter than the transmit budget refills for the script's cost", async () => {
+    const bus = createBus();
+    bus.provide("session.script", () => ({ ok: true }));
+    const t = loadTool("sched-query", { bus });
+    // a connect and a send cost 2 transmissions; six an hour allow one run every 20 minutes
+    expect((await t.run("gpauto", "every 10 connect HB9W-8; send sh/dx; disconnect"))[0]).toMatch(
+      /^Scheduled every 20 min\./,
+    );
+    // a connect and six sends cost 3
+    const six = Array.from({ length: 6 }, () => "send x").join("; ");
+    expect((await t.run("gpauto", `every 10 connect HB9W-8; ${six}`))[0]).toMatch(/^Scheduled every 30 min\./);
+    expect((await t.run("gpauto", "every 45 connect HB9W-8; send sh/dx"))[0]).toMatch(/^Scheduled every 45 min\./);
+  });
 });
 
 describe("the transmit format the app accepts", () => {
@@ -186,7 +207,13 @@ describe("auto-status", () => {
     await t.run("autostatus", "10");
     for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
     expect(t.state.txs).toEqual([">APRScaching"]);
-    expect(t.state.logs).toEqual(["auto-status held (TX gate closed)"]);
+    expect(t.state.logs).toEqual(["auto-status held (TX gate, transmit budget or format)"]);
+  });
+  it("refuses a status led by a grid locator when it is set", async () => {
+    const t = loadTool("auto-status");
+    expect((await t.run("autostatus", "10 JN76 QRV"))[0]).toMatch(/may not start with a grid locator/);
+    for (let i = 0; i < 10; i++) await t.dispatch("on_tick");
+    expect(t.state.txs).toEqual([]);
   });
 });
 

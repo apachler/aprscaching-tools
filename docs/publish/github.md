@@ -8,7 +8,7 @@ and players can add your registry by address and pin its key.
 
 - A GitHub repository for the registry, public.
 - Node 22 or newer, and the signing scripts: `genkey.mjs`, `sign.mjs` and `verify.mjs` from
-  [`scripts/`](https://github.com/apachler/aprscaching-tools/tree/dev/scripts) in apachler/aprscaching-tools. They
+  [`scripts/`](https://github.com/apachler/aprscaching-tools/tree/main/scripts) in apachler/aprscaching-tools. They
   are MIT and need no dependencies; copy them into your repository.
 - Each tool's signed `tool.json` and script, or the address its author hosts them at
   ([Sign a tool](../write/sign.md)).
