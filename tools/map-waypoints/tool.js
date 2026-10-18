@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Map waypoints 1.0.0, built by scripts/build.mjs from tools/map-waypoints/src, lib/ and the
+// Map waypoints 1.0.1, built by scripts/build.mjs from tools/map-waypoints/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // lib/geo.js
@@ -29,7 +29,7 @@
   register({
     commands: {
       wp: (args) => {
-        const [loc, ...rest] = args.trim().split(/\s+/);
+        const [loc, ...rest] = args.trim().replace(/^(-?[\d.]+),\s+/, "$1,").split(/\s+/);
         const label = rest.join(" ") || void 0;
         let p = gridToLatLon(loc ?? "");
         if (!p) {
@@ -40,7 +40,9 @@
         points.push({ ...p, ...label ? { label } : {} });
         if (points.length > MAX_POINTS) points.shift();
         push();
-        return [`Waypoint ${points.length}: ${p.lat.toFixed(4)},${p.lon.toFixed(4)}${label ? ` (${label})` : ""}`];
+        return [
+          `Waypoint ${points.length} of ${MAX_POINTS}: ${p.lat.toFixed(4)},${p.lon.toFixed(4)}${label ? ` (${label})` : ""}`
+        ];
       },
       wpclear: () => {
         points.length = 0;

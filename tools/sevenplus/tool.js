@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-// 7PLUS reassembler 1.0.1, built by scripts/build.mjs from tools/sevenplus/src, lib/ and the
+// 7PLUS reassembler 1.0.2, built by scripts/build.mjs from tools/sevenplus/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // lib/sevenplus.js
-  var HEADER = /go_7\+\.?[ \t]+(\d{1,3})[ \t]+of[ \t]+(\d{1,3})(?:[ \t]+([\w.-]{1,64}))?/gi;
-  var PART = /part[ \t]+(\d{1,3})[ \t]+of[ \t]+(\d{1,3})/gi;
+  var HEADER = /go_7\+\.?[ \t]+(\d{1,3})(?!\d)[ \t]+of[ \t]+(\d{1,3})(?!\d)(?:[ \t]+([\w.-]{1,64}))?/gi;
+  var PART = /part[ \t]+(\d{1,3})(?!\d)[ \t]+of[ \t]+(\d{1,3})(?!\d)/gi;
   function decode7plus(input) {
     const text = String(input);
     const lines = text.split(/\r?\n/);

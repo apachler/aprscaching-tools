@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Connect bell 1.0.1, built by scripts/build.mjs from tools/connect-bell/src, lib/ and the
+// Connect bell 1.0.2, built by scripts/build.mjs from tools/connect-bell/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // lib/text.js
@@ -10,6 +10,7 @@
 
   // tools/connect-bell/src/index.js
   tool.on("on_connect", (p) => {
+    if (p.direction === "outgoing") return;
     const who = p.peerCall ? String(p.peerCall) : "a station";
     tool.log(`*ring* ${who} connected`);
     tool.setPanel({

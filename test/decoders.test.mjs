@@ -26,6 +26,9 @@ describe("sevenplus", () => {
     expect(both).toMatch(/part\(s\) 1, 2 of 2/);
     expect(both).toMatch(/status: complete/);
     expect(decode7plus(" go_7+. 001 of 001 A.ZIP\nQUJD")).toMatch(/no stop_7\+ line/);
+    // a count of four digits is no 7PLUS header, not a header of its first three
+    expect(decode7plus("go_7+. 001 of 1000 TEST.ZIP\nstop_7+")).not.toMatch(/of 100\b/);
+    expect(decode7plus("part 1 of 1000")).not.toMatch(/of 100\b/);
   });
 });
 

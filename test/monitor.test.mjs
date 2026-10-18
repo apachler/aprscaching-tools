@@ -157,6 +157,8 @@ describe("station-db and info-responder", () => {
     expect((await info.run("whois", "OE8XBM-1", { remote: true }))[0]).toMatch(/^OE8XBM-1: \w+$/);
     expect((await info.run("whois", "ZZ9ZZZ"))[0]).toMatch(/not heard yet/);
     expect(await info.run("whois", "")).toEqual(["Usage: WHOIS <CALL>"]);
+    // the answer goes over the air: a peer's free text is not echoed back
+    expect(await info.run("whois", "BUY CHEAP STUFF AT EXAMPLE", { remote: true })).toEqual(["Usage: WHOIS <CALL>"]);
     expect(await info.run("info", "", { remote: true })).toEqual([
       "APRScaching shack station. Type MENU for commands. 73!",
     ]);
@@ -165,6 +167,17 @@ describe("station-db and info-responder", () => {
     expect(await info.run("setinfo", "QRV on 2m")).toEqual(["Info text updated."]);
     expect(await info.run("info", "", { remote: true })).toEqual(["QRV on 2m"]);
     expect(info.panel.nodes[1]).toEqual({ kind: "kv", key: "Peer info", value: "QRV on 2m" });
+  });
+
+  it("station-log shows a station as not heard when the Station DB call fails", async () => {
+    const bus = createBus();
+    bus.provide("station.type", () => {
+      throw new Error("no answer in time");
+    });
+    const log = loadTool("station-log", { bus });
+    expect(await log.run("whois", "oe8apr")).toEqual(["Asked Station DB about OE8APR; the answer shows in the panel."]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(log.panel.nodes[0]).toEqual({ kind: "kv", key: "OE8APR", value: "not heard", tone: "muted" });
   });
 
   it("info-responder reads a station as not heard when no Station DB answers", async () => {

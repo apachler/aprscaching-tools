@@ -7,6 +7,7 @@ import { asStr } from "../../../lib/text.js";
 const DEFAULT_INFO = "APRScaching shack station. Type MENU for commands. 73!";
 let infoText = "";
 const info = () => infoText || DEFAULT_INFO;
+const CALL = /^[A-Z0-9]{1,6}(-[0-9]{1,2})?$/;
 
 function panel() {
   tool.setPanel({
@@ -26,7 +27,8 @@ register({
       remote: true,
       run: async (args) => {
         const c = args.trim().toUpperCase();
-        if (!c) return ["Usage: WHOIS <CALL>"];
+        // the answer goes back over the air: only a callsign is echoed, never a peer's free text
+        if (!CALL.test(c)) return ["Usage: WHOIS <CALL>"];
         let type = "";
         try {
           type = asStr(await tool.call("station.type", c));

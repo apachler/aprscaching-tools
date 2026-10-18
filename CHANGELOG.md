@@ -7,6 +7,21 @@ format versions are named where they change.
 
 - **Docs site.** A catalogue page's facts table escapes the manifest's text, the light scheme's faint icons and
   accent hover text meet WCAG AA contrast, and source links point at `main`, which the site describes.
+- **Scheduled query 1.0.2.** A schedule is at least 10 minutes for each transmission a run costs, so the transmit
+  budget covers every run instead of refusing every other one.
+- **Station log 1.0.2.** `/whois` shows "not heard" in the panel when Station DB is missing or does not answer in
+  time.
+- **Connect bell 1.0.2.** Only connects another station opens ring; the operator's own outgoing connects stay quiet.
+- **Auto-status 1.1.2.** A status led by a grid locator is refused when it is set, and a held status names the gate,
+  the budget or the format, not the gate alone.
+- **Grid & bearing 1.1.1.** A bearing just under 360° reads 0°, and a peer's bad locator is echoed at most 10
+  characters long.
+- **Unit converter 1.1.2.** Any two units of one kind convert (`1000 m km`, `1 mi ft`), and a peer's unknown unit is
+  echoed at most 8 characters long.
+- **Map waypoints 1.0.1.** `/wp 47.07, 15.44` takes the space after the comma, and the answer counts against the 500
+  it keeps.
+- **Info responder 1.1.2.** `WHOIS` answers only a callsign, so a peer's free text is never transmitted back.
+- **7PLUS reassembler 1.0.2.** A part count of four digits is not misread as its first three.
 
 ## [1.4.0] - 2026-10-07
 
