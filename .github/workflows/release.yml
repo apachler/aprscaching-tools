@@ -23,8 +23,11 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+      # against the authority key on main's tip, not the one in the tagged tree
       - name: Verify every signature at the tag
-        run: node scripts/verify.mjs --strict
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          AUTHORITY="$(git show FETCH_HEAD:authority.pub)" node scripts/verify.mjs --strict
       # The repository checks, strict: every tool folder at the tag has its registry entry
       - run: corepack enable && pnpm install --frozen-lockfile --ignore-scripts
       - name: Repository checks (STRICT=1)

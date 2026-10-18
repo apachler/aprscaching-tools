@@ -12,6 +12,9 @@ format versions are named where they change.
 - **Signing.** `sign.mjs` and `sign-all.mjs` derive the public key from the private key and refuse a key value whose
   `pub` differs, before anything is signed. `sign.mjs` refuses an `entry` that is not a plain path beside the
   manifest, and `sign-all.mjs` refuses a registry entry that leaves the repository.
+- **Authority pin.** CI checks `main`, pull requests into it and release tags against the authority key `main`
+  already holds, not the `authority.pub` in the tree it checks, so a change that swaps the key and signs again with
+  its own fails `verify`.
 - **Release workflow.** The checks run in a job with a read-only token; the job that writes the release and asks for
   the provenance attestation runs no code of the repository or its dependencies. A tag without its CHANGELOG section
   fails. No workflow leaves its token in the checkout.

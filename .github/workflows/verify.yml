@@ -48,6 +48,13 @@ jobs:
       - name: verify (dev, unsigned tools listed)
         if: github.base_ref != 'main' && github.ref != 'refs/heads/main'
         run: node scripts/verify.mjs
+      # The registry is checked against the authority key main held before this change, never against the
+      # authority.pub the change brings: a change that swaps the key and signs again with its own fails here. A key
+      # rotation is merged by an admin past this check (docs/project/maintain.md).
       - name: verify --strict (main)
         if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
-        run: node scripts/verify.mjs --strict
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          AUTHORITY="$(git show "$BASE_SHA:authority.pub")" node scripts/verify.mjs --strict
