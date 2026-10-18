@@ -12,20 +12,14 @@ permissions:
   contents: read
 
 jobs:
-  release:
+  # Everything that runs the repository's or a dependency's code runs here, with a read-only token, so no such code
+  # ever sits beside the token that writes releases or the one that asks for a provenance certificate.
+  check:
     runs-on: ubuntu-latest
-    # what this job alone needs: the release itself, and the provenance attestation (a Sigstore certificate for this
-    # run, stored with the repository's attestations)
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
-      - name: The tag is on main
-        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
@@ -37,6 +31,24 @@ jobs:
         env:
           STRICT: "1"
         run: pnpm exec vitest run test/repository.test.mjs
+
+  release:
+    needs: check
+    runs-on: ubuntu-latest
+    # what this job alone needs: the release itself, and the provenance attestation (a Sigstore certificate for this
+    # run, stored with the repository's attestations). It runs git, the attest action and gh, nothing of the
+    # repository's own.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: The tag is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       # What an instance reads at the tag: the registry, the authority key, the licence and the tools
       - name: The registry archive
         env:
@@ -49,14 +61,19 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: aprscaching-tools-${{ github.ref_name }}.tar.gz
+      # The notes are CHANGELOG.md's section for the version, matched as plain text (a version's dots are no
+      # pattern); a tag without its section fails rather than publishing empty notes.
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: |
-          notes="$(awk -v v="${TAG#v}" '$0 ~ "^## \\[?"v"[] ]" {on=1; next} /^## / && on {exit} on' CHANGELOG.md 2>/dev/null)"
-          [ -n "$notes" ] || notes="Registry $TAG."
+          notes="$(awk -v h="## [${TAG#v}]" 'index($0, h) == 1 {on=1; next} /^## / && on {exit} on' CHANGELOG.md)"
+          if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
+            echo "::error::CHANGELOG.md has no section '## [${TAG#v}]' with notes"
+            exit 1
+          fi
           cp "$BUNDLE" "aprscaching-tools-$TAG.tar.gz.intoto.jsonl"
           gh release create "$TAG" --title "$TAG" --notes "$notes" --verify-tag --draft \
             "aprscaching-tools-$TAG.tar.gz" "aprscaching-tools-$TAG.tar.gz.sha256" "aprscaching-tools-$TAG.tar.gz.intoto.jsonl"

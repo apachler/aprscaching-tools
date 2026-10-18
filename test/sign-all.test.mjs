@@ -51,4 +51,33 @@ describe("sign-all.mjs", () => {
     expect(fs.readFileSync(regPath, "utf8")).toBe(JSON.stringify(reg, null, 2) + "\n");
     fs.rmSync(dir, { recursive: true, force: true });
   }, 60_000);
+
+  it("writes nothing when a registry entry leaves the repository", () => {
+    const dir = copyRepo();
+    const author = genkey();
+    const authority = genkey();
+    fs.writeFileSync(path.join(dir, "authority.pub"), pubOf(authority) + "\n");
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "tools-outside-"));
+    fs.writeFileSync(path.join(outside, "tool.js"), "x");
+    const manifest = JSON.stringify({ name: "outside", entry: "tool.js" });
+    fs.writeFileSync(path.join(outside, "tool.json"), manifest);
+    const regPath = path.join(dir, "registry.json");
+    const reg = JSON.parse(fs.readFileSync(regPath, "utf8"));
+    reg.entries.push({
+      ...reg.entries[0],
+      name: "outside",
+      entry: path.relative(dir, path.join(outside, "tool.json")),
+    });
+    fs.writeFileSync(regPath, JSON.stringify(reg, null, 2) + "\n");
+    const r = spawnSync(process.execPath, ["scripts/sign-all.mjs"], {
+      cwd: dir,
+      env: { ...process.env, AUTHOR_KEY: author, AUTHORITY_KEY: authority },
+      encoding: "utf8",
+    });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaves the repository; nothing was signed/);
+    expect(fs.readFileSync(path.join(outside, "tool.json"), "utf8")).toBe(manifest);
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
+  }, 60_000);
 });

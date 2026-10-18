@@ -12,7 +12,7 @@
 // absolute address, a script its author hosts, names the local copy of that script as the third argument.
 import fs from "node:fs";
 import path from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
 
 const stable = (v) =>
   v === null || typeof v !== "object"
@@ -33,6 +33,14 @@ if (!kind || !file || !privB64) {
 }
 
 const { pkcs8, pub } = JSON.parse(Buffer.from(privB64, "base64").toString());
+// the signature is checked against `pub`: refuse a value whose pub is not its private key's, before signing anything
+const derived = createPublicKey(
+  createPrivateKey({ key: Buffer.from(pkcs8, "base64"), format: "der", type: "pkcs8" }),
+).export({ format: "jwk" }).x;
+if (derived !== pub) {
+  console.error("TOOL_PRIVATE_KEY's pub is not the public key of its private key");
+  process.exit(2);
+}
 const key = await crypto.subtle.importKey("pkcs8", Buffer.from(pkcs8, "base64"), { name: "Ed25519" }, false, ["sign"]);
 const signB64 = async (bytes) => Buffer.from(await crypto.subtle.sign("Ed25519", key, bytes)).toString("base64");
 const enc = (s) => new TextEncoder().encode(s);
@@ -50,6 +58,12 @@ if (kind === "manifest") {
     }
     script = scriptArg;
   } else {
+    // the app resolves entry as an address against the manifest's: a root-absolute path, a query, a fragment or an
+    // encoded character names another file there than here
+    if (/^[/\\]|[?#%]/.test(entry)) {
+      console.error(`entry ${entry} is not a plain path beside the manifest`);
+      process.exit(2);
+    }
     script = path.join(path.dirname(file), entry);
     const r = path.relative(path.dirname(path.resolve(file)), path.resolve(script));
     if (!r || r.startsWith("..") || path.isAbsolute(r)) {

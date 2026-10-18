@@ -248,7 +248,9 @@ The script runs these steps; when it cannot, run them yourself. The steps for v1
     ```
 
 The tag becomes a GitHub Release, with the CHANGELOG section as its notes (`.github/workflows/release.yml`, which
-checks that the tag is on `main` and runs `verify.mjs --strict`). A tag never moves: a fix is a new tag. A ruleset
+checks that the tag is on `main` and runs `verify.mjs --strict`). The checks run in a job of their own with a
+read-only token; the job that writes the release and asks for the attestation runs only git, the attest action and
+`gh`, and fails a tag whose version has no CHANGELOG section. A tag never moves: a fix is a new tag. A ruleset
 refuses to delete or move a `v*` tag, and releases are immutable, so a published release and its files stay as they
 were published. Instances that follow `github:apachler/aprscaching-tools@<tag>` read the files at that tag.
 

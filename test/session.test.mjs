@@ -139,6 +139,12 @@ describe("the transmit format the app accepts", () => {
     expect(txAllowed(":BLN1     :bulletin")).toBe(false);
     expect(txAllowed("!4704.41N/01526.27E>")).toBe(false); // a position
     expect(txAllowed(">two\nlines")).toBe(false);
+    expect(txAllowed(":OE8APR-9 :PARM.Volt,Temp")).toBe(false); // a telemetry definition
+    expect(txAllowed(":OE8APR-9 :UNIT.V,C")).toBe(false);
+  });
+  it("matches command words without regard to case", async () => {
+    const t = loadTool("unit-convert");
+    expect((await t.run("CONV", "100 km mi"))[0]).toBe("100 km = 62.14 mi");
   });
   it("holds a status too long for the app, and the tool hears false", async () => {
     const t = loadTool("auto-status");

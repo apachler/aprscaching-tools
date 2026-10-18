@@ -133,6 +133,8 @@ else ok(`registry signature verifies (${reg.entries.length} entries)`);
 // Entry addresses resolve against the registry's own URL. Simulate the subpath it is published under, so an
 // address that only works at a web root shows up here and not on a user's screen.
 const SERVED = "https://raw.githubusercontent.com/OWNER/aprscaching-tools/TAG/";
+// a hosted manifest or script that does not answer in this time fails, rather than holding CI
+const FETCH_MS = 15000;
 const servedRegistry = new URL("registry.json", SERVED);
 const listed = new Set();
 const names = new Set();
@@ -158,7 +160,7 @@ for (const [i, e] of reg.entries.entries()) {
   if (url.origin !== servedRegistry.origin) {
     // Hosted by its author elsewhere: fetch it as the app would, without cookies.
     try {
-      const res = await fetch(url, { credentials: "omit" });
+      const res = await fetch(url, { credentials: "omit", signal: AbortSignal.timeout(FETCH_MS) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       manifest = await res.json();
     } catch (err) {
@@ -216,18 +218,51 @@ for (const [i, e] of reg.entries.entries()) {
     fail(`${label}: entry pubkey ${e.pubkey} is not the manifest's ${manifest.pubkey}`);
   else ok(`${label}: manifest signed by ${manifest.pubkey}, matching the entry`);
 
+  // The app fetches the script at `entry` resolved against the manifest's address and checks its bytes against the
+  // signed entrySha256, so the same address is resolved here and the bytes it names are hashed.
+  const entry = manifest.entry ?? "tool.js";
+  let scriptUrl;
+  try {
+    // a manifest in the repository resolves from where it is served, even when its registry entry is root-absolute
+    const base = manifestFile ? new URL(path.relative(root, manifestFile).split(path.sep).join("/"), SERVED) : url;
+    scriptUrl = typeof entry === "string" ? new URL(entry, base) : null;
+  } catch {
+    scriptUrl = null;
+  }
+  if (!scriptUrl) {
+    fail(`${label}: the manifest's entry ${JSON.stringify(entry)} is not a URL or path`);
+    continue;
+  }
+  let scriptBytes;
+  let where = scriptUrl.href;
   if (manifestFile) {
-    const script = path.join(path.dirname(manifestFile), manifest.entry ?? "tool.js");
-    if (!inRepo(script)) fail(`${label}: the manifest's entry "${manifest.entry}" leaves the repository`);
+    // a query, a fragment or an encoded character may name one file to the app and another once decoded
+    if (!scriptUrl.href.startsWith(SERVED) || scriptUrl.search || scriptUrl.hash || scriptUrl.pathname.includes("%")) {
+      fail(`${label}: the manifest's entry "${entry}" resolves to ${scriptUrl.href}, not to a file beside it`);
+      continue;
+    }
+    const script = path.join(root, decodeURIComponent(scriptUrl.href.slice(SERVED.length)));
+    if (!inRepo(script)) fail(`${label}: the manifest's entry "${entry}" leaves the repository`);
     else if (!fs.existsSync(script)) fail(`${label}: script ${rel(script)} is missing`);
     else {
-      const hash = createHash("sha256").update(fs.readFileSync(script)).digest("base64");
-      if (typeof manifest.entrySha256 !== "string")
-        unsigned(`${label}: manifest has no entrySha256; sign it again with scripts/sign.mjs`);
-      else if (manifest.entrySha256 !== hash)
-        unsigned(`${label}: ${rel(script)} does not match the manifest's entrySha256`);
-      else ok(`${label}: script matches the signed entrySha256`);
+      scriptBytes = fs.readFileSync(script);
+      where = rel(script);
     }
+  } else {
+    try {
+      const res = await fetch(scriptUrl, { credentials: "omit", signal: AbortSignal.timeout(FETCH_MS) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      scriptBytes = Buffer.from(await res.arrayBuffer());
+    } catch (err) {
+      fail(`${label}: cannot fetch ${scriptUrl.href} (${err.message})`);
+    }
+  }
+  if (scriptBytes) {
+    const hash = createHash("sha256").update(scriptBytes).digest("base64");
+    if (typeof manifest.entrySha256 !== "string")
+      unsigned(`${label}: manifest has no entrySha256; sign it again with scripts/sign.mjs`);
+    else if (manifest.entrySha256 !== hash) unsigned(`${label}: ${where} does not match the manifest's entrySha256`);
+    else ok(`${label}: script matches the signed entrySha256`);
   }
 }
 

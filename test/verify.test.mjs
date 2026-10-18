@@ -121,4 +121,42 @@ describe("sign.mjs and verify.mjs", () => {
     expect(r.stderr).toMatch(/leaves the manifest's folder/);
     fs.rmSync(dir, { recursive: true, force: true });
   });
+  it("fail a manifest whose entry the app resolves elsewhere than the file that was hashed", () => {
+    for (const entry of ["/tool.js", "tool.js?v=2", "tool%2ejs"]) {
+      const { dir, verify } = signedCopy((d, when) => {
+        if (when !== "after") return;
+        const p = path.join(d, "tools/unit-convert/tool.json");
+        fs.writeFileSync(p, JSON.stringify({ ...JSON.parse(fs.readFileSync(p, "utf8")), entry }));
+      });
+      const r = verify();
+      expect(r.status, entry).toBe(1);
+      expect(r.stdout, entry).toMatch(/resolves to .*, not to a file beside it/);
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  it("sign refuses an entry that is not a plain path beside the manifest", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tools-sign-"));
+    fs.mkdirSync(path.join(dir, "t"));
+    fs.writeFileSync(path.join(dir, "t/tool.js"), "x");
+    fs.writeFileSync(path.join(dir, "t/tool.json"), JSON.stringify({ name: "t", entry: "/tool.js" }));
+    const r = node(dir, [path.join(repoRoot, "scripts/sign.mjs"), "manifest", "t/tool.json"], {
+      TOOL_PRIVATE_KEY: genkey(),
+    });
+    expect(r.status).toBe(2);
+    expect(r.stderr).toMatch(/not a plain path beside the manifest/);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+  it("sign refuses a key value whose pub is not its private key's", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tools-sign-"));
+    fs.writeFileSync(path.join(dir, "registry.json"), JSON.stringify({ entries: [] }));
+    const doc = JSON.parse(Buffer.from(genkey(), "base64").toString());
+    const mixed = Buffer.from(JSON.stringify({ ...doc, pub: pubOf(genkey()) })).toString("base64");
+    const r = node(dir, [path.join(repoRoot, "scripts/sign.mjs"), "registry", "registry.json"], {
+      TOOL_PRIVATE_KEY: mixed,
+    });
+    expect(r.status).toBe(2);
+    expect(r.stderr).toMatch(/pub is not the public key of its private key/);
+    expect(fs.readFileSync(path.join(dir, "registry.json"), "utf8")).toBe(JSON.stringify({ entries: [] }));
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 });

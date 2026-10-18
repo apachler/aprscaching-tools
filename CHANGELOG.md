@@ -5,6 +5,19 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+- **Verify.** It resolves a manifest's `entry` as the app does, against the manifest's address, and fails one that
+  names another file there than the one it hashed (a leading `/`, a query, a fragment, a `%`-escape). For a tool its
+  author hosts, it fetches the script and checks it against `entrySha256`, which `--strict` requires; a hosted
+  manifest or script that does not answer within 15 seconds fails.
+- **Signing.** `sign.mjs` and `sign-all.mjs` derive the public key from the private key and refuse a key value whose
+  `pub` differs, before anything is signed. `sign.mjs` refuses an `entry` that is not a plain path beside the
+  manifest, and `sign-all.mjs` refuses a registry entry that leaves the repository.
+- **Release workflow.** The checks run in a job with a read-only token; the job that writes the release and asks for
+  the provenance attestation runs no code of the repository or its dependencies. A tag without its CHANGELOG section
+  fails. No workflow leaves its token in the checkout.
+- **Test harness.** It refuses telemetry definitions over `requestTx`, and matches command words without regard to
+  case, as the app does. The script tests have a minute each.
+
 ## [1.4.0] - 2026-10-07
 
 The docs follow the packet terminal's session events, a release picks its own version, and the docs build installs
