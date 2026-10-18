@@ -27,7 +27,7 @@ A line that starts with `#` or `rem` is a comment, and the parser skips a line i
 | Command | Does |
 |---|---|
 | `/gpauto <steps>` | Runs the script now, and keeps it |
-| `/gpauto every <minutes> <steps>` | Runs it now, then every `<minutes>`, 10 or more. Each scheduled run's outcome goes to the tool log |
+| `/gpauto every <minutes> <steps>` | Runs it now, then every `<minutes>`: at least 10 for each transmission a run costs. Each scheduled run's outcome goes to the tool log |
 | `/gpauto run` | Runs the kept script again |
 | `/gpauto off` | Ends the schedule |
 | `/gpauto` | Says whether a script is kept |

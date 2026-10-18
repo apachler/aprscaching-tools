@@ -48,12 +48,16 @@ register({
       if (!call) return ["Usage: /whois <callsign>"];
       if (!ipc) return ["Station log needs the ipc permission to ask Station DB."];
       // A command answers at once; the service's answer arrives later, so it goes to the panel.
-      ipc.call("station.type", call).then((type) => {
-        const known = typeof type === "string" && type !== "";
-        ipc.setPanel(
-          panel([{ kind: "kv", key: call, value: known ? type : "not heard", tone: known ? "ok" : "muted" }]),
-        );
-      });
+      // no Station DB, or no answer in time, reads as not heard, as an empty answer does
+      ipc
+        .call("station.type", call)
+        .catch(() => "")
+        .then((type) => {
+          const known = typeof type === "string" && type !== "";
+          ipc.setPanel(
+            panel([{ kind: "kv", key: call, value: known ? type : "not heard", tone: known ? "ok" : "muted" }]),
+          );
+        });
       return [`Asked Station DB about ${call}; the answer shows in the panel.`];
     },
   },

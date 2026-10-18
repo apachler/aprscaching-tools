@@ -25,6 +25,12 @@ describe("grid-bearing", () => {
     expect(t.panel.nodes.map((n) => n.key)).toEqual(["JN76JX", "JO30", "Distance", "Bearing"]);
     expect(await t.run("grid", "JN76")).toEqual(["JN76 = 46.5000, 15.0000"]);
     expect(await t.run("grid", "JN76 XX99")).toEqual(["Bad locator: XX99"]);
+    // a peer's bad locator is echoed no longer than a locator
+    expect(await t.run("grid", `JN76 ${"Z".repeat(200)}`, { remote: true })).toEqual([
+      `Bad locator: ${"Z".repeat(10)}`,
+    ]);
+    // due north, a hair west of it, rounds to 0°, not 360°
+    expect((await t.run("grid", "AA00AA RR99XX"))[0]).toMatch(/bearing (\d|[1-9]\d|[12]\d\d|3[0-5]\d)°$/);
     expect((await t.run("grid", ""))[0]).toMatch(/^Usage: grid/);
   });
 });
@@ -37,6 +43,15 @@ describe("unit-convert", () => {
     expect((await t.run("conv", "212 f c", { remote: true }))[0]).toBe("212 F = 100.0 C");
     expect((await t.run("conv", "10 kn km/h"))[0]).toBe("10 kn = 18.52 kmh");
     expect((await t.run("conv", "1 km parsec"))[0]).toMatch(/^Can't convert km -> parsec/);
+    // any two units of one dimension convert, through its base unit
+    expect((await t.run("conv", "1000 m km"))[0]).toBe("1000 m = 1.00 km");
+    expect((await t.run("conv", "1 mi ft"))[0]).toBe("1 mi = 5280.00 ft");
+    expect((await t.run("conv", "5 km km"))[0]).toBe("5 km = 5.00 km");
+    expect((await t.run("conv", "1 km kn"))[0]).toMatch(/^Can't convert/); // length is not speed
+    expect((await t.run("conv", "1 km constructor"))[0]).toMatch(/^Can't convert/);
+    expect((await t.run("conv", `1 km ${"y".repeat(200)}`, { remote: true }))[0]).toBe(
+      `Can't convert km -> ${"y".repeat(8)}. Known: km mi m ft yd nm, kn kmh, c f.`,
+    );
     expect((await t.run("conv", "x"))[0]).toMatch(/^Usage/);
   });
 });
@@ -82,10 +97,11 @@ describe("map-waypoints", () => {
   it("drops markers by locator or lat,lon and clears them", async () => {
     const t = loadTool("map-waypoints");
     expect(t.map).toBeNull();
-    expect((await t.run("wp", "JN76jx home"))[0]).toMatch(/^Waypoint 1: .* \(home\)$/);
-    expect(await t.run("wp", "47.07,15.44")).toEqual(["Waypoint 2: 47.0700,15.4400"]);
+    expect((await t.run("wp", "JN76jx home"))[0]).toMatch(/^Waypoint 1 of 500: .* \(home\)$/);
+    expect(await t.run("wp", "47.07,15.44")).toEqual(["Waypoint 2 of 500: 47.0700,15.4400"]);
+    expect(await t.run("wp", "47.07, 15.44 Graz")).toEqual(["Waypoint 3 of 500: 47.0700,15.4400 (Graz)"]);
     expect(t.map.id).toBe("waypoints");
-    expect(t.map.points.map((p) => p.label)).toEqual(["home", undefined]);
+    expect(t.map.points.map((p) => p.label)).toEqual(["home", undefined, "Graz"]);
     expect(t.map.points.every((p) => p.tone === "accent")).toBe(true);
     expect(await t.run("wp", "91,0")).toEqual(["Usage: /wp <locator|lat,lon> [label]"]);
     expect(await t.run("wpclear")).toEqual(["Waypoints cleared."]);

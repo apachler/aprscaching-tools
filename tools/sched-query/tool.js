@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Scheduled query (GPAUTO) 1.0.1, built by scripts/build.mjs from tools/sched-query/src, lib/ and the
+// Scheduled query (GPAUTO) 1.0.2, built by scripts/build.mjs from tools/sched-query/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // vendor/aprscaching/packages/tools/src/session-script.ts
@@ -38,6 +38,10 @@
   var script = "";
   var everyMin = 0;
   var ticks = 0;
+  function cost(steps) {
+    const sends = steps.filter((s) => s.op === "send").length;
+    return steps.filter((s) => s.op === "connect").length + Math.ceil(sends / 5);
+  }
   async function runOnce(text) {
     const steps = parseScript(text);
     if (!steps.length) return NO_STEPS;
@@ -79,8 +83,9 @@
         }
         const every = a.match(/^every\s+(\d+)\s+([\s\S]+)$/i);
         if (every) {
-          if (!parseScript(every[2]).length) return [NO_STEPS];
-          everyMin = Math.max(MIN_MINUTES, Number(every[1]));
+          const steps = parseScript(every[2]);
+          if (!steps.length) return [NO_STEPS];
+          everyMin = Math.max(MIN_MINUTES * Math.max(1, cost(steps)), Number(every[1]));
           script = every[2];
           ticks = 0;
           return [`Scheduled every ${everyMin} min. ${await runOnce(script)}`];

@@ -4,7 +4,9 @@
 // cluster, now or every so many minutes, and shows its progress and the captured reply in a panel. The packet
 // terminal owns the connection: it offers the `session.script` service while its TNC is open, and that service
 // asks for the 'tx' permission, since a script connects and sends. A schedule runs every 10 minutes or more, and each
-// scheduled run's outcome goes to the tool log, a refusal included.
+// scheduled run's outcome goes to the tool log, a refusal included. The transmit budget refills one transmission
+// every 10 minutes, so a schedule is never shorter than 10 minutes for each transmission a run costs: a shorter one
+// would be refused every other run.
 import { parseScript } from "aprscaching/packages/tools/src/session-script.ts";
 
 const MIN_MINUTES = 10;
@@ -12,6 +14,12 @@ const NO_STEPS = "No steps. e.g. /gpauto connect HB9W-8; waitfor Cluster; send s
 let script = "";
 let everyMin = 0;
 let ticks = 0;
+
+/** A run's transmit cost, as the host counts it: each connect, and each five send steps started. */
+function cost(steps) {
+  const sends = steps.filter((s) => s.op === "send").length;
+  return steps.filter((s) => s.op === "connect").length + Math.ceil(sends / 5);
+}
 
 async function runOnce(text) {
   const steps = parseScript(text);
@@ -61,8 +69,9 @@ register({
       }
       const every = a.match(/^every\s+(\d+)\s+([\s\S]+)$/i);
       if (every) {
-        if (!parseScript(every[2]).length) return [NO_STEPS];
-        everyMin = Math.max(MIN_MINUTES, Number(every[1]));
+        const steps = parseScript(every[2]);
+        if (!steps.length) return [NO_STEPS];
+        everyMin = Math.max(MIN_MINUTES * Math.max(1, cost(steps)), Number(every[1]));
         script = every[2];
         ticks = 0;
         return [`Scheduled every ${everyMin} min. ${await runOnce(script)}`];
