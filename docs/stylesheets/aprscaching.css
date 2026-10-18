@@ -48,6 +48,13 @@
   --md-admonition-fg-color: var(--ink);
 }
 
+/* the light scheme's page is near white: the faintest ink (copy button, permalink) needs a stronger mix to keep
+   3:1 for interface parts, and text on the accent (button and tab hover) needs white to keep 4.5:1 */
+[data-md-color-scheme="default"] {
+  --md-default-fg-color--lighter: color-mix(in oklch, var(--muted) 80%, transparent);
+  --md-accent-bg-color: oklch(1 0 0);
+}
+
 /* diagrams: Material draws the mermaid blocks with these variables, taken from the app's diagram tokens */
 [data-md-color-scheme] {
   --md-mermaid-font-family: var(--font-ui);

@@ -5,6 +5,9 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+- **Docs site.** A catalogue page's facts table escapes the manifest's text, the light scheme's faint icons and
+  accent hover text meet WCAG AA contrast, and source links point at `main`, which the site describes.
+
 ## [1.4.0] - 2026-10-07
 
 The docs follow the packet terminal's session events, a release picks its own version, and the docs build installs
