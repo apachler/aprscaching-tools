@@ -54,6 +54,8 @@ export function txAllowed(info) {
   const m = /^:([!-~]{1,9} *):(.*?)(\{[A-Za-z0-9]{1,5}\})?$/.exec(info);
   if (!m || m[1].length !== 9) return false;
   if (/^(BLN|NWS|SKY|CWA|BOM)/i.test(m[1])) return false;
+  // telemetry definitions travel as messages to the station they describe: the app refuses them too
+  if (/^(PARM|UNIT|EQNS|BITS)\./.test(m[2])) return false;
   return m[2].length > 0 && m[2].length <= 67;
 }
 
@@ -200,8 +202,10 @@ export function loadTool(name, opts = {}) {
     s.commands = {};
     for (const [w, v] of Object.entries(t?.commands ?? {})) {
       // as the sandbox does: a command is the operator's alone unless it opts in with { run, remote: true }
-      if (typeof v === "function") s.commands[w] = { run: v, remote: false };
-      else if (v && typeof v.run === "function") s.commands[w] = { run: v.run, remote: v.remote === true };
+      // words match without regard to case, as the app matches them
+      const word = w.toLowerCase();
+      if (typeof v === "function") s.commands[word] = { run: v, remote: false };
+      else if (v && typeof v.run === "function") s.commands[word] = { run: v.run, remote: v.remote === true };
     }
     if (Array.isArray(t?.colourRules)) s.colourRules = clone(t.colourRules);
     if (t?.panel !== undefined) s.panel = clone(t.panel);
@@ -227,7 +231,7 @@ export function loadTool(name, opts = {}) {
     commands: () => Object.keys(s.commands),
     /** Run a command as the operator, or as a remote peer: then only a remote tool's remote commands answer (null). */
     async run(word, args = "", { remote = false } = {}) {
-      const c = s.commands[word];
+      const c = s.commands[String(word).toLowerCase()];
       if (!c || (remote && (!manifest.remote || !c.remote))) return null;
       try {
         return [].concat((await c.run(args)) ?? []).map(String);

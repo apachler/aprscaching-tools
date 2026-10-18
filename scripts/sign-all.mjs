@@ -13,7 +13,7 @@
 //
 // Both values come from genkey.mjs. They stay in the environment of this one command and are never written.
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,12 +27,18 @@ function pubOf(envName) {
     console.error(`sign-all: set ${envName} to the private value genkey.mjs printed`);
     process.exit(2);
   }
+  let derived;
   try {
     const { pkcs8, pub } = JSON.parse(Buffer.from(v, "base64").toString());
     if (typeof pkcs8 !== "string" || typeof pub !== "string") throw new Error();
+    // the key signs with pkcs8: the public key it is checked against is derived from it, not taken from `pub`
+    derived = createPublicKey(
+      createPrivateKey({ key: Buffer.from(pkcs8, "base64"), format: "der", type: "pkcs8" }),
+    ).export({ format: "jwk" }).x;
+    if (derived !== pub) throw new Error();
     return pub;
   } catch {
-    console.error(`sign-all: ${envName} is not a private value from genkey.mjs`);
+    console.error(`sign-all: ${envName} is not a private value from genkey.mjs, or its pub is not its private key's`);
     process.exit(2);
   }
 }
@@ -102,6 +108,11 @@ for (const e of reg.entries) {
     continue;
   }
   const file = path.join(root, e.entry);
+  const r = path.relative(root, path.resolve(file));
+  if (!r || r.startsWith("..") || path.isAbsolute(r) || /%2f|%5c/i.test(e.entry)) {
+    console.error(`sign-all: ${e.name}'s entry ${e.entry} leaves the repository; nothing was signed`);
+    process.exit(1);
+  }
   let m;
   try {
     m = JSON.parse(fs.readFileSync(file, "utf8"));

@@ -42,6 +42,11 @@ post on a channel you control. The project registry does this on its [home page]
 
 An authority key change costs every instance and player a confirmation, so change it only when it leaks.
 
+In this repository, CI checks a release against the authority key `main` already holds, not the `authority.pub` the
+release brings, so a pull request that swaps the key and signs again with its own fails `verify`. A real change of
+the authority key fails that check too: a repository admin merges it past the check, and the release after it is
+checked against the new key.
+
 ## Release practice
 
 - **Tag every release** and give people the `github:owner/repo@<tag>` address. A tag never moves: a fix is a new
