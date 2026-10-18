@@ -63,7 +63,8 @@ describe("sign-all.mjs", () => {
     fs.writeFileSync(path.join(outside, "tool.json"), manifest);
     const regPath = path.join(dir, "registry.json");
     const reg = JSON.parse(fs.readFileSync(regPath, "utf8"));
-    reg.entries.push({
+    // first, so it is the entry the checks reach before any other could stop them
+    reg.entries.unshift({
       ...reg.entries[0],
       name: "outside",
       entry: path.relative(dir, path.join(outside, "tool.json")),
