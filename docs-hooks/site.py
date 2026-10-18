@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import html
 import json
 import logging
 import re
@@ -79,24 +80,30 @@ def on_files(files, config):
     return files
 
 
+def _cell(value) -> str:
+    # manifest strings are a tool author's text, and Markdown passes raw HTML through: escape them, and keep a `|`
+    # from ending the table cell
+    return html.escape(str(value)).replace("|", "\\|")
+
+
 def _facts(name: str) -> str:
     m = _tools[name]
     entry = next((e for e in _registry.get("entries", []) if e.get("name") == m.get("name")), None)
-    surfaces = ", ".join(f"`{s}`" for s in (m.get("surfaces") or ["web"]))
+    surfaces = ", ".join(f"<code>{_cell(s)}</code>" for s in (m.get("surfaces") or ["web"]))
     remote = "Connected peers may run the commands it opens to them" if m.get("remote") else "The operator's alone"
     listed = (
-        f"Listed, as version {entry['version']}" if entry and entry.get("version") else "Not listed"
+        f"Listed, as version {_cell(entry['version'])}" if entry and entry.get("version") else "Not listed"
     )
     rows = [
-        ("Manifest name", f"`{m.get('name')}`"),
-        ("Version", m.get("version", "")),
-        ("Tool API", f"`{m.get('api', '')}`, the minimum it needs"),
-        ("Author", m.get("author", "")),
+        ("Manifest name", f"<code>{_cell(m.get('name'))}</code>"),
+        ("Version", _cell(m.get("version", ""))),
+        ("Tool API", f"<code>{_cell(m.get('api', ''))}</code>, the minimum it needs"),
+        ("Author", _cell(m.get("author", ""))),
         ("Shows on", surfaces),
         ("Commands", remote),
-        ("Licence", m.get("_licence") or "see its README"),
+        ("Licence", _cell(m.get("_licence") or "see its README")),
         ("In the project registry", listed),
-        ("Source", f"[`tools/{name}/`]({REPO}/tree/dev/tools/{name})"),
+        ("Source", f"[`tools/{name}/`]({REPO}/tree/main/tools/{name})"),
     ]
     return "| | |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in rows) + "\n"
 
@@ -155,6 +162,8 @@ def _permissions_table(markdown: str) -> list[str] | None:
 
 def on_page_markdown(markdown, page, config, files):
     where = page.file.src_uri
+    # the checks read the page as written, before the markers expand, so a warning's line number is the source's
+    _check(markdown, where)
     markdown = markdown.replace("<!-- authority-key -->", _authority)
     markdown = markdown.replace("<!-- authority-fingerprint -->", fingerprint(_authority))
     markdown = markdown.replace("<!-- registry-format -->", str(_registry.get("format", "")))
@@ -192,7 +201,6 @@ def on_page_markdown(markdown, page, config, files):
                 log.warning("%s: the row for %s lists %s; the manifest asks for %s", where, name, listed,
                             _tools[name].get("permissions"))
 
-    _check(markdown, where)
     return markdown
 
 
