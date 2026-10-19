@@ -74,6 +74,12 @@ describe("digimode-decoders", () => {
     expect(t.state.decoderMeta.every((d) => d.placeholder)).toBe(true);
     expect(await t.decode("cw", t.state.decoderMeta[0].placeholder)).toBe("HELLO"); // the example decodes
   });
+
+  it("decodes a token that names an object property to nothing", async () => {
+    const t = loadTool("digimode-decoders");
+    expect(await t.decode("cw", "constructor .... __proto__")).toBe("H");
+    expect(await t.decode("psk31", "constructor00toString")).toBe("");
+  });
 });
 
 describe("packet-decoder", () => {
@@ -104,5 +110,7 @@ describe("packet-decoder", () => {
     expect(await t.decode("aprs", "not a frame")).toMatch(/^Not a TNC2 line/);
     expect(t.panel.nodes[0]).toMatchObject({ kind: "text", tone: "bad" });
     expect(await t.decode("aprs", "  \n ")).toMatch(/^Paste/);
+    expect(await t.decode("aprs", ">APRS:!4704.41N/01526.27E>")).toMatch(/^Not a TNC2 line/);
+    expect(await t.decode("aprs", "OE8APR-9>,WIDE1-1:!4704.41N/01526.27E>")).toMatch(/^Not a TNC2 line/);
   });
 });

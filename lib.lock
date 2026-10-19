@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/apachler/aprscaching.git",
-  "ref": "32b5862c5c03ef1e4eda02611bf2ab1c8712a810",
+  "ref": "911083797fde782f239f1a947287a3eb9cbe858c",
   "paths": [
     "packages/aprs/src",
     "packages/packet/src/names.ts",

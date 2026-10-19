@@ -27,6 +27,10 @@ The script calls `register()` while it runs. What it registered by the time the 
 reads. A later call replaces the commands, colour rules and decoders inside the worker, but the app keeps the lists
 it read at load; `tool.setPanel()` and `tool.setColourRules()` change the others later.
 
+Each contribution needs its permission: commands `command`, colour rules `monitor`, a panel `panel` and decoders
+`decoder`. Without it, `register()` throws `permission '<name>' not granted` and the tool does not load. An empty
+contribution, such as `commands: {}` or `panel: null`, needs none.
+
 ```js
 register({
   commands: { hello: (args) => [`Hello ${args || "world"}`] },

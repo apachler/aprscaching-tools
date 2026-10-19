@@ -22,6 +22,11 @@ format versions are named where they change.
   it keeps.
 - **Info responder 1.1.2.** `WHOIS` answers only a callsign, so a peer's free text is never transmitted back.
 - **7PLUS reassembler 1.0.2.** A part count of four digits is not misread as its first three.
+- **CW encoder 1.0.1.** A word with no Morse characters leaves no empty word between the `/` separators.
+- **PSK31 + CW decoders 1.0.2.** A token that names an object property, such as `constructor`, decodes to nothing.
+- **Packet decoder 1.1.1.** A line with an empty source or destination callsign is not TNC2. It decodes with the
+  APRScaching parser of the libraries `lib.lock` pins, which reads DAO precision, symbols from the destination
+  address and the overlay digit of a compressed position.
 - **Station DB 1.1.2.** It publishes `station.seen` for a station again only when its type or source changes or
   30 seconds have passed, and at most 100 stations a second, so a busy feed stays within the app's 200 messages a
   second and `station.type` keeps answering.
@@ -38,6 +43,9 @@ format versions are named where they change.
 - **Release workflow.** The checks run in a job with a read-only token; the job that writes the release and asks for
   the provenance attestation runs no code of the repository or its dependencies. A tag without its CHANGELOG section
   fails. No workflow leaves its token in the checkout.
+- **Test harness: permissions.** `register()` fails the load for commands without `command`, colour rules without
+  `monitor`, a panel without `panel` or decoders without `decoder`, as the sandbox does; `loadTool` takes
+  `opts.script` to run a source of the test's own.
 - **Test harness.** It refuses telemetry definitions over `requestTx`, and matches command words without regard to
   case, as the app does. The script tests have a minute each.
 

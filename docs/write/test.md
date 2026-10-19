@@ -21,6 +21,8 @@ harness keeps the app's rules where a test could otherwise pass wrongly:
 - **The bus.** `provide` is refused for a service another tool holds, and for names that start with `session.` or
   `host.` or `link.`; a tool may not publish those topics either, except `link.ping.request`. A call to `session.script` without `tx` is refused with the
   app's reason ([The tool bus](tool-bus.md)).
+- **Permissions.** `register()` throws for a contribution without its permission, as the sandbox does, so a tool
+  that registers a command without `command` fails to load ([The sandbox API](sandbox-api.md#register)).
 - **Transmit format.** `requestTx()` holds what the app would not send, such as a status over 62 characters or one
   that starts with a grid locator, and resolves `false` ([The sandbox API](sandbox-api.md#toolrequesttxinfo)).
 - **Message size.** A colour-rule set over 64 KB of JSON is dropped and logged, as the app drops a message over its
@@ -28,7 +30,7 @@ harness keeps the app's rules where a test could otherwise pass wrongly:
 
 | Call | Does |
 |---|---|
-| `loadTool(name, opts?)` | Loads the tool. `opts.permissions` overrides the manifest's grants; `opts.bus` shares a bus between tools; `opts.tx(info)` and `opts.beacon(spec)` answer transmit and beacon requests (granted by default) and may throw, as the app does when its gate is closed. |
+| `loadTool(name, opts?)` | Loads the tool. `opts.permissions` overrides the manifest's grants; `opts.bus` shares a bus between tools; `opts.tx(info)` and `opts.beacon(spec)` answer transmit and beacon requests (granted by default) and may throw, as the app does when its gate is closed; `opts.script` runs that source in place of the built `tool.js`. |
 | `createBus()` | A tool bus several tools can share. `bus.emit(topic, data, from)` publishes as any sender, such as `"(host)"`. |
 | `t.run(word, args?, { remote? })` | Runs a command and resolves its lines; as a remote station, only a remote tool's remote commands answer (`null` otherwise). |
 | `t.decode(id, input)` | Runs a decoder. |

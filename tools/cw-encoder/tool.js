@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// CW encoder 1.0.0, built by scripts/build.mjs from tools/cw-encoder/src, lib/ and the
+// CW encoder 1.0.1, built by scripts/build.mjs from tools/cw-encoder/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // vendor/aprscaching/packages/tools/src/decoders/morse.ts
@@ -52,11 +52,11 @@
     "(": "-.--.",
     ")": "-.--.-"
   };
-  var REV = Object.fromEntries(Object.entries(MORSE).map(([c, m]) => [m, c]));
+  var REV = new Map(Object.entries(MORSE).map(([c, m]) => [m, c]));
   function encodeMorse(text) {
     return text.toUpperCase().split(/\s+/).filter(Boolean).map(
       (word) => [...word].map((c) => MORSE[c] ?? "").filter(Boolean).join(" ")
-    ).join(" / ");
+    ).filter(Boolean).join(" / ");
   }
 
   // tools/cw-encoder/src/index.js
