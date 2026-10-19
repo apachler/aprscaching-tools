@@ -129,6 +129,33 @@ describe("station-db and info-responder", () => {
     expect(await bus.call("station.type", "ZZ9ZZZ")).toBe("");
   });
 
+  it("station-db publishes a station again only when it changes or after 30 s, and 100 stations a second", async () => {
+    vi.useFakeTimers();
+    const bus = createBus();
+    const seen = [];
+    bus.subscribe("station.seen", (data) => seen.push(data));
+    const db = loadTool("station-db", { bus });
+    const hear = (call, source = "RF") => db.dispatch("on_frame", { peerCall: call, source, text: "" });
+    await hear("OE8XBM-1");
+    await hear("OE8XBM-1");
+    expect(seen).toHaveLength(1);
+    await hear("OE8XBM-1", "APRS"); // a new source is news
+    expect(seen.map((d) => d.source)).toEqual(["RF", "APRS"]);
+    vi.advanceTimersByTime(30_000);
+    await hear("OE8XBM-1", "APRS");
+    expect(seen).toHaveLength(3);
+    // a busy second: 100 are published, the rest the next time they are heard
+    seen.length = 0;
+    vi.advanceTimersByTime(1000);
+    for (let i = 0; i < 150; i++) await hear(`OE${i}AB`);
+    expect(seen).toHaveLength(100);
+    expect(await bus.call("station.type", "OE149AB")).not.toBe(""); // classified all the same
+    vi.advanceTimersByTime(1000);
+    await hear("OE149AB");
+    await hear("OE0AB");
+    expect(seen.slice(100).map((d) => d.call)).toEqual(["OE149AB"]);
+  });
+
   it("refuses a second provider of a held service, as the app's bus does", () => {
     const bus = createBus();
     loadTool("station-db", { bus });

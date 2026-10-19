@@ -6,7 +6,8 @@ Station log lists the stations Station DB hears and answers `/seen` and `/whois`
 ## What it does
 
 The tool subscribes to Station DB's `station.seen` messages and keeps the ten newest stations in its panel, with
-their type and source. `/whois` asks Station DB's `station.type` service; the answer arrives later, so it shows in
+their type and source. Station DB publishes a station heard again at most every 30 seconds, so a station heard
+often keeps its place until then. `/whois` asks Station DB's `station.type` service; the answer arrives later, so it shows in
 the panel.
 
 ## Use it

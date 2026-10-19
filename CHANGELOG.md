@@ -22,6 +22,9 @@ format versions are named where they change.
   it keeps.
 - **Info responder 1.1.2.** `WHOIS` answers only a callsign, so a peer's free text is never transmitted back.
 - **7PLUS reassembler 1.0.2.** A part count of four digits is not misread as its first three.
+- **Station DB 1.1.2.** It publishes `station.seen` for a station again only when its type or source changes or
+  30 seconds have passed, and at most 100 stations a second, so a busy feed stays within the app's 200 messages a
+  second and `station.type` keeps answering.
 - **Verify.** It resolves a manifest's `entry` as the app does, against the manifest's address, and fails one that
   names another file there than the one it hashed (a leading `/`, a query, a fragment, a `%`-escape). For a tool its
   author hosts, it fetches the script and checks it against `entrySha256`, which `--strict` requires; a hosted

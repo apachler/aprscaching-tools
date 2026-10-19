@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Station DB (NAMES.GP) 1.1.1, built by scripts/build.mjs from tools/station-db/src, lib/ and the
+// Station DB (NAMES.GP) 1.1.2, built by scripts/build.mjs from tools/station-db/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // vendor/aprscaching/packages/packet/src/names.ts
@@ -49,16 +49,30 @@
 
   // tools/station-db/src/index.js
   var KEPT = 5e3;
+  var SEEN_EVERY_MS = 3e4;
+  var PER_SECOND = 100;
   var registry = new StationRegistry();
   var heard = /* @__PURE__ */ new Map();
+  var second = 0;
+  var sent = 0;
   tool.on("on_frame", (p) => {
     const call = callOf(p.peerCall);
     if (!call) return;
     const type = registry.classify(call, { dest: asStr(p.dst), payload: asStr(p.text) });
+    const now = Date.now();
+    let told = heard.get(call)?.told;
     heard.delete(call);
-    heard.set(call, type);
+    const fresh = told && told.type === type && told.source === p.source && now - told.at < SEEN_EVERY_MS;
+    if (!fresh) {
+      if (now - second >= 1e3) [second, sent] = [now, 0];
+      if (sent < PER_SECOND) {
+        sent++;
+        told = { type, source: p.source, at: now };
+        tool.emit("station.seen", { call, type, source: p.source });
+      }
+    }
+    heard.set(call, { type, told });
     if (heard.size > KEPT) heard.delete(heard.keys().next().value);
-    tool.emit("station.seen", { call, type, source: p.source });
   });
-  tool.provide("station.type", (arg) => heard.get(callOf(typeof arg === "string" ? arg : arg?.call)) ?? "");
+  tool.provide("station.type", (arg) => heard.get(callOf(typeof arg === "string" ? arg : arg?.call))?.type ?? "");
 })();
