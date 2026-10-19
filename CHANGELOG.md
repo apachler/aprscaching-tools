@@ -35,6 +35,9 @@ format versions are named where they change.
 - **Release workflow.** The checks run in a job with a read-only token; the job that writes the release and asks for
   the provenance attestation runs no code of the repository or its dependencies. A tag without its CHANGELOG section
   fails. No workflow leaves its token in the checkout.
+- **Test harness: permissions.** `register()` fails the load for commands without `command`, colour rules without
+  `monitor`, a panel without `panel` or decoders without `decoder`, as the sandbox does; `loadTool` takes
+  `opts.script` to run a source of the test's own.
 - **Test harness.** It refuses telemetry definitions over `requestTx`, and matches command words without regard to
   case, as the app does. The script tests have a minute each.
 

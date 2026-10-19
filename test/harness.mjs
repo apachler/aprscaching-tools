@@ -104,13 +104,13 @@ export function readManifest(name) {
 /**
  * Load a built tool. `opts.permissions` overrides the manifest's grants; `opts.bus` shares a bus; `opts.tx(info)`
  * and `opts.beacon(spec)` answer the tool's transmit and beacon requests (granted by default), and may throw as the
- * host does when its gate is closed.
+ * host does when its gate is closed. `opts.script` runs that source in place of the built tool.js.
  */
 export function loadTool(name, opts = {}) {
   const manifest = readManifest(name);
   const file = path.join(root, "tools", name, manifest.entry ?? "tool.js");
-  if (!fs.existsSync(file)) throw new Error(`no ${file}: run node scripts/build.mjs`);
-  const script = fs.readFileSync(file, "utf8");
+  if (opts.script === undefined && !fs.existsSync(file)) throw new Error(`no ${file}: run node scripts/build.mjs`);
+  const script = opts.script ?? fs.readFileSync(file, "utf8");
   const granted = opts.permissions ?? manifest.permissions;
   const bus = opts.bus ?? createBus();
   const s = {
@@ -199,6 +199,12 @@ export function loadTool(name, opts = {}) {
     ? { emit: tool.emit, subscribe: tool.subscribe, call: tool.call, provide: tool.provide, setPanel: tool.setPanel }
     : undefined;
   const register = (t) => {
+    // as the sandbox does: a contribution needs its permission, and one without it fails the load; an empty one
+    // needs none
+    if (Object.keys(t?.commands ?? {}).length) need("command");
+    if (Array.isArray(t?.colourRules) && t.colourRules.length) need("monitor");
+    if (t?.panel != null) need("panel");
+    if (t?.decoders?.length) need("decoder");
     s.commands = {};
     for (const [w, v] of Object.entries(t?.commands ?? {})) {
       // as the sandbox does: a command is the operator's alone unless it opts in with { run, remote: true }
