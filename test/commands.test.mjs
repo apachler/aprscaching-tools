@@ -56,6 +56,20 @@ describe("unit-convert", () => {
   });
 });
 
+describe("register()", () => {
+  // hello registers a command, colour rules, a panel and a decoder: each needs its permission, as in the sandbox
+  const all = ["command", "monitor", "panel", "decoder"];
+  it.each(all)("fails the load of a contribution without '%s'", (perm) => {
+    const permissions = all.filter((p) => p !== perm);
+    expect(() => loadTool("hello", { permissions })).toThrow(`permission '${perm}' not granted`);
+  });
+
+  it("asks no permission for an empty contribution", () => {
+    const script = "register({ commands: {}, colourRules: [], panel: null, decoders: [] })";
+    expect(() => loadTool("hello", { permissions: [], script })).not.toThrow();
+  });
+});
+
 describe("cw-encoder", () => {
   it("encodes text to Morse", async () => {
     const t = loadTool("cw-encoder");
