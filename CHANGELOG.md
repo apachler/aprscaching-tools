@@ -27,6 +27,9 @@ format versions are named where they change.
 - **Packet decoder 1.1.1.** A line with an empty source or destination callsign is not TNC2. It decodes with the
   APRScaching parser of the libraries `lib.lock` pins, which reads DAO precision, symbols from the destination
   address and the overlay digit of a compressed position.
+- **Station DB 1.1.2.** It publishes `station.seen` for a station again only when its type or source changes or
+  30 seconds have passed, and at most 100 stations a second, so a busy feed stays within the app's 200 messages a
+  second and `station.type` keeps answering.
 - **Verify.** It resolves a manifest's `entry` as the app does, against the manifest's address, and fails one that
   names another file there than the one it hashed (a leading `/`, a query, a fragment, a `%`-escape). For a tool its
   author hosts, it fetches the script and checks it against `entrySha256`, which `--strict` requires; a hosted

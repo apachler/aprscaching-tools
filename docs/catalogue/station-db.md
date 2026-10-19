@@ -11,7 +11,10 @@ For every heard frame, the tool works out the station's type with the NAMES.GP r
   from the map's live stations;
 - answers the `station.type` service with a heard station's type, or `""` for one it has not heard.
 
-It keeps the last 5000 stations.
+It publishes a station again only when its type or source changes, or 30 seconds after it last did, and at most 100
+stations a second; a station held back in a busy second is published the next time it is heard. That keeps a busy
+feed within the app's [message budget](../write/limits.md#the-message-budget), with room for the `station.type`
+answers. It keeps the last 5000 stations.
 
 ## Use it
 
