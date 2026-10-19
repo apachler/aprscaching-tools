@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// PSK31 + CW decoders 1.0.1, built by scripts/build.mjs from tools/digimode-decoders/src, lib/ and the
+// PSK31 + CW decoders 1.0.2, built by scripts/build.mjs from tools/digimode-decoders/src, lib/ and the
 // aprscaching libraries lib.lock pins. Edit the sources, not this file.
 (() => {
   // vendor/aprscaching/packages/tools/src/decoders/morse.ts
@@ -52,10 +52,10 @@
     "(": "-.--.",
     ")": "-.--.-"
   };
-  var REV = Object.fromEntries(Object.entries(MORSE).map(([c, m]) => [m, c]));
+  var REV = new Map(Object.entries(MORSE).map(([c, m]) => [m, c]));
   function decodeMorse(input) {
     return input.trim().split("/").flatMap((part) => part.trim().split(/\s{2,}/)).map(
-      (word) => word.trim().split(/\s+/).filter(Boolean).map((t) => REV[t] ?? "").join("")
+      (word) => word.trim().split(/\s+/).filter(Boolean).map((t) => REV.get(t) ?? "").join("")
     ).join(" ").trim();
   }
 
@@ -149,9 +149,9 @@
     "\n": "11101111",
     "\r": "11101111"
   };
-  var REV2 = Object.fromEntries(Object.entries(VARICODE).map(([c, v]) => [v, c]));
+  var REV2 = new Map(Object.entries(VARICODE).map(([c, v]) => [v, c]));
   function decodeVaricode(bits) {
-    return bits.split("00").map((code) => code ? REV2[code] ?? "" : "").join("");
+    return bits.split("00").map((code) => code ? REV2.get(code) ?? "" : "").join("");
   }
 
   // tools/digimode-decoders/src/index.js

@@ -22,6 +22,11 @@ format versions are named where they change.
   it keeps.
 - **Info responder 1.1.2.** `WHOIS` answers only a callsign, so a peer's free text is never transmitted back.
 - **7PLUS reassembler 1.0.2.** A part count of four digits is not misread as its first three.
+- **CW encoder 1.0.1.** A word with no Morse characters leaves no empty word between the `/` separators.
+- **PSK31 + CW decoders 1.0.2.** A token that names an object property, such as `constructor`, decodes to nothing.
+- **Packet decoder 1.1.1.** A line with an empty source or destination callsign is not TNC2. It decodes with the
+  APRScaching parser of the libraries `lib.lock` pins, which reads DAO precision, symbols from the destination
+  address and the overlay digit of a compressed position.
 - **Verify.** It resolves a manifest's `entry` as the app does, against the manifest's address, and fails one that
   names another file there than the one it hashed (a leading `/`, a query, a fragment, a `%`-escape). For a tool its
   author hosts, it fetches the script and checks it against `entrySha256`, which `--strict` requires; a hosted

@@ -2,7 +2,7 @@
   "name": "digimode-decoders",
   "title": "PSK31 + CW decoders",
   "author": "OE8APR",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "api": "1.0",
   "permissions": [
     "decoder"
