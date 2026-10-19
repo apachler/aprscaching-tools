@@ -61,6 +61,7 @@ describe("cw-encoder", () => {
     const t = loadTool("cw-encoder");
     expect(await t.run("cw", "SOS")).toEqual(["... --- ..."]);
     expect(await t.run("cw", "")).toEqual(["Usage: /cw <text>"]);
+    expect(await t.run("cw", "SOS ~~ SOS")).toEqual(["... --- ... / ... --- ..."]); // a word without Morse drops
   });
 });
 
