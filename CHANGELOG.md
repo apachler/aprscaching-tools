@@ -5,6 +5,9 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+- **Release script.** `pr-main` and `sync-dev` merge only a pull request from this repository whose head is the
+  commit the step pushed. A fork's PR from a branch of the same name is never reused or merged, and an own PR at
+  another commit stops the step.
 - **Docs site.** A catalogue page's facts table escapes the manifest's text, the light scheme's faint icons and
   accent hover text meet WCAG AA contrast, and source links point at `main`, which the site describes.
 - **Scheduled query 1.0.2.** A schedule is at least 10 minutes for each transmission a run costs, so the transmit

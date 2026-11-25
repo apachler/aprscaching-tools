@@ -451,23 +451,53 @@ async function watchChecks(ctx, number) {
   if (w.status !== 0) throw new StepError(`the checks of #${number} did not pass; fix them, push, and rerun`);
 }
 
-/** The open PR from `head` into `base`, or null. */
-function openPr(ctx, head, base) {
+/**
+ * The pull request from this repository's branch `head` into `base` whose head is `sha`: the open one, or one it opens.
+ * `gh pr list --head` matches by branch name alone, a fork's branch of that name included, so a cross-repository PR
+ * is never taken. An own PR at another commit stops the step: merging it would publish a commit the step did not
+ * mean, and opening a second one beside it is refused by GitHub.
+ */
+async function ownPr(ctx, head, base, sha, title, body) {
   const r = ctx.must(
-    ctx.gh("pr", "list", "--head", head, "--base", base, "--state", "open", "--json", "number,url,headRefOid"),
+    ctx.gh(
+      "pr",
+      "list",
+      "--head",
+      head,
+      "--base",
+      base,
+      "--state",
+      "open",
+      "--json",
+      "number,url,headRefOid,isCrossRepository",
+    ),
     "gh pr list",
   );
-  return JSON.parse(r.stdout || "[]")[0] ?? null;
-}
-
-async function createPr(ctx, head, base, title, body) {
-  await ctx.confirm(`Open a pull request ${head} → ${base} titled "${title}"?`, () =>
+  const own = JSON.parse(r.stdout || "[]").filter((p) => p.isCrossRepository === false);
+  const at = own.find((p) => p.headRefOid === sha);
+  if (at) return at;
+  if (own.length)
+    throw new StepError(
+      `#${own[0].number} from ${head} into ${base} is at ${own[0].headRefOid}, not at ${sha}, the commit this step ` +
+        `merges: if ${head} was pushed just now, rerun in a moment; otherwise close #${own[0].number} and rerun`,
+    );
+  const out = await ctx.confirm(`Open a pull request ${head} → ${base} titled "${title}"?`, () =>
     ctx.must(ctx.gh("pr", "create", "--base", base, "--head", head, "--title", title, "--body", body), "gh pr create"),
   );
-  const pr = openPr(ctx, head, base);
-  if (!pr) throw new StepError(`the pull request ${head} → ${base} is not listed yet; rerun in a moment`);
-  ctx.log(`opened ${pr.url}`);
-  return pr;
+  const url = out.stdout.trim().split("\n").at(-1);
+  const number = Number(/\/pull\/(\d+)$/.exec(url)?.[1]);
+  if (!number) throw new StepError(`gh pr create printed no pull request URL ("${url}"); find the PR and rerun`);
+  ctx.log(`opened ${url}`);
+  return { number, url, headRefOid: sha };
+}
+
+/** Merge PR `number` as a merge commit, only while its head is `sha`, the commit the step means to merge. */
+function mergeAt(ctx, number, sha) {
+  const view = ctx.must(ctx.gh("pr", "view", String(number), "--json", "headRefOid"), "gh pr view").stdout;
+  const reported = JSON.parse(view).headRefOid;
+  if (reported !== sha)
+    throw new StepError(`#${number}'s head is ${reported}, not ${sha}, the commit this step merges; nothing is merged`);
+  return ctx.gh("pr", "merge", String(number), "--merge", "--match-head-commit", sha);
 }
 
 steps["pr-main"] = async (ctx, s) => {
@@ -491,16 +521,10 @@ steps["pr-main"] = async (ctx, s) => {
     await ctx.confirm(`Push ${ctx.branch} to origin?`, () =>
       ctx.must(ctx.git("push", "-u", "origin", `${ctx.branch}:${ctx.branch}`), "git push"),
     );
-  const pr =
-    openPr(ctx, ctx.branch, "main") ??
-    (await createPr(ctx, ctx.branch, "main", `chore(release): ${ctx.tag}`, `Release ${ctx.tag}.`));
+  const pr = await ownPr(ctx, ctx.branch, "main", head, `chore(release): ${ctx.tag}`, `Release ${ctx.tag}.`);
   await watchChecks(ctx, pr.number);
-  const sha = ctx.must(ctx.gh("pr", "view", String(pr.number), "--json", "headRefOid"), "gh pr view").stdout;
   await ctx.confirm(`Merge #${pr.number} into main as a merge commit? This publishes ${ctx.tag}'s signed state`, () =>
-    ctx.must(
-      ctx.gh("pr", "merge", String(pr.number), "--merge", "--match-head-commit", JSON.parse(sha).headRefOid),
-      "gh pr merge",
-    ),
+    ctx.must(mergeAt(ctx, pr.number, head), "gh pr merge"),
   );
   ctx.git("fetch", "origin", "--prune");
 };
@@ -545,13 +569,17 @@ steps["sync-dev"] = async (ctx, s) => {
     );
   } else {
     ctx.log("dev has moved on since the release branch was cut: main comes in through a pull request");
-    const pr =
-      openPr(ctx, "main", "dev") ??
-      (await createPr(ctx, "main", "dev", `chore(release): merge ${ctx.tag} into dev`, `Brings ${ctx.tag} into dev.`));
+    const pr = await ownPr(
+      ctx,
+      "main",
+      "dev",
+      main,
+      `chore(release): merge ${ctx.tag} into dev`,
+      `Brings ${ctx.tag} into dev.`,
+    );
     await watchChecks(ctx, pr.number);
-    const sha = ctx.must(ctx.gh("pr", "view", String(pr.number), "--json", "headRefOid"), "gh pr view").stdout;
     await ctx.confirm(`Merge #${pr.number} into dev as a merge commit?`, () => {
-      const r = ctx.gh("pr", "merge", String(pr.number), "--merge", "--match-head-commit", JSON.parse(sha).headRefOid);
+      const r = mergeAt(ctx, pr.number, main);
       if (r.status !== 0)
         throw new StepError(
           `#${pr.number} does not merge (a conflict, most likely in CHANGELOG.md): resolve it on a branch from dev, ` +

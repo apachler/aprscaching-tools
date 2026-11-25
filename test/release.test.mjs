@@ -94,7 +94,9 @@ function world(s = {}) {
     devMovedOn: false,
     releaseBranches: [],
     devLog: [],
-    prOpen: false,
+    head: "h7",
+    prs: [],
+    viewHead: null,
     ...s,
   };
   const calls = [];
@@ -120,12 +122,30 @@ function world(s = {}) {
       return ok(st.devLog.map(([subject, body = ""]) => `${subject}\x1f${body}\x1e`).join("\n"));
     if (line.startsWith("git rev-parse v") && line.endsWith("^{commit}")) return ok(`${st.localTagAt ?? "0ld"}\n`);
     if (line === "git merge-base --is-ancestor origin/dev origin/main") return st.devMovedOn ? no() : ok();
-    if (line.startsWith("gh pr create")) st.prOpen = true;
+    if (line === "git rev-parse HEAD") return ok(`${st.head}\n`);
+    const arg = (name) => args[args.indexOf(name) + 1];
+    if (line.startsWith("gh pr create")) {
+      const pr = {
+        number: 7,
+        url: "https://github.com/apachler/aprscaching-tools/pull/7",
+        headRefName: arg("--head"),
+        baseRefName: arg("--base"),
+        headRefOid: arg("--head") === "main" ? "feedface" : st.head,
+        isCrossRepository: false,
+      };
+      st.prs.push(pr);
+      return ok(`${pr.url}\n`);
+    }
     if (line.startsWith("gh pr list"))
-      return ok(st.prOpen ? JSON.stringify([{ number: 7, url: "pr/7", headRefOid: "h7" }]) : "[]");
+      return ok(
+        JSON.stringify(st.prs.filter((p) => p.headRefName === arg("--head") && p.baseRefName === arg("--base"))),
+      );
     if (line.startsWith("gh pr checks") && args.includes("--json"))
       return ok(JSON.stringify([{ name: "verify", bucket: "pass" }]));
-    if (line.startsWith("gh pr view")) return ok(JSON.stringify({ headRefOid: "h7" }));
+    if (line.startsWith("gh pr view")) {
+      const pr = st.prs.find((p) => String(p.number) === args[2]);
+      return ok(JSON.stringify({ headRefOid: st.viewHead ?? pr?.headRefOid }));
+    }
     if (line === "gh auth status") return st.ghAuth === 0 ? ok() : no("not logged in");
     if (line === "node scripts/verify.mjs --strict") return { status: st.verifyStrict, stdout: "", stderr: "" };
     if (line === "node scripts/sign-all.mjs")
@@ -404,6 +424,69 @@ describe("release.mjs steps", () => {
     expect(lines).toContainEqual(expect.stringMatching(/^gh pr create --base dev --head main /));
     expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 7 --merge /));
     expect(lines.filter((l) => l.startsWith("git push"))).toEqual([]);
+  });
+
+  /** A fork's open PR from a branch named like the one the step means, which `gh pr list --head` also returns. */
+  const forkPr = (head, base) => ({
+    number: 99,
+    url: "https://github.com/apachler/aprscaching-tools/pull/99",
+    headRefName: head,
+    baseRefName: base,
+    headRefOid: "f0f0f0f",
+    isCrossRepository: true,
+  });
+  const releaseWorld = (s = {}) => {
+    const w = world({ current: "release/v1.2.0", verifyStrict: 0, ...s });
+    w.st.refs.add("refs/heads/release/v1.2.0");
+    return w;
+  };
+  const ghPr = (w) => w.calls.map((c) => c.line).filter((l) => l.startsWith("gh pr"));
+
+  it("opens and merges its own release PR when a fork's PR of the same branch name is open", async () => {
+    const w = releaseWorld({ prs: [forkPr("release/v1.2.0", "main")] });
+    const h = harness(fixture({ changelog: DATED("1.2.0") }), w, { yes: true });
+    expect(await release(h.ctx, { only: "pr-main" })).toBe(0);
+    const lines = ghPr(w);
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr create --base main --head release\/v1\.2\.0 /));
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 7 --merge --match-head-commit h7 /));
+    expect(lines.filter((l) => / 99 /.test(l))).toEqual([]);
+  });
+
+  it("opens and merges its own main → dev PR when a fork's PR from its main is open", async () => {
+    const w = world({ mainChangelog: DATED("1.2.0"), tagged: true, devMovedOn: true, prs: [forkPr("main", "dev")] });
+    const h = harness(fixture(), w, { yes: true });
+    expect(await release(h.ctx, { only: "sync-dev" })).toBe(0);
+    const lines = ghPr(w);
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr create --base dev --head main /));
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 7 --merge --match-head-commit feedface /));
+    expect(lines.filter((l) => / 99 /.test(l))).toEqual([]);
+  });
+
+  it("reuses its own open PR at the commit it pushed, without opening another", async () => {
+    const own = { ...forkPr("release/v1.2.0", "main"), number: 8, headRefOid: "h7", isCrossRepository: false };
+    const w = releaseWorld({ prs: [own] });
+    const h = harness(fixture({ changelog: DATED("1.2.0") }), w, { yes: true });
+    expect(await release(h.ctx, { only: "pr-main" })).toBe(0);
+    const lines = ghPr(w);
+    expect(lines.filter((l) => l.startsWith("gh pr create"))).toEqual([]);
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 8 --merge --match-head-commit h7 /));
+  });
+
+  it("stops when the PR's reported head is not the commit it means to merge, naming both", async () => {
+    const w = releaseWorld({ viewHead: "e1e1e1e" });
+    const h = harness(fixture({ changelog: DATED("1.2.0") }), w, { yes: true });
+    expect(await release(h.ctx, { only: "pr-main" })).toBe(1);
+    expect(h.text()).toMatch(/#7's head is e1e1e1e, not h7/);
+    expect(ghPr(w).filter((l) => l.startsWith("gh pr merge"))).toEqual([]);
+  });
+
+  it("stops at its own PR at another commit, neither merging it nor opening a second", async () => {
+    const stale = { ...forkPr("main", "dev"), number: 8, headRefOid: "0ld", isCrossRepository: false };
+    const w = world({ mainChangelog: DATED("1.2.0"), tagged: true, devMovedOn: true, prs: [stale] });
+    const h = harness(fixture(), w, { yes: true });
+    expect(await release(h.ctx, { only: "sync-dev" })).toBe(1);
+    expect(h.text()).toMatch(/#8 from main into dev is at 0ld, not at feedface/);
+    expect(ghPr(w).filter((l) => /^gh pr (create|merge)/.test(l))).toEqual([]);
   });
 
   it("starts a hotfix from a tag, with its entry written on the release branch", async () => {
