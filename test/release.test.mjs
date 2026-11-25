@@ -97,6 +97,7 @@ function world(s = {}) {
     head: "h7",
     prs: [],
     viewHead: null,
+    createPrints: null,
     ...s,
   };
   const calls = [];
@@ -125,16 +126,18 @@ function world(s = {}) {
     if (line === "git rev-parse HEAD") return ok(`${st.head}\n`);
     const arg = (name) => args[args.indexOf(name) + 1];
     if (line.startsWith("gh pr create")) {
+      // a number no listed PR has, so the step must take it from what gh pr create prints
+      const number = Math.max(6, ...st.prs.map((p) => p.number)) + 1;
       const pr = {
-        number: 7,
-        url: "https://github.com/apachler/aprscaching-tools/pull/7",
+        number,
+        url: `https://github.com/apachler/aprscaching-tools/pull/${number}`,
         headRefName: arg("--head"),
         baseRefName: arg("--base"),
         headRefOid: arg("--head") === "main" ? "feedface" : st.head,
         isCrossRepository: false,
       };
       st.prs.push(pr);
-      return ok(`${pr.url}\n`);
+      return ok(st.createPrints ?? `${pr.url}\n`);
     }
     if (line.startsWith("gh pr list"))
       return ok(
@@ -448,7 +451,7 @@ describe("release.mjs steps", () => {
     expect(await release(h.ctx, { only: "pr-main" })).toBe(0);
     const lines = ghPr(w);
     expect(lines).toContainEqual(expect.stringMatching(/^gh pr create --base main --head release\/v1\.2\.0 /));
-    expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 7 --merge --match-head-commit h7 /));
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 100 --merge --match-head-commit h7 /));
     expect(lines.filter((l) => / 99 /.test(l))).toEqual([]);
   });
 
@@ -458,8 +461,16 @@ describe("release.mjs steps", () => {
     expect(await release(h.ctx, { only: "sync-dev" })).toBe(0);
     const lines = ghPr(w);
     expect(lines).toContainEqual(expect.stringMatching(/^gh pr create --base dev --head main /));
-    expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 7 --merge --match-head-commit feedface /));
+    expect(lines).toContainEqual(expect.stringMatching(/^gh pr merge 100 --merge --match-head-commit feedface /));
     expect(lines.filter((l) => / 99 /.test(l))).toEqual([]);
+  });
+
+  it("stops when gh pr create prints no pull request URL, merging nothing", async () => {
+    const w = releaseWorld({ prs: [forkPr("release/v1.2.0", "main")], createPrints: "" });
+    const h = harness(fixture({ changelog: DATED("1.2.0") }), w, { yes: true });
+    expect(await release(h.ctx, { only: "pr-main" })).toBe(1);
+    expect(h.text()).toMatch(/gh pr create printed no pull request URL/);
+    expect(ghPr(w).filter((l) => /^gh pr (checks|merge)/.test(l))).toEqual([]);
   });
 
   it("reuses its own open PR at the commit it pushed, without opening another", async () => {
