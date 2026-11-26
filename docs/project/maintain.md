@@ -206,7 +206,8 @@ want to see (`.claude/skills/release/SKILL.md`).
 ### Merge a release that fails verify by design
 
 On a pull request, `verify` runs `scripts/verify.mjs`, `scripts/build.mjs` and `scripts/fetch-libs.mjs` as the base
-branch holds them, never as the pull request brings them, so a change can't make its own check pass. A release that
+branch holds them, with the base branch's dependencies, on the pull request's tools and registry, before any command
+the pull request defines. A change can't make its own check pass. A release that
 the scripts on `main` can't accept fails `verify` for that reason: one that changes the authority key, and one whose
 `lib.lock` or registry the older scripts on `main` refuse, such as a `lib.lock` without the `repository` key the older
 `fetch-libs.mjs` requires. Read the failed `verify` log first: merge past it only when the failure is the one the

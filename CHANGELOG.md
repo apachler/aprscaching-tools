@@ -17,11 +17,11 @@ format versions are named where they change.
   the release `check` fail a key file in the plain form, naming the command that encrypts it, and the release's
   `sign` step is the maintainer's, run in their own terminal.
 - **Trusted checks.** On a pull request, `verify` runs `verify.mjs`, `build.mjs` and `fetch-libs.mjs` from the base
-  branch, so a change can't make its own check pass, and a pull request into `main` must come from a release branch
-  of this repository. `fetch-libs` takes the libraries only from APRScaching's `dev` branch, named in the script:
-  `lib.lock` holds `ref` and `paths`, and a pinned commit off that branch is refused. `build --check` fails a tool
-  whose `tool.js` carries the build banner without its `src/`. The release that brings this into `main` fails
-  `verify` by design and is merged with a one-time ruleset bypass (maintain.md).
+  branch before any of the change's own commands, so a change can't make its own check pass, and a pull request into
+  `main` must come from a release branch of this repository. `fetch-libs` takes the libraries only from APRScaching's
+  `dev` branch, named in the script: `lib.lock` holds `ref` and `paths`, and a pinned commit off that branch is
+  refused. `build --check` fails a tool whose `tool.js` carries the build banner without its `src/`. The release that
+  brings this into `main` fails `verify` by design and is merged with a one-time ruleset bypass (maintain.md).
 - **Docs site.** A catalogue page's facts table escapes the manifest's text, the light scheme's faint icons and
   accent hover text meet WCAG AA contrast, and source links point at `main`, which the site describes.
 - **Scheduled query 1.0.2.** A schedule is at least 10 minutes for each transmission a run costs, so the transmit

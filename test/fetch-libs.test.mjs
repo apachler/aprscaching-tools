@@ -95,6 +95,13 @@ describe("fetch-libs.mjs", () => {
     expect(r.lib).toBeNull();
   });
 
+  it("refuses a lib.lock key other than ref and paths", () => {
+    const r = fetchLibs({ ref: onBranch, paths, branch: "side" });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('lib.lock: holds only "ref" and "paths", not "branch"');
+    expect(r.lib).toBeNull();
+  });
+
   it("--source takes the pinned commit from a clone's origin branch", () => {
     const r = fetchLibs({ ref: onBranch, paths }, "--source", clone("git@github.com:apachler/aprscaching.git"));
     expect(r.stderr).toBe("");
