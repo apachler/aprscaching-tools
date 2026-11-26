@@ -7,10 +7,12 @@
 // Node 22 or newer; pnpm through corepack at the packageManager version; gh signed in; origin pointing at the
 // project repository; dev and main on origin; the libraries in vendor/ at the lib.lock commit; the lockfile installing
 // (pnpm install --frozen-lockfile --ignore-scripts, which only touches node_modules); and the signing key files:
-// in a folder outside every git working tree (mode 700, else a warning), present, mode 600, parseable, the authority
-// key the one authority.pub pins and the author key the one the registry lists for OE8APR. Only public keys and their fingerprints are printed.
+// in a folder outside every git working tree (mode 700, else a warning), present, encrypted with a passphrase, mode
+// 600, the authority key the one authority.pub pins and the author key the one the registry lists for OE8APR. The
+// keys are not opened: only public keys and their fingerprints are read and printed.
 //
-// Missing key files are a warning (a contributor has none); --release makes them a failure. Exits 1 on any failure.
+// Missing key files are a warning (a contributor has none); --release makes them a failure. A key file that holds
+// its private key unencrypted fails either way, naming the command that encrypts it. Exits 1 on any failure.
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";

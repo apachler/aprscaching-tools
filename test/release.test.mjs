@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
 // scripts/release.mjs and scripts/doctor.mjs against a stand-in for git and gh: a temporary repository holds the
 // files the scripts read, an injected runner answers every command from a described state and records it, and the
-// keys are throwaway ones from genkey.mjs. No network, no real keys, nothing outside the temporary folder changes.
-import { execFileSync } from "node:child_process";
+// keys are throwaway encrypted key files. No network, no real keys, nothing outside the temporary folder changes.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { doctor } from "../scripts/doctor.mjs";
 import { createContext, datedChangelog, nextVersion, parseArgs, release, unreleasedBody } from "../scripts/release.mjs";
-import { fingerprint, inspectKeyFolder, keyFiles, redact, workTreeOf } from "../scripts/release-kit.mjs";
-import { repoRoot } from "./harness.mjs";
+import { fingerprint, inspectKeyFolder, keyFiles, workTreeOf } from "../scripts/release-kit.mjs";
+import { makeKey } from "./keys.mjs";
 
-const genkey = () => execFileSync(process.execPath, [path.join(repoRoot, "scripts/genkey.mjs"), "--raw"]).toString();
-const pubOf = (priv) => JSON.parse(Buffer.from(priv, "base64").toString()).pub;
+const KEYS = { author: await makeKey(), authority: await makeKey(), other: await makeKey() };
 
 const CHANGELOG = `# Changelog
 
@@ -42,8 +40,7 @@ function fixture(opts = {}) {
   const root = path.join(base, "repo");
   fs.mkdirSync(root);
   if (opts.git) fs.mkdirSync(path.join(root, ".git"));
-  const author = genkey();
-  const authority = genkey();
+  const { author, authority } = KEYS;
   const w = (rel, text) => {
     fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
     fs.writeFileSync(path.join(root, rel), text);
@@ -53,13 +50,13 @@ function fixture(opts = {}) {
   w("lib.lock", JSON.stringify({ ref: "a".repeat(40) }));
   w("vendor/aprscaching/.lib-ref", "a".repeat(40) + "\n");
   w("node_modules/.modules.yaml", "");
-  w("authority.pub", (opts.authorityPub ?? pubOf(authority)) + "\n");
+  w("authority.pub", (opts.authorityPub ?? authority.pub) + "\n");
   const entry = {
     name: "foo",
     title: "Foo",
     author: "OE8APR",
     version: "1.0.0",
-    pubkey: pubOf(author),
+    pubkey: author.pub,
     entry: "tools/foo/tool.json",
   };
   w("registry.json", JSON.stringify({ format: 1, entries: [entry] }));
@@ -69,8 +66,10 @@ function fixture(opts = {}) {
   fs.mkdirSync(keys);
   fs.chmodSync(keys, opts.dirMode ?? 0o700);
   if (!opts.noAuthorKey)
-    fs.writeFileSync(path.join(keys, "oe8apr-tool-author.key"), author, { mode: opts.mode ?? 0o600 });
-  fs.writeFileSync(path.join(keys, "registry-authority.key"), authority, { mode: 0o600 });
+    fs.writeFileSync(path.join(keys, "oe8apr-tool-author.key"), opts.plainAuthor ? author.plain : author.file, {
+      mode: opts.mode ?? 0o600,
+    });
+  fs.writeFileSync(path.join(keys, "registry-authority.key"), authority.file, { mode: 0o600 });
   return { base, root, keys, author, authority };
 }
 
@@ -90,7 +89,6 @@ function world(s = {}) {
     ghAuth: 0,
     verifyStrict: 1,
     url: "https://github.com/apachler/aprscaching-tools.git",
-    echo: null,
     devMovedOn: false,
     releaseBranches: [],
     devLog: [],
@@ -103,7 +101,7 @@ function world(s = {}) {
   const calls = [];
   const run = (cmd, args, opts = {}) => {
     const line = `${cmd === process.execPath ? "node" : cmd} ${args.join(" ")}`;
-    calls.push({ line, env: opts.env ? { ...opts.env } : undefined });
+    calls.push({ line, env: opts.env ? { ...opts.env } : undefined, inherit: !!opts.inherit });
     const ok = (stdout = "") => ({ status: 0, stdout, stderr: "" });
     const no = (stderr = "") => ({ status: 1, stdout: "", stderr });
     if (line.startsWith("git fetch")) return ok();
@@ -151,8 +149,7 @@ function world(s = {}) {
     }
     if (line === "gh auth status") return st.ghAuth === 0 ? ok() : no("not logged in");
     if (line === "node scripts/verify.mjs --strict") return { status: st.verifyStrict, stdout: "", stderr: "" };
-    if (line === "node scripts/sign-all.mjs")
-      return { status: 0, stdout: `sign-all: done${st.echo ? ` ${opts.env?.[st.echo]}` : ""}\n`, stderr: "" };
+    if (line === "node scripts/sign-all.mjs") return { status: st.signAll ?? 0, stdout: "", stderr: "" };
     return ok();
   };
   return { st, calls, run };
@@ -177,6 +174,7 @@ function harness(fx, w, o = {}) {
     yes: o.yes,
     from: o.from,
     source: path.join(fx.root, "no-clone"),
+    terminal: o.terminal ?? false,
   });
   return { ctx, out, asked, text: () => out.join("\n") };
 }
@@ -203,7 +201,7 @@ describe("release.mjs --dry-run", () => {
     expect(t).toMatch(/dry run for v1\.2\.0/);
     for (const step of ["prepare", "sign", "changelog", "pr-main", "tag", "sync-dev", "handover"])
       expect(t).toMatch(new RegExp(`todo  ${step}`));
-    expect(t).toContain(`author key ${pubOf(fx.author)} (${fingerprint(pubOf(fx.author))})`);
+    expect(t).toContain(`author key ${fx.author.pub} (${fingerprint(fx.author.pub)})`);
     expect(w.calls.filter((c) => MUTATING.test(c.line))).toEqual([]);
     expect(h.asked).toEqual([]);
     expect(fs.readFileSync(path.join(fx.root, "CHANGELOG.md"), "utf8")).toBe(CHANGELOG);
@@ -307,12 +305,23 @@ describe("release.mjs check", () => {
     const h = harness(fx, w, { dryRun: true });
     expect(await release(h.ctx)).toBe(1);
     expect(h.text()).toMatch(/has mode 644; run chmod 600/);
-    expect(h.text()).not.toContain(fx.author);
-    expect(h.text()).not.toContain(JSON.parse(Buffer.from(fx.author, "base64").toString()).pkcs8);
+    expect(h.text()).not.toContain(fx.author.secret);
+  });
+
+  it("fails a key file that holds its private key unencrypted, naming the command that encrypts it", async () => {
+    const fx = fixture({ plainAuthor: true });
+    const h = harness(fx, world(), { dryRun: true });
+    expect(await release(h.ctx)).toBe(1);
+    const file = path.join(fx.keys, "oe8apr-tool-author.key");
+    expect(h.text()).toContain(
+      `FAIL  the author key: ${file} holds its private key unencrypted; encrypt it, keeping the key: node scripts/genkey.mjs --convert ${file}`,
+    );
+    expect(h.text()).not.toContain(fx.author.secret);
+    expect(h.text()).not.toContain(fx.author.plain);
   });
 
   it("fails a missing key file and an authority key authority.pub does not pin", async () => {
-    const r = await check({ noAuthorKey: true, authorityPub: pubOf(genkey()) }, {});
+    const r = await check({ noAuthorKey: true, authorityPub: KEYS.other.pub }, {});
     expect(r.code).toBe(1);
     expect(r.text).toMatch(/the author key: .*does not exist/);
     expect(r.text).toMatch(/but authority\.pub pins/);
@@ -357,24 +366,60 @@ describe("release.mjs steps", () => {
     expect(w.calls.filter((c) => MUTATING.test(c.line))).toEqual([]);
   });
 
-  it("passes the keys to sign-all alone, in its environment, and never prints them", async () => {
+  it("runs sign-all alone, on the terminal, with no key in any environment, after the build", async () => {
     const fx = fixture();
-    const w = world({ current: "release/v1.2.0", echo: "AUTHOR_KEY" });
+    const w = world({ current: "release/v1.2.0" });
     w.st.refs.add("refs/heads/release/v1.2.0");
     const before = { ...process.env };
-    const h = harness(fx, w, { yes: true });
+    const h = harness(fx, w, { yes: true, terminal: true });
     expect(await release(h.ctx, { only: "sign" })).toBe(0);
-    const signAll = w.calls.filter((c) => c.line === "node scripts/sign-all.mjs");
-    expect(signAll).toHaveLength(1);
-    expect(signAll[0].env.AUTHOR_KEY).toBe(fx.author);
-    expect(signAll[0].env.AUTHORITY_KEY).toBe(fx.authority);
-    for (const c of w.calls.filter((x) => x.line !== "node scripts/sign-all.mjs"))
-      expect(JSON.stringify(c.env ?? {})).not.toMatch(
-        new RegExp(`${fx.author.slice(0, 20)}|${fx.authority.slice(0, 20)}`),
-      );
-    expect(h.text()).toContain("sign-all: done [redacted]");
-    expect(h.text()).not.toContain(fx.author);
+    // what the step runs once the state is read: sign-all, which opens the keys itself, and then nothing but a diff
+    const since = w.calls.findIndex((c) => c.line === "node scripts/sign-all.mjs");
+    expect(w.calls.slice(since).map((c) => c.line)).toEqual(["node scripts/sign-all.mjs", "git diff --stat"]);
+    expect(w.calls[since].inherit).toBe(true);
+    // the build ran in the prepare step; the sign step runs no build, pnpm or other repository script of its own
+    expect(
+      w.calls
+        .slice(0, since)
+        .filter((c) => /^(node|corepack)/.test(c.line))
+        .map((c) => c.line),
+    ).toEqual(["node scripts/verify.mjs --strict"]);
+    for (const c of w.calls) {
+      const values = Object.values(c.env ?? {}).map(String);
+      for (const k of [fx.author, fx.authority])
+        for (const v of [k.secret, k.plain, k.file])
+          expect(
+            values.filter((x) => x.includes(v.trim())),
+            c.line,
+          ).toEqual([]);
+      expect(Object.keys(c.env ?? {})).not.toEqual(expect.arrayContaining(["AUTHOR_KEY"]));
+    }
+    expect(h.text()).toMatch(/sign every listed tool with the author key {4}/);
     expect(process.env).toEqual(before);
+  });
+
+  it("hands the sign step to the maintainer when no terminal can type the passphrases", async () => {
+    const fx = fixture();
+    const w = world({ current: "release/v1.2.0" });
+    w.st.refs.add("refs/heads/release/v1.2.0");
+    const h = harness(fx, w, { yes: true, terminal: false });
+    expect(await release(h.ctx, { only: "sign" })).toBe(1);
+    expect(h.text()).toContain(
+      `sign needs the maintainer: the keys open only with their passphrases, typed at a terminal. In a terminal of your own, in ${fx.root}, run: node scripts/release.mjs 1.2.0 --step sign`,
+    );
+    expect(w.calls.filter((c) => c.line === "node scripts/sign-all.mjs")).toEqual([]);
+  });
+
+  it("refuses to sign with a key file still in the plain form", async () => {
+    const fx = fixture({ plainAuthor: true });
+    const w = world({ current: "release/v1.2.0" });
+    w.st.refs.add("refs/heads/release/v1.2.0");
+    const h = harness(fx, w, { yes: true, terminal: true });
+    expect(await release(h.ctx, { only: "sign" })).toBe(1);
+    expect(h.text()).toMatch(
+      /holds its private key unencrypted; encrypt it, keeping the key: node scripts\/genkey\.mjs --convert /,
+    );
+    expect(w.calls.filter((c) => c.line === "node scripts/sign-all.mjs")).toEqual([]);
   });
 
   it("dates the changelog and sets the package version", async () => {
@@ -584,13 +629,13 @@ describe("the key folder", () => {
     };
     const ok = run({ HOME: path.join(fx.base, "nohome"), XDG_CONFIG_HOME: config });
     expect(ok.code, ok.t).toBe(0);
-    expect(ok.t).toContain(`pass  author key: ${pubOf(fx.author)}`);
+    expect(ok.t).toContain(`pass  author key: ${fx.author.pub}`);
     expect(ok.t).toMatch(/pass {2}key folder .* is outside every git working tree/);
     fs.mkdirSync(path.join(config, ".git"));
     const inside = run({ HOME: path.join(fx.base, "nohome"), XDG_CONFIG_HOME: config });
     expect(inside.code).toBe(1);
     expect(inside.t).toMatch(/FAIL {2}the key folder .* lies inside a git working tree/);
-    expect(inside.t).not.toContain(fx.author);
+    expect(inside.t).not.toContain(fx.author.secret);
   });
 });
 
@@ -666,12 +711,6 @@ describe("release.mjs helpers", () => {
     expect(unreleasedBody("# Changelog\n\n## [Unreleased]\n")).toBe("");
     expect(datedChangelog(CHANGELOG, "1.2.0", "2026-10-07")).toBe(DATED("1.2.0"));
   });
-
-  it("redacts a private value and its decoded parts", () => {
-    const k = genkey();
-    const { pkcs8 } = JSON.parse(Buffer.from(k, "base64").toString());
-    expect(redact(`a ${k} b ${pkcs8} c`, [k])).toBe("a [redacted] b [redacted] c");
-  });
 });
 
 describe("doctor.mjs", () => {
@@ -688,16 +727,16 @@ describe("doctor.mjs", () => {
     });
     const t = out.join("\n");
     expect(code, t).toBe(0);
-    expect(t).toContain(`pass  author key: ${pubOf(fx.author)} (fingerprint ${fingerprint(pubOf(fx.author))})`);
-    expect(t).toContain(`pass  authority key: ${pubOf(fx.authority)}`);
-    expect(t).not.toContain(fx.author);
-    expect(t).not.toContain(fx.authority);
+    expect(t).toContain(`pass  author key: ${fx.author.pub} (fingerprint ${fingerprint(fx.author.pub)})`);
+    expect(t).toContain(`pass  authority key: ${fx.authority.pub}`);
+    expect(t).not.toContain(fx.author.secret);
+    expect(t).not.toContain(fx.authority.secret);
   });
 
   it("fails an old Node, a key others can read and an author key the registry does not list", () => {
     const fx = fixture({ mode: 0o640 });
-    const other = genkey();
-    fs.writeFileSync(path.join(fx.keys, "registry-authority.key"), other, { mode: 0o600 });
+    const other = KEYS.other;
+    fs.writeFileSync(path.join(fx.keys, "registry-authority.key"), other.file, { mode: 0o600 });
     const out = [];
     const code = doctor({
       root: fx.root,
@@ -711,7 +750,30 @@ describe("doctor.mjs", () => {
     expect(t).toMatch(/FAIL {2}Node 20\.1\.0/);
     expect(t).toMatch(/FAIL {2}author key: .*mode 640/);
     expect(t).toMatch(/FAIL {2}authority key: .*but authority\.pub pins/);
-    expect(t).not.toContain(other);
+    expect(t).not.toContain(other.secret);
+  });
+
+  it("fails a key file in the plain form, with or without --release, naming the command that encrypts it", () => {
+    const fx = fixture({ plainAuthor: true });
+    const file = path.join(fx.keys, "oe8apr-tool-author.key");
+    for (const release of [false, true]) {
+      const out = [];
+      const code = doctor({
+        root: fx.root,
+        run: doctorRun,
+        env: { TOOL_KEYS_DIR: fx.keys },
+        log: (l) => out.push(l),
+        release,
+        install: false,
+      });
+      const t = out.join("\n");
+      expect(code, t).toBe(1);
+      expect(t).toContain(
+        `FAIL  author key: ${file} holds its private key unencrypted; encrypt it, keeping the key: node scripts/genkey.mjs --convert ${file}`,
+      );
+      expect(t).not.toContain(fx.author.secret);
+      expect(t).toMatch(/pass {2}authority key: /);
+    }
   });
 
   it("warns about missing keys, and fails them with --release", () => {

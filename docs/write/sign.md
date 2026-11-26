@@ -15,35 +15,45 @@ them, and lets a registry vouch for your key.
 
 ## Steps
 
-1. Make an author key once, and keep the private value offline:
+1. Make an author key once. `genkey.mjs` asks twice for a passphrase of at least 12 characters and writes the key
+   file encrypted with it, with mode 600:
 
     ```bash
-    node scripts/genkey.mjs --raw > ~/my-tool-author.key && chmod 600 ~/my-tool-author.key
+    node scripts/genkey.mjs ~/my-tool-author.key
     ```
 
-    The file holds the private value. Never commit it: the repository's `.gitignore` excludes `*.key`.
+    The file holds the private key only encrypted, so a program that reads the file gets nothing that signs. Keep
+    the passphrase apart from the file, such as in a password manager, and never commit the file: the repository's
+    `.gitignore` excludes `*.key`.
 
 2. Print your public key:
 
     ```bash
-    node -e "console.log(JSON.parse(Buffer.from(require('fs').readFileSync(process.argv[1], 'utf8'), 'base64')).pub)" ~/my-tool-author.key
+    node scripts/genkey.mjs --pub ~/my-tool-author.key
     ```
 
     This is the key a registry lists for you, and the one a reviewer asks you to prove is yours.
 
-3. Sign the manifest:
+3. Sign the manifest, in a terminal: `sign.mjs` asks for the passphrase there, and takes it from nowhere else:
 
     ```bash
-    TOOL_PRIVATE_KEY="$(cat ~/my-tool-author.key)" node scripts/sign.mjs manifest tools/<name>/tool.json
+    node scripts/sign.mjs manifest tools/<name>/tool.json --key ~/my-tool-author.key
     ```
 
     `sign.mjs` hashes the script `entry` names into `entrySha256`, then writes your `pubkey` and the `signature`.
-    Reading the key with `"$(cat …)"` keeps the value out of your shell history. When `entry` is an absolute
-    address, a script you host yourself, give your local copy of that script as a third argument:
-    `node scripts/sign.mjs manifest tools/<name>/tool.json path/to/tool.js`. Otherwise `entry` is a plain path
-    in the manifest's folder: no leading `/`, query, fragment or `%`-escape, since the app resolves it as an address
-    against the manifest's and would fetch another file than the one hashed. `sign.mjs` refuses a key value whose
-    `pub` is not its private key's.
+    When `entry` is an absolute address, a script you host yourself, give your local copy of that script as a third
+    argument: `node scripts/sign.mjs manifest tools/<name>/tool.json path/to/tool.js --key ~/my-tool-author.key`.
+    Otherwise `entry` is a plain path in the manifest's folder: no leading `/`, query, fragment or `%`-escape, since
+    the app resolves it as an address against the manifest's and would fetch another file than the one hashed.
+    `sign.mjs` refuses a key or passphrase given in the environment or as an argument, and a key file changed after
+    `genkey.mjs` wrote it.
+
+    `sign.mjs` refuses a key file that holds its key unencrypted, a bare base64 value. Encrypt such a file in place
+    once; the key, and so your public key and every signature, stay the same:
+
+    ```bash
+    node scripts/genkey.mjs --convert ~/my-tool-author.key
+    ```
 
 4. Sign again after every change to the manifest or the script, with a new `version`.
 

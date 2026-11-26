@@ -26,8 +26,9 @@ appreciated; you are credited unless you prefer not to be.
 
 - **Signature checks.** Anything that lets `scripts/verify.mjs` or the release checks accept a registry or a manifest
   that the authority key or the author key did not sign, or a script that does not match its signed `entrySha256`.
-- **The signing flow.** A way for `scripts/sign-all.mjs`, `release.mjs` or `doctor.mjs` to leak a private key: into
-  a log, a commit, a CI run or a file inside a working tree.
+- **The signing flow.** A way for `scripts/sign-all.mjs`, `sign.mjs`, `genkey.mjs`, `release.mjs` or `doctor.mjs`
+  to leak a private key: into a log, a commit, a CI run, an environment variable or a file inside a working tree, or
+  to a process of the maintainer's that reads a key file or runs while a key is open.
 - **A tool in the registry** that is malicious or vulnerable: it does more than its permissions and README say,
   transmits without the operator asking, or exfiltrates data. For a tool that only misbehaves, without a security
   impact, use the **Report a tool** issue form.

@@ -12,10 +12,11 @@
 // The steps, in order:
 //   check      the tree is clean, gh is signed in, the version is new semver, CHANGELOG.md's Unreleased section has
 //              content, the key files exist with mode 600 in a folder outside every git working tree and match
-//              authority.pub and the project's author key, and every tool folder has a registry entry;
+//              authority.pub and the project's author key, encrypted, and every tool folder has a registry entry;
 //   prepare    release/vX.Y.Z from origin/dev (or --from, such as a tag for a hotfix); pnpm install, fetch-libs
 //              --source, build --check;
-//   sign       sign-all with the two keys, which ends in verify --strict;
+//   sign       sign-all, which opens the two keys with the passphrases the maintainer types at the terminal and ends
+//              in verify --strict; without a terminal the step stops and names the command for the maintainer;
 //   changelog  Unreleased becomes "## [X.Y.Z] - <date>" under a new empty Unreleased; package.json takes the version;
 //   pr-main    commit with a sign-off, push, a PR into main, wait for the strict checks, merge as a merge commit;
 //   tag        tag origin/main as vX.Y.Z, push the tag, wait for the Release workflow;
@@ -31,8 +32,8 @@
 //
 // The key files come from TOOL_KEYS_DIR (default $XDG_CONFIG_HOME/aprscaching-tools/keys, else
 // ~/.config/aprscaching-tools/keys), or TOOL_AUTHOR_KEY_FILE and TOOL_AUTHORITY_KEY_FILE; check refuses a key folder
-// inside a git working tree. Their values are read only in the sign step and passed to sign-all in that one child
-// process's environment; everything printed passes through a filter that removes them.
+// inside a git working tree. This script reads only their public keys; sign-all opens the keys, in its own process,
+// after the build check and with nothing else running.
 import fs from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -47,8 +48,6 @@ import {
   inspectKey,
   inspectKeyFolder,
   keyFiles,
-  loadKey,
-  redact,
   repoRoot,
   repoSlug,
 } from "./release-kit.mjs";
@@ -110,7 +109,6 @@ async function terminalAsk(question) {
  */
 export function createContext(o) {
   const version = String(o.version ?? "").replace(/^v/, "");
-  const secrets = [];
   const ctx = {
     version,
     tag: `v${version}`,
@@ -124,17 +122,14 @@ export function createContext(o) {
     source: o.source,
     today: o.today ?? localDate(),
     sleep: o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))),
-    secrets,
     out: o.log ?? ((line) => console.log(line)),
     rawAsk: o.ask ?? terminalAsk,
     rawRun: o.run ?? defaultRunner,
     node: o.node ?? process.execPath,
+    terminal: o.terminal ?? !!(process.stdin.isTTY && process.stdout.isTTY),
   };
-  ctx.log = (line = "") => ctx.out(redact(line, secrets));
-  ctx.run = (cmd, args, opts = {}) => {
-    const r = ctx.rawRun(cmd, args, { cwd: ctx.root, ...opts });
-    return { ...r, stdout: redact(r.stdout, secrets), stderr: redact(r.stderr, secrets) };
-  };
+  ctx.log = (line = "") => ctx.out(line);
+  ctx.run = (cmd, args, opts = {}) => ctx.rawRun(cmd, args, { cwd: ctx.root, ...opts });
   ctx.git = (...args) => ctx.run("git", args);
   ctx.gh = (...args) => ctx.run("gh", [...args, "-R", ctx.slug ?? UPSTREAM]);
   ctx.ask = async (q) => {
@@ -395,16 +390,15 @@ steps.sign = async (ctx, s) => {
   ctx.log(`sign every listed tool with the author key    ${k.author.pub} (${fingerprint(k.author.pub)})`);
   ctx.log(`sign registry.json with the authority key      ${k.authority.pub} (${fingerprint(k.authority.pub)})`);
   ctx.log("then verify --strict (scripts/sign-all.mjs)");
-  await ctx.confirm("Sign the release?", () => {
-    const env = { ...ctx.env };
-    for (const v of ["AUTHOR_KEY", "AUTHORITY_KEY", "TOOL_PRIVATE_KEY"]) delete env[v];
-    env.AUTHOR_KEY = loadKey(k.author.file);
-    env.AUTHORITY_KEY = loadKey(k.authority.file);
-    ctx.secrets.push(env.AUTHOR_KEY, env.AUTHORITY_KEY);
-    const r = ctx.run(ctx.node, ["scripts/sign-all.mjs"], { env });
-    env.AUTHOR_KEY = env.AUTHORITY_KEY = undefined;
-    if (r.stdout.trim()) ctx.log(r.stdout.trimEnd());
-    if (r.stderr.trim()) ctx.log(r.stderr.trimEnd());
+  // The keys open only with the passphrases the maintainer types, so a run without a terminal (an agent's) hands
+  // this step over instead of trying it.
+  if (!ctx.terminal)
+    throw new StepError(
+      `sign needs the maintainer: the keys open only with their passphrases, typed at a terminal. In a terminal of your own, in ${ctx.root}, run: node scripts/release.mjs ${ctx.version} --step sign`,
+    );
+  await ctx.confirm("Sign the release? sign-all asks for each key's passphrase", () => {
+    // sign-all gets this terminal for the passphrases, and runs while this process waits for it and runs nothing else
+    const r = ctx.run(ctx.node, ["scripts/sign-all.mjs"], { inherit: true });
     if (r.status !== 0)
       throw new StepError("sign-all failed; nothing is committed. Fix the cause and run the sign step again");
   });
@@ -619,7 +613,7 @@ const PLAN = {
     `git switch --no-track -c ${ctx.branch} ${ctx.from} (or switch to it)`,
     "pnpm install --frozen-lockfile --ignore-scripts; fetch-libs --source <APRScaching>; build --check",
   ],
-  sign: () => ["sign-all with the author and authority key files, then verify --strict"],
+  sign: () => ["the maintainer types the key passphrases for sign-all, at a terminal; then verify --strict"],
   changelog: (ctx) => [`## [Unreleased] → ## [${ctx.version}] - ${ctx.today}; package.json version`],
   "pr-main": (ctx) => [`commit -s, push ${ctx.branch}, PR into main, watch the strict checks, merge as a merge commit`],
   tag: (ctx) => [`git tag -a ${ctx.tag} origin/main, push it, watch the Release workflow`],

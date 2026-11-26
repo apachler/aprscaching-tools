@@ -1,60 +1,58 @@
 // SPDX-License-Identifier: MIT
 // scripts/sign.mjs and scripts/verify.mjs end to end, with throwaway keys in a temporary copy of one tool: the
 // registry format and every manifest's tool API version are checked, and both are covered by the signatures.
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { KeyError, decryptKey } from "../scripts/keyfile.mjs";
+import { SignError, signManifest, signRegistry } from "../scripts/sign.mjs";
 import { repoRoot } from "./harness.mjs";
+import { PASS, makeKey } from "./keys.mjs";
 
 const node = (cwd, args, env = {}) =>
   spawnSync(process.execPath, args, { cwd, env: { ...process.env, ...env }, encoding: "utf8" });
-const genkey = () => execFileSync(process.execPath, [path.join(repoRoot, "scripts/genkey.mjs"), "--raw"]).toString();
-const pubOf = (priv) => JSON.parse(Buffer.from(priv, "base64").toString()).pub;
+/** A throwaway key, opened: { pub, key } as sign-all and sign.mjs hold it. */
+const openKey = async () => decryptKey((await makeKey()).file, PASS);
 
 /** A one-tool repository signed with fresh keys; `edit(dir)` changes it before verification. */
-function signedCopy(edit = () => {}, { resignManifest = true } = {}) {
+async function signedCopy(edit = () => {}, { resignManifest = true } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tools-verify-"));
   fs.mkdirSync(path.join(dir, "scripts"));
-  for (const f of ["sign.mjs", "verify.mjs"])
-    fs.copyFileSync(path.join(repoRoot, "scripts", f), path.join(dir, "scripts", f));
+  for (const f of ["verify.mjs"]) fs.copyFileSync(path.join(repoRoot, "scripts", f), path.join(dir, "scripts", f));
   fs.cpSync(path.join(repoRoot, "tools/unit-convert"), path.join(dir, "tools/unit-convert"), { recursive: true });
-  const author = genkey();
-  const authority = genkey();
-  fs.writeFileSync(path.join(dir, "authority.pub"), pubOf(authority) + "\n");
+  const author = await openKey();
+  const authority = await openKey();
+  fs.writeFileSync(path.join(dir, "authority.pub"), authority.pub + "\n");
   const m = JSON.parse(fs.readFileSync(path.join(dir, "tools/unit-convert/tool.json"), "utf8"));
   const entry = {
     name: m.name,
     title: m.title,
     author: m.author,
     version: m.version,
-    pubkey: pubOf(author),
+    pubkey: author.pub,
     entry: "tools/unit-convert/tool.json",
   };
   fs.writeFileSync(path.join(dir, "registry.json"), JSON.stringify({ entries: [entry] }));
-  const sign = (kind, file, key) => {
-    const r = node(dir, ["scripts/sign.mjs", kind, file], { TOOL_PRIVATE_KEY: key });
-    expect(r.status, r.stderr).toBe(0);
-  };
   edit(dir, "before");
-  if (resignManifest) sign("manifest", "tools/unit-convert/tool.json", author);
-  sign("registry", "registry.json", authority);
+  if (resignManifest) await signManifest(path.join(dir, "tools/unit-convert/tool.json"), author);
+  await signRegistry(path.join(dir, "registry.json"), authority);
   edit(dir, "after");
   return { dir, verify: () => node(dir, ["scripts/verify.mjs", "--strict"]) };
 }
 
 describe("sign.mjs and verify.mjs", () => {
-  it("sign registry format 1 and the manifest's api, and verify them", () => {
-    const { dir, verify } = signedCopy();
+  it("sign registry format 1 and the manifest's api, and verify them", async () => {
+    const { dir, verify } = await signedCopy();
     expect(JSON.parse(fs.readFileSync(path.join(dir, "registry.json"), "utf8")).format).toBe(1);
     const r = verify();
     expect(r.stdout).toContain("0 failure(s)");
     expect(r.status).toBe(0);
   });
 
-  it("fail a registry whose format was changed after signing", () => {
-    const { verify } = signedCopy((dir, when) => {
+  it("fail a registry whose format was changed after signing", async () => {
+    const { verify } = await signedCopy((dir, when) => {
       if (when !== "after") return;
       const p = path.join(dir, "registry.json");
       fs.writeFileSync(p, JSON.stringify({ ...JSON.parse(fs.readFileSync(p, "utf8")), format: 2 }));
@@ -65,8 +63,8 @@ describe("sign.mjs and verify.mjs", () => {
     expect(r.stdout).toMatch(/registry signature does not verify/);
   });
 
-  it("fail a manifest without a well-formed api, signed or not", () => {
-    const { verify } = signedCopy((dir, when) => {
+  it("fail a manifest without a well-formed api, signed or not", async () => {
+    const { verify } = await signedCopy((dir, when) => {
       if (when !== "before") return;
       const p = path.join(dir, "tools/unit-convert/tool.json");
       fs.writeFileSync(p, JSON.stringify({ ...JSON.parse(fs.readFileSync(p, "utf8")), api: "1" }));
@@ -76,8 +74,8 @@ describe("sign.mjs and verify.mjs", () => {
     expect(r.stdout).toMatch(/manifest needs "api": "MAJOR.MINOR"/);
   });
 
-  it("fail a manifest whose api was changed after signing", () => {
-    const { verify } = signedCopy((dir, when) => {
+  it("fail a manifest whose api was changed after signing", async () => {
+    const { verify } = await signedCopy((dir, when) => {
       if (when !== "after") return;
       const p = path.join(dir, "tools/unit-convert/tool.json");
       fs.writeFileSync(p, JSON.stringify({ ...JSON.parse(fs.readFileSync(p, "utf8")), api: "1.1" }));
@@ -86,8 +84,8 @@ describe("sign.mjs and verify.mjs", () => {
     expect(r.status).toBe(1);
     expect(r.stdout).toMatch(/manifest signature does not verify/);
   });
-  it("fail a manifest that holds no JSON object, instead of skipping it", () => {
-    const { dir, verify } = signedCopy((d, when) => {
+  it("fail a manifest that holds no JSON object, instead of skipping it", async () => {
+    const { dir, verify } = await signedCopy((d, when) => {
       if (when === "after") fs.writeFileSync(path.join(d, "tools/unit-convert/tool.json"), "null");
     });
     const r = verify();
@@ -96,8 +94,8 @@ describe("sign.mjs and verify.mjs", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it("fail an entry address with an encoded slash, which could leave the repository", () => {
-    const { dir, verify } = signedCopy((d, when) => {
+  it("fail an entry address with an encoded slash, which could leave the repository", async () => {
+    const { dir, verify } = await signedCopy((d, when) => {
       if (when !== "before") return;
       const regPath = path.join(d, "registry.json");
       const reg = JSON.parse(fs.readFileSync(regPath, "utf8"));
@@ -109,21 +107,19 @@ describe("sign.mjs and verify.mjs", () => {
     expect(r.stdout).toMatch(/holds an encoded slash/);
     fs.rmSync(dir, { recursive: true, force: true });
   });
-  it("sign refuses a manifest whose entry leaves its folder", () => {
+  it("sign refuses a manifest whose entry leaves its folder", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tools-sign-"));
     fs.mkdirSync(path.join(dir, "t"));
     fs.writeFileSync(path.join(dir, "secret.js"), "x");
     fs.writeFileSync(path.join(dir, "t/tool.json"), JSON.stringify({ name: "t", entry: "../secret.js" }));
-    const r = node(dir, [path.join(repoRoot, "scripts/sign.mjs"), "manifest", "t/tool.json"], {
-      TOOL_PRIVATE_KEY: genkey(),
-    });
-    expect(r.status).toBe(2);
-    expect(r.stderr).toMatch(/leaves the manifest's folder/);
+    await expect(signManifest(path.join(dir, "t/tool.json"), await openKey())).rejects.toThrow(
+      new SignError("entry ../secret.js leaves the manifest's folder"),
+    );
     fs.rmSync(dir, { recursive: true, force: true });
   });
-  it("fail a manifest whose entry the app resolves elsewhere than the file that was hashed", () => {
+  it("fail a manifest whose entry the app resolves elsewhere than the file that was hashed", async () => {
     for (const entry of ["/tool.js", "tool.js?v=2", "tool%2ejs"]) {
-      const { dir, verify } = signedCopy((d, when) => {
+      const { dir, verify } = await signedCopy((d, when) => {
         if (when !== "after") return;
         const p = path.join(d, "tools/unit-convert/tool.json");
         fs.writeFileSync(p, JSON.stringify({ ...JSON.parse(fs.readFileSync(p, "utf8")), entry }));
@@ -134,29 +130,21 @@ describe("sign.mjs and verify.mjs", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
-  it("sign refuses an entry that is not a plain path beside the manifest", () => {
+  it("sign refuses an entry that is not a plain path beside the manifest", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tools-sign-"));
     fs.mkdirSync(path.join(dir, "t"));
     fs.writeFileSync(path.join(dir, "t/tool.js"), "x");
     fs.writeFileSync(path.join(dir, "t/tool.json"), JSON.stringify({ name: "t", entry: "/tool.js" }));
-    const r = node(dir, [path.join(repoRoot, "scripts/sign.mjs"), "manifest", "t/tool.json"], {
-      TOOL_PRIVATE_KEY: genkey(),
-    });
-    expect(r.status).toBe(2);
-    expect(r.stderr).toMatch(/not a plain path beside the manifest/);
+    await expect(signManifest(path.join(dir, "t/tool.json"), await openKey())).rejects.toThrow(
+      /not a plain path beside the manifest/,
+    );
     fs.rmSync(dir, { recursive: true, force: true });
   });
-  it("sign refuses a key value whose pub is not its private key's", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tools-sign-"));
-    fs.writeFileSync(path.join(dir, "registry.json"), JSON.stringify({ entries: [] }));
-    const doc = JSON.parse(Buffer.from(genkey(), "base64").toString());
-    const mixed = Buffer.from(JSON.stringify({ ...doc, pub: pubOf(genkey()) })).toString("base64");
-    const r = node(dir, [path.join(repoRoot, "scripts/sign.mjs"), "registry", "registry.json"], {
-      TOOL_PRIVATE_KEY: mixed,
-    });
-    expect(r.status).toBe(2);
-    expect(r.stderr).toMatch(/pub is not the public key of its private key/);
-    expect(fs.readFileSync(path.join(dir, "registry.json"), "utf8")).toBe(JSON.stringify({ entries: [] }));
-    fs.rmSync(dir, { recursive: true, force: true });
+  it("a key file whose public key was swapped does not open, and signs nothing", async () => {
+    const doc = JSON.parse((await makeKey()).file);
+    const swapped = JSON.stringify({ ...doc, pub: (await makeKey()).pub });
+    await expect(decryptKey(swapped, PASS, "k.key")).rejects.toThrow(
+      new KeyError("k.key does not open: a wrong passphrase, or the file changed after it was written"),
+    );
   });
 });
