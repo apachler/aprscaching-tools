@@ -17,11 +17,18 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
+      # A fork names its branches freely, so the branch name counts only on a branch of this repository.
       - name: a PR into main comes from a release branch
         if: github.base_ref == 'main'
         env:
           HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
         run: |
+          if [[ "$HEAD_REPO" != "$REPO" ]]; then
+            echo "::error::a pull request into main comes from a release branch of $REPO, not from $HEAD_REPO"
+            exit 1
+          fi
           [[ "$HEAD_REF" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]] && exit 0
           echo "::error::a pull request into main comes from release/vX.Y.Z, not from $HEAD_REF: retarget it to dev"
           exit 1
@@ -31,30 +38,56 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      # pnpm is pinned through packageManager; the lockfile is frozen and pnpm-workspace.yaml holds the release-age
-      # floor. No dependency runs an install script: esbuild ships its binary as an optional package.
-      - run: corepack enable && pnpm install --frozen-lockfile --ignore-scripts
-      # ESLint for code mistakes, Prettier for the layout (Markdown and the signed and built files are left out)
-      - run: pnpm lint
-      # The MIT libraries the tools bundle, from APRScaching at the commit lib.lock pins.
+      # The gate runs before any command the change defines (its package scripts, its pnpm config, the git config
+      # those could write), so nothing of the change can reach the code that judges it. The gate folder is the
+      # trusted commit's whole tree, with its scripts, package.json, lockfile and pnpm settings, and only what the
+      # gate checks taken from the change: tools/, lib/, lib.lock, registry.json, authority.pub. On a pull request
+      # the trusted commit is its base, so an edit to the verifier, the build check or the library fetch takes effect
+      # once merged; on a push it is the pushed commit, already merged.
+      - name: the gate, from the base commit
+        env:
+          GATE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+          GATE: ${{ runner.temp }}/gate
+        run: |
+          git fetch --no-tags --depth=1 origin "$GATE_SHA"
+          rm -rf "$GATE" && mkdir -p "$GATE"
+          git archive "$GATE_SHA" | tar -x -C "$GATE"
+          rm -rf "$GATE/tools" "$GATE/lib" "$GATE/lib.lock" "$GATE/registry.json" "$GATE/authority.pub"
+          cp -a tools lib lib.lock registry.json authority.pub "$GATE/"
+          cd "$GATE" && corepack enable && pnpm install --frozen-lockfile --ignore-scripts
+      # The MIT libraries the tools bundle, from APRScaching's dev branch at the commit lib.lock pins.
       - run: node scripts/fetch-libs.mjs
+        working-directory: ${{ runner.temp }}/gate
       # Every committed tool.js must be exactly what its sources build to, so the signed bytes are the reviewed ones.
       - run: node scripts/build.mjs --check
+        working-directory: ${{ runner.temp }}/gate
+      # The registry against the authority key in authority.pub, every listed tool against its author key.
+      - name: verify (dev, unsigned tools listed)
+        if: github.base_ref != 'main' && github.ref != 'refs/heads/main'
+        working-directory: ${{ runner.temp }}/gate
+        run: node scripts/verify.mjs
+      # The registry is checked against the authority key main held before this change, never against the
+      # authority.pub the change brings, and by the base commit's verify.mjs: a change that swaps the key and signs
+      # again with its own fails here, whatever it does to the verifier. A real key rotation fails here too, and the
+      # main ruleset has no bypass actor: the maintainer adds a bypass for that one merge in the ruleset and removes it
+      # after (docs/publish/keys-and-releases.md).
+      - name: verify --strict (main)
+        if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
+        working-directory: ${{ runner.temp }}/gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "$BASE_SHA"
+          AUTHORITY="$(git -C "$GITHUB_WORKSPACE" show "$BASE_SHA:authority.pub")" node scripts/verify.mjs --strict
+      # From here on the change's own code runs: its install, its lint and its tests, with the libraries the gate
+      # fetched.
+      # pnpm is pinned through packageManager; the lockfile is frozen and pnpm-workspace.yaml holds the release-age
+      # floor. No dependency runs an install script: esbuild ships its binary as an optional package.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # ESLint for code mistakes, Prettier for the layout (Markdown and the signed and built files are left out)
+      - run: pnpm lint
+      - run: cp -a "$RUNNER_TEMP/gate/vendor" .
       # STRICT=1 on main and in PRs into it: a tool folder without a registry entry fails instead of warning
       - run: pnpm test
         env:
           STRICT: ${{ (github.base_ref == 'main' || github.ref == 'refs/heads/main') && '1' || '' }}
-      # The registry against the authority key in authority.pub, every listed tool against its author key.
-      - name: verify (dev, unsigned tools listed)
-        if: github.base_ref != 'main' && github.ref != 'refs/heads/main'
-        run: node scripts/verify.mjs
-      # The registry is checked against the authority key main held before this change, never against the
-      # authority.pub the change brings: a change that swaps the key and signs again with its own fails here. A key
-      # rotation is merged by an admin past this check (docs/project/maintain.md).
-      - name: verify --strict (main)
-        if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          AUTHORITY="$(git show "$BASE_SHA:authority.pub")" node scripts/verify.mjs --strict

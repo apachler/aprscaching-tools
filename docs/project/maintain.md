@@ -203,6 +203,43 @@ reads the key files or asks for a passphrase. Otherwise it stops for you only wh
 had to write a CHANGELOG line for a pull request that brought none. It also stops when something turns up you would
 want to see (`.claude/skills/release/SKILL.md`).
 
+### Merge a release that fails verify by design
+
+On a pull request, `verify` runs `scripts/verify.mjs`, `scripts/build.mjs` and `scripts/fetch-libs.mjs` as the base
+branch holds them, with the base branch's dependencies, on the pull request's tools and registry, before any command
+the pull request defines. A change can't make its own check pass. A release that
+the scripts on `main` can't accept fails `verify` for that reason: one that changes the authority key, and one whose
+`lib.lock` or registry the older scripts on `main` refuse, such as a `lib.lock` without the `repository` key the older
+`fetch-libs.mjs` requires. Read the failed `verify` log first: merge past it only when the failure is the one the
+release brings on purpose.
+
+The `main` ruleset has no bypass actor, so the maintainer adds one for that merge and removes it right after:
+
+1. Save the ruleset as it is:
+
+    ```bash
+    id=$(gh api repos/apachler/aprscaching-tools/rulesets --jq '.[] | select(.name == "main") | .id')
+    gh api repos/apachler/aprscaching-tools/rulesets/"$id" \
+      | jq '{name, target, enforcement, conditions, rules, bypass_actors}' > main-ruleset.json
+    ```
+
+2. Let repository admins bypass it, for pull requests only:
+
+    ```bash
+    jq '.bypass_actors = [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}]' \
+      main-ruleset.json | gh api -X PUT repos/apachler/aprscaching-tools/rulesets/"$id" --input -
+    ```
+
+3. Merge the release pull request as a merge commit, past the failed `verify` (`gh pr merge <number> --merge --admin`).
+4. Put the ruleset back, and check that `bypass_actors` is empty again:
+
+    ```bash
+    gh api -X PUT repos/apachler/aprscaching-tools/rulesets/"$id" --input main-ruleset.json
+    gh api repos/apachler/aprscaching-tools/rulesets/"$id" --jq .bypass_actors
+    ```
+
+5. Go on with the tag and `sync-dev` (`node scripts/release.mjs` resumes there).
+
 ### Hotfix
 
 A fix that cannot wait for what is on `dev` starts from the tag it fixes. `--from` names it:
@@ -226,8 +263,8 @@ The script runs these steps; when it cannot, run them yourself. The steps for v1
     git fetch origin && git switch -c release/v1.1.0 origin/dev
     ```
 
-2. Fetch the libraries from a local APRScaching clone that holds the `lib.lock` commit, so signing needs no network
-   (`git -C ~/Development/github/aprscaching fetch origin` first if the clone lacks it):
+2. Fetch the libraries from a local APRScaching clone whose `origin/dev` holds the `lib.lock` commit, so signing
+   needs no network (`git -C ~/Development/github/aprscaching fetch origin` first if the clone lacks it):
 
     ```bash
     corepack enable && pnpm install --frozen-lockfile --ignore-scripts

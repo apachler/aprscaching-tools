@@ -1,5 +1,4 @@
 {
-  "repository": "https://github.com/apachler/aprscaching.git",
   "ref": "911083797fde782f239f1a947287a3eb9cbe858c",
   "paths": [
     "packages/aprs/src",
