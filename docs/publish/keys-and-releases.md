@@ -43,9 +43,11 @@ post on a channel you control. The project registry does this on its [home page]
 An authority key change costs every instance and player a confirmation, so change it only when it leaks.
 
 In this repository, CI checks a release against the authority key `main` already holds, not the `authority.pub` the
-release brings, so a pull request that swaps the key and signs again with its own fails `verify`. A real change of
-the authority key fails that check too: a repository admin merges it past the check, and the release after it is
-checked against the new key.
+release brings, and with the `verify.mjs` `main` already holds, not the one the release brings. A pull request that
+swaps the key and signs again with its own fails `verify`, whatever it changes in the verifier. A real change of the
+authority key fails that check too. The `main` ruleset has no bypass actor, so the maintainer adds one for that
+merge and removes it after ([Merge a release that fails verify by design](../project/maintain.md#merge-a-release-that-fails-verify-by-design)).
+The release after it is checked against the new key.
 
 ## Release practice
 

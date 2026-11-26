@@ -12,6 +12,10 @@
 //   node scripts/build.mjs                # write every tools/<name>/tool.js
 //   node scripts/build.mjs <name>…        # only these tools
 //   node scripts/build.mjs --check        # build in memory; fail if a committed tool.js differs
+//
+// A tool is built when its script carries the build banner: that script must have src/index.js beside it and match a
+// fresh build. A hand-written tool carries no banner and is left alone. Deleting a built tool's src/ therefore fails
+// here instead of turning it into a hand-written tool nobody checks.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,13 +41,16 @@ if (have !== lock.ref) {
   process.exit(1);
 }
 
+/** The line every built script carries; its presence, not the folder layout, says a tool is built. */
+const BANNER = /^\/\/ .*, built by scripts\/build\.mjs from tools\//m;
 const toolsDir = path.join(root, "tools");
-const names = fs
+const folders = fs
   .readdirSync(toolsDir, { withFileTypes: true })
-  .filter((d) => d.isDirectory() && fs.existsSync(path.join(toolsDir, d.name, "src", "index.js")))
+  .filter((d) => d.isDirectory() && (!only.length || only.includes(d.name)))
   .map((d) => d.name)
-  .filter((n) => !only.length || only.includes(n))
   .sort();
+const hasSources = (n) => fs.existsSync(path.join(toolsDir, n, "src", "index.js"));
+const names = folders.filter(hasSources);
 for (const n of only)
   if (!names.includes(n)) {
     console.error(`build: no tool ${n} with a src/index.js`);
@@ -51,6 +58,22 @@ for (const n of only)
   }
 
 let failures = 0;
+for (const name of folders.filter((n) => !hasSources(n))) {
+  let entry = "tool.js";
+  try {
+    entry = JSON.parse(fs.readFileSync(path.join(toolsDir, name, "tool.json"), "utf8")).entry ?? entry;
+  } catch {
+    // no readable manifest: the script is looked for under its default name, and the tests report the manifest
+  }
+  const file = path.join(toolsDir, name, path.basename(String(entry)));
+  const head = fs.existsSync(file) ? fs.readFileSync(file, "utf8").split("\n").slice(0, 5).join("\n") : "";
+  if (BANNER.test(head)) {
+    failures++;
+    console.error(
+      `FAIL  ${name}: tools/${name}/${path.basename(String(entry))} carries the build banner but tools/${name}/src/index.js is missing; restore the sources, or drop the banner for a hand-written tool`,
+    );
+  } else if (check) console.log(`-     ${name}: hand-written (no build banner), not built`);
+}
 for (const name of names) {
   const manifest = JSON.parse(fs.readFileSync(path.join(toolsDir, name, "tool.json"), "utf8"));
   const entry = manifest.entry ?? "tool.js";

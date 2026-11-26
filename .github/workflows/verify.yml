@@ -17,11 +17,18 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
+      # A fork names its branches freely, so the branch name counts only on a branch of this repository.
       - name: a PR into main comes from a release branch
         if: github.base_ref == 'main'
         env:
           HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
         run: |
+          if [[ "$HEAD_REPO" != "$REPO" ]]; then
+            echo "::error::a pull request into main comes from a release branch of $REPO, not from $HEAD_REPO"
+            exit 1
+          fi
           [[ "$HEAD_REF" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]] && exit 0
           echo "::error::a pull request into main comes from release/vX.Y.Z, not from $HEAD_REF: retarget it to dev"
           exit 1
@@ -36,21 +43,30 @@ jobs:
       - run: corepack enable && pnpm install --frozen-lockfile --ignore-scripts
       # ESLint for code mistakes, Prettier for the layout (Markdown and the signed and built files are left out)
       - run: pnpm lint
-      # The MIT libraries the tools bundle, from APRScaching at the commit lib.lock pins.
+      # The gate's own code comes from the base commit, never from the change: a pull request that edits the verifier,
+      # the build check or the library fetch is checked by the versions it would replace, and its edits take effect
+      # once merged. The checked-out tree stays the pull request's; only these three files are swapped, then put back
+      # for the tests.
+      - name: the gate's scripts from the base commit
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git checkout "$BASE_SHA" -- scripts/verify.mjs scripts/build.mjs scripts/fetch-libs.mjs
+      # The MIT libraries the tools bundle, from APRScaching's dev branch at the commit lib.lock pins.
       - run: node scripts/fetch-libs.mjs
       # Every committed tool.js must be exactly what its sources build to, so the signed bytes are the reviewed ones.
       - run: node scripts/build.mjs --check
-      # STRICT=1 on main and in PRs into it: a tool folder without a registry entry fails instead of warning
-      - run: pnpm test
-        env:
-          STRICT: ${{ (github.base_ref == 'main' || github.ref == 'refs/heads/main') && '1' || '' }}
       # The registry against the authority key in authority.pub, every listed tool against its author key.
       - name: verify (dev, unsigned tools listed)
         if: github.base_ref != 'main' && github.ref != 'refs/heads/main'
         run: node scripts/verify.mjs
       # The registry is checked against the authority key main held before this change, never against the
-      # authority.pub the change brings: a change that swaps the key and signs again with its own fails here. A key
-      # rotation is merged by an admin past this check (docs/project/maintain.md).
+      # authority.pub the change brings, and by the base commit's verify.mjs: a change that swaps the key and signs
+      # again with its own fails here, whatever it does to the verifier. A real key rotation fails here too, and the
+      # main ruleset has no bypass actor: the maintainer adds a bypass for that one merge in the ruleset and removes it
+      # after (docs/publish/keys-and-releases.md).
       - name: verify --strict (main)
         if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
         env:
@@ -58,3 +74,11 @@ jobs:
         run: |
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
           AUTHORITY="$(git show "$BASE_SHA:authority.pub")" node scripts/verify.mjs --strict
+      # The tests run the pull request's own scripts, so its changes to them are tested before they merge.
+      - name: the pull request's scripts for the tests
+        if: github.event_name == 'pull_request'
+        run: git checkout HEAD -- scripts/verify.mjs scripts/build.mjs scripts/fetch-libs.mjs
+      # STRICT=1 on main and in PRs into it: a tool folder without a registry entry fails instead of warning
+      - run: pnpm test
+        env:
+          STRICT: ${{ (github.base_ref == 'main' || github.ref == 'refs/heads/main') && '1' || '' }}

@@ -22,7 +22,10 @@ needs more than one file, or the APRS parser. At the end your tool's script is a
 | The helpers the project's tools share | `lib/`: `aprs-decode.js` (the packet decoder's text form), `geo.js` (Maidenhead locators, distance and bearing), `sevenplus.js` (the 7PLUS parser), `text.js` (small text helpers) | `import { gridToLatLon } from "../../../lib/geo.js"` |
 | The APRScaching MIT libraries | `vendor/aprscaching/`, fetched at the commit `lib.lock` pins | `import { parseScript } from "aprscaching/packages/tools/src/session-script.ts"` |
 
-`lib.lock` names the APRScaching commit and the paths fetched from it:
+`lib.lock` names the APRScaching commit and the paths fetched from it. The repository and branch are in
+`scripts/fetch-libs.mjs`, not in `lib.lock`: `https://github.com/apachler/aprscaching.git`, branch `dev`. The commit
+must be on that branch, so a fork's commit, which GitHub also serves through APRScaching's address, is refused. A
+`repository` key in `lib.lock` is refused too.
 
 | Path | What it is |
 |---|---|
@@ -101,7 +104,7 @@ version give the same bytes on any computer.
 
 ## Move `lib.lock` to a new commit
 
-1. Set `ref` in `lib.lock` to a full commit that exists on GitHub, such as an APRScaching release tag's commit.
+1. Set `ref` in `lib.lock` to a full commit on APRScaching's `dev` branch.
 2. Fetch and check:
 
     ```bash
