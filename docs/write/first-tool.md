@@ -174,11 +174,12 @@ describe("my-station-log", () => {
 
 ### Sign it
 
-The app installs only signed tools. Make an author key once, on a computer you trust, and sign the manifest:
+The app installs only signed tools. Make an author key once, on a computer you trust, and sign the manifest. Both
+commands ask for the key's passphrase at the terminal:
 
 ```bash
-node scripts/genkey.mjs --raw > ~/my-tool-author.key && chmod 600 ~/my-tool-author.key
-TOOL_PRIVATE_KEY="$(cat ~/my-tool-author.key)" node scripts/sign.mjs manifest tools/my-station-log/tool.json
+node scripts/genkey.mjs ~/my-tool-author.key
+node scripts/sign.mjs manifest tools/my-station-log/tool.json --key ~/my-tool-author.key
 ```
 
 `sign.mjs` writes the script's SHA-256 into `entrySha256`, your public key into `pubkey`, and the `signature`. Sign

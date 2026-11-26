@@ -5,6 +5,17 @@ format versions are named where they change.
 
 ## [Unreleased]
 
+- **Release script.** `pr-main` and `sync-dev` merge only a pull request from this repository whose head is the
+  commit the step pushed. A fork's PR from a branch of the same name is never reused or merged, and an own PR at
+  another commit stops the step.
+- **Signing keys at rest.** A key file holds its private key only encrypted with a passphrase (scrypt, AES-256-GCM),
+  so a program that reads it gets nothing that signs. `genkey.mjs <file>` writes one, `genkey.mjs --convert <file>`
+  encrypts a plain key file in place, keeping its key and public key, and `genkey.mjs --pub <file>` prints the
+  public key. `sign.mjs` takes `--key <file>`, and with `sign-all.mjs` asks for the passphrase at the terminal,
+  refusing a key or passphrase in the environment or an argument. `sign-all` runs the build check before it opens
+  a key, signs in its own process with nothing else running, and verifies after letting the keys go. The doctor and
+  the release `check` fail a key file in the plain form, naming the command that encrypts it, and the release's
+  `sign` step is the maintainer's, run in their own terminal.
 - **Trusted checks.** On a pull request, `verify` runs `verify.mjs`, `build.mjs` and `fetch-libs.mjs` from the base
   branch, so a change can't make its own check pass, and a pull request into `main` must come from a release branch
   of this repository. `fetch-libs` takes the libraries only from APRScaching's `dev` branch, named in the script:

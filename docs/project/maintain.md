@@ -29,9 +29,13 @@ flowchart LR
 
 ## The keys
 
-The private values never enter this repository, CI, a log or the shell history. Keep each one in a file of its own
-on the computer that signs, holding the value `node scripts/genkey.mjs --raw` printed, and pass it to one command as
-`"$(cat <file>)"`. The files live in the key folder, outside every repository, so no `git add` can pick them up:
+The private keys never enter this repository, CI, a log, an environment variable or the shell history. Each lives
+in a key file of its own on the computer that signs, encrypted with a passphrase (`scripts/keyfile.mjs`: scrypt and
+AES-256-GCM). A program that reads the file, such as a test, a build tool, a dependency or an agent session running
+as you, gets nothing that signs. The key opens only inside `sign-all` or `sign.mjs`, with the passphrase you type at
+their terminal prompt, and never from an argument, the environment or a file. Make a key file with
+`node scripts/genkey.mjs <file>`; `node scripts/genkey.mjs --pub <file>` prints its public key. The files live in the
+key folder, outside every repository, so no `git add` can pick them up:
 
 - `TOOL_KEYS_DIR` when it is set;
 - otherwise `$XDG_CONFIG_HOME/aprscaching-tools/keys`, which is `~/.config/aprscaching-tools/keys` when
@@ -44,6 +48,18 @@ file mode 600:
 mkdir -p ~/.config/aprscaching-tools/keys && chmod 700 ~/.config/aprscaching-tools/keys
 chmod 600 ~/.config/aprscaching-tools/keys/*.key
 ```
+
+A key file that holds its key unencrypted, a bare base64 value, fails the doctor and the release `check`, which name
+the command that encrypts it in place. It keeps the key, so the public key, `authority.pub` and every signature stay
+as they are. It asks twice for the new passphrase:
+
+```bash
+node scripts/genkey.mjs --convert ~/.config/aprscaching-tools/keys/oe8apr-tool-author.key
+node scripts/genkey.mjs --convert ~/.config/aprscaching-tools/keys/registry-authority.key
+```
+
+A backup made before the conversion still holds the keys unencrypted: make the backup again
+([Back up the keys](#back-up-the-keys)) and destroy the older copies.
 
 | Key | File | Signs |
 |---|---|---|
@@ -126,9 +142,10 @@ node scripts/doctor.mjs --release
 
 The doctor checks Node, pnpm through corepack, `gh auth status`, the `origin` remote, `dev` and `main`, the libraries
 in `vendor/`, that the lockfile installs, and the key files: in a folder outside every git working tree (a failure
-otherwise) with mode 700 (a warning otherwise), present, mode 600, readable, the authority key the one
-`authority.pub` pins and the author key the one the registry lists for OE8APR. It prints each public key and its
-fingerprint, never a private value, and one `pass`, `warn` or `FAIL` line per check.
+otherwise) with mode 700 (a warning otherwise), present, encrypted (a key file in the plain form fails, naming the
+command that encrypts it), mode 600, readable, the authority key the one `authority.pub` pins and the author key the
+one the registry lists for OE8APR. It reads only the public keys, without opening the keys, prints each with its
+fingerprint, and one `pass`, `warn` or `FAIL` line per check.
 
 The key files are read from the key folder ([The keys](#the-keys)); the `check` step of the release script refuses
 them in the same cases.
@@ -154,7 +171,7 @@ the newest tag says `nothing to release`.
 |---|---|
 | `check` | A clean tree, `gh` signed in, a new X.Y.Z version, a non-empty Unreleased section, the key files and their folder outside every working tree, a registry entry for every tool folder |
 | `prepare` | `release/vX.Y.Z` from `origin/dev`, or from `--from <ref>`; `pnpm install --frozen-lockfile --ignore-scripts`, `fetch-libs` (from the local clone when there is one, else from GitHub), `build --check` |
-| `sign` | `sign-all` with the two key files, ending in `verify --strict` |
+| `sign` | Stops for you: `sign-all` asks for each key's passphrase at the terminal, signs, and ends in `verify --strict` |
 | `changelog` | Dates Unreleased as `## [X.Y.Z] - <date>` under a new empty Unreleased, and sets `package.json`'s version |
 | `pr-main` | Commits with a sign-off, pushes, opens the PR into `main`, watches the strict checks, merges it as a merge commit |
 | `tag` | Tags `origin/main`, pushes the tag, watches the Release workflow |
@@ -168,14 +185,23 @@ step; `--yes` answers that step's questions, for a step already confirmed. `--so
 clone `fetch-libs` reads; it defaults to `APRSCACHING_SOURCE`, then `~/Development/github/aprscaching`, and without a
 clone there the libraries come from GitHub. Without a terminal every question is answered no, and the run exits 1.
 
-The script reads the key files in the `sign` step only, and passes their values to `sign-all` in that one process's
-environment. Every line it prints passes through a filter that removes them.
+The script itself reads only the key files' public keys. The `sign` step runs `sign-all` on your terminal and waits
+for it. `sign-all` runs `build --check` first, then asks for the author key's and the authority key's passphrases.
+It signs in its own process with nothing else running, lets go of both keys, and only then runs `verify --strict`.
+A run without a terminal, such as an agent's, stops at the `sign` step. It prints the command for you to run in a
+terminal of your own:
 
-In Claude Code, `/release` (or `/release 1.4.0`) runs the whole release: asking for it is the go-ahead for every step, signing and
-the merge into `main` included. It checks the Unreleased entry against the pull requests merged since the last tag,
-runs the `sign` step, which reads the key files itself, and merges into `main` only once the pull request's checks
-have passed. It stops for you only when a check or step fails, when it had to write a CHANGELOG line for a pull
-request that brought none, or when something turns up you would want to see (`.claude/skills/release/SKILL.md`).
+```bash
+node scripts/release.mjs 1.4.0 --step sign
+```
+
+In Claude Code, `/release` (or `/release 1.4.0`) runs the whole release: asking for it is the go-ahead for every
+step, the merge into `main` included. It checks the Unreleased entry against the pull requests merged since the last
+tag, and merges into `main` only once the pull request's checks have passed. At the `sign` step it stops and hands
+you that command: you run it in your own terminal, type the passphrases, and tell it when the step is done. It never
+reads the key files or asks for a passphrase. Otherwise it stops for you only when a check or step fails, or when it
+had to write a CHANGELOG line for a pull request that brought none. It also stops when something turns up you would
+want to see (`.claude/skills/release/SKILL.md`).
 
 ### Merge a release that fails verify by design
 
@@ -244,18 +270,16 @@ The script runs these steps; when it cannot, run them yourself. The steps for v1
     node scripts/fetch-libs.mjs --source ~/Development/github/aprscaching
     ```
 
-3. Sign everything in one step:
+3. Sign everything in one step, in a terminal; `sign-all` asks for each key's passphrase:
 
     ```bash
-    AUTHOR_KEY="$(cat ~/.config/aprscaching-tools/keys/oe8apr-tool-author.key)" \
-    AUTHORITY_KEY="$(cat ~/.config/aprscaching-tools/keys/registry-authority.key)" \
-      node scripts/sign-all.mjs
+    node scripts/sign-all.mjs
     ```
 
-    `sign-all` checks that every `tool.js` matches its sources; signs each listed `tool.json` with the author key,
-    including its `api` and the script's `entrySha256`; copies each manifest's key, title, author, version and
-    description into
-    its registry entry; signs the registry's `format` and `entries` with the authority key; and runs
+    `sign-all` takes the key files from the key folder. It checks that every `tool.js` matches its sources, before
+    it opens a key; signs each listed `tool.json` with the author key, including its `api` and the script's
+    `entrySha256`; copies each manifest's key, title, author, version and description into its registry entry;
+    signs the registry's `format` and `entries` with the authority key; lets go of both keys; and runs
     `verify.mjs --strict`. A manifest signed by another author's key is left alone, and `sign-all` stops when that
     signature does not hold. The authority key must be the one in `authority.pub`.
 

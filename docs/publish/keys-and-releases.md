@@ -13,12 +13,15 @@ what to do when a key changes or leaks, and how to release. It is for registry p
 Both are Ed25519 keys made by `scripts/genkey.mjs`. A publisher who also writes tools holds both, and keeps them
 apart: a leaked author key exposes that author's tools, a leaked authority key the whole list.
 
-## Keep the private values offline
+## Keep the private keys offline
 
-- Keep each private value in a file of its own on the computer that signs, readable by you alone
-  (`chmod 600`).
-- Pass it to one command as `"$(cat <file>)"`, so the shell history records the file name, not the value.
-- Never put a private value in the repository, in CI or in a log. CI only verifies; it never signs.
+- Keep each key in a key file of its own on the computer that signs, readable by you alone (`chmod 600`).
+  `genkey.mjs` writes it encrypted with a passphrase, so a program that reads the file gets nothing that signs.
+- Type the passphrase only at the prompt of `sign.mjs` or `sign-all.mjs`, in a terminal. Neither takes a key or a
+  passphrase from an argument or the environment, where every program they start could read it.
+- Encrypt a key file that holds its key as a bare base64 value in place, keeping the key:
+  `node scripts/genkey.mjs --convert <file>`.
+- Never put a private key or its passphrase in the repository, in CI or in a log. CI only verifies; it never signs.
 
 ## How instances pin the authority key
 

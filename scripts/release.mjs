@@ -12,10 +12,11 @@
 // The steps, in order:
 //   check      the tree is clean, gh is signed in, the version is new semver, CHANGELOG.md's Unreleased section has
 //              content, the key files exist with mode 600 in a folder outside every git working tree and match
-//              authority.pub and the project's author key, and every tool folder has a registry entry;
+//              authority.pub and the project's author key, encrypted, and every tool folder has a registry entry;
 //   prepare    release/vX.Y.Z from origin/dev (or --from, such as a tag for a hotfix); pnpm install, fetch-libs
 //              --source, build --check;
-//   sign       sign-all with the two keys, which ends in verify --strict;
+//   sign       sign-all, which opens the two keys with the passphrases the maintainer types at the terminal and ends
+//              in verify --strict; without a terminal the step stops and names the command for the maintainer;
 //   changelog  Unreleased becomes "## [X.Y.Z] - <date>" under a new empty Unreleased; package.json takes the version;
 //   pr-main    commit with a sign-off, push, a PR into main, wait for the strict checks, merge as a merge commit;
 //   tag        tag origin/main as vX.Y.Z, push the tag, wait for the Release workflow;
@@ -31,8 +32,8 @@
 //
 // The key files come from TOOL_KEYS_DIR (default $XDG_CONFIG_HOME/aprscaching-tools/keys, else
 // ~/.config/aprscaching-tools/keys), or TOOL_AUTHOR_KEY_FILE and TOOL_AUTHORITY_KEY_FILE; check refuses a key folder
-// inside a git working tree. Their values are read only in the sign step and passed to sign-all in that one child
-// process's environment; everything printed passes through a filter that removes them.
+// inside a git working tree. This script reads only their public keys; sign-all opens the keys, in its own process,
+// after the build check and with nothing else running.
 import fs from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -47,8 +48,6 @@ import {
   inspectKey,
   inspectKeyFolder,
   keyFiles,
-  loadKey,
-  redact,
   repoRoot,
   repoSlug,
 } from "./release-kit.mjs";
@@ -110,7 +109,6 @@ async function terminalAsk(question) {
  */
 export function createContext(o) {
   const version = String(o.version ?? "").replace(/^v/, "");
-  const secrets = [];
   const ctx = {
     version,
     tag: `v${version}`,
@@ -124,17 +122,14 @@ export function createContext(o) {
     source: o.source,
     today: o.today ?? localDate(),
     sleep: o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))),
-    secrets,
     out: o.log ?? ((line) => console.log(line)),
     rawAsk: o.ask ?? terminalAsk,
     rawRun: o.run ?? defaultRunner,
     node: o.node ?? process.execPath,
+    terminal: o.terminal ?? !!(process.stdin.isTTY && process.stdout.isTTY),
   };
-  ctx.log = (line = "") => ctx.out(redact(line, secrets));
-  ctx.run = (cmd, args, opts = {}) => {
-    const r = ctx.rawRun(cmd, args, { cwd: ctx.root, ...opts });
-    return { ...r, stdout: redact(r.stdout, secrets), stderr: redact(r.stderr, secrets) };
-  };
+  ctx.log = (line = "") => ctx.out(line);
+  ctx.run = (cmd, args, opts = {}) => ctx.rawRun(cmd, args, { cwd: ctx.root, ...opts });
   ctx.git = (...args) => ctx.run("git", args);
   ctx.gh = (...args) => ctx.run("gh", [...args, "-R", ctx.slug ?? UPSTREAM]);
   ctx.ask = async (q) => {
@@ -395,16 +390,15 @@ steps.sign = async (ctx, s) => {
   ctx.log(`sign every listed tool with the author key    ${k.author.pub} (${fingerprint(k.author.pub)})`);
   ctx.log(`sign registry.json with the authority key      ${k.authority.pub} (${fingerprint(k.authority.pub)})`);
   ctx.log("then verify --strict (scripts/sign-all.mjs)");
-  await ctx.confirm("Sign the release?", () => {
-    const env = { ...ctx.env };
-    for (const v of ["AUTHOR_KEY", "AUTHORITY_KEY", "TOOL_PRIVATE_KEY"]) delete env[v];
-    env.AUTHOR_KEY = loadKey(k.author.file);
-    env.AUTHORITY_KEY = loadKey(k.authority.file);
-    ctx.secrets.push(env.AUTHOR_KEY, env.AUTHORITY_KEY);
-    const r = ctx.run(ctx.node, ["scripts/sign-all.mjs"], { env });
-    env.AUTHOR_KEY = env.AUTHORITY_KEY = undefined;
-    if (r.stdout.trim()) ctx.log(r.stdout.trimEnd());
-    if (r.stderr.trim()) ctx.log(r.stderr.trimEnd());
+  // The keys open only with the passphrases the maintainer types, so a run without a terminal (an agent's) hands
+  // this step over instead of trying it.
+  if (!ctx.terminal)
+    throw new StepError(
+      `sign needs the maintainer: the keys open only with their passphrases, typed at a terminal. In a terminal of your own, in ${ctx.root}, run: node scripts/release.mjs ${ctx.version} --step sign`,
+    );
+  await ctx.confirm("Sign the release? sign-all asks for each key's passphrase", () => {
+    // sign-all gets this terminal for the passphrases, and runs while this process waits for it and runs nothing else
+    const r = ctx.run(ctx.node, ["scripts/sign-all.mjs"], { inherit: true });
     if (r.status !== 0)
       throw new StepError("sign-all failed; nothing is committed. Fix the cause and run the sign step again");
   });
@@ -451,23 +445,53 @@ async function watchChecks(ctx, number) {
   if (w.status !== 0) throw new StepError(`the checks of #${number} did not pass; fix them, push, and rerun`);
 }
 
-/** The open PR from `head` into `base`, or null. */
-function openPr(ctx, head, base) {
+/**
+ * The pull request from this repository's branch `head` into `base` whose head is `sha`: the open one, or one it opens.
+ * `gh pr list --head` matches by branch name alone, a fork's branch of that name included, so a cross-repository PR
+ * is never taken. An own PR at another commit stops the step: merging it would publish a commit the step did not
+ * mean, and opening a second one beside it is refused by GitHub.
+ */
+async function ownPr(ctx, head, base, sha, title, body) {
   const r = ctx.must(
-    ctx.gh("pr", "list", "--head", head, "--base", base, "--state", "open", "--json", "number,url,headRefOid"),
+    ctx.gh(
+      "pr",
+      "list",
+      "--head",
+      head,
+      "--base",
+      base,
+      "--state",
+      "open",
+      "--json",
+      "number,url,headRefOid,isCrossRepository",
+    ),
     "gh pr list",
   );
-  return JSON.parse(r.stdout || "[]")[0] ?? null;
-}
-
-async function createPr(ctx, head, base, title, body) {
-  await ctx.confirm(`Open a pull request ${head} → ${base} titled "${title}"?`, () =>
+  const own = JSON.parse(r.stdout || "[]").filter((p) => p.isCrossRepository === false);
+  const at = own.find((p) => p.headRefOid === sha);
+  if (at) return at;
+  if (own.length)
+    throw new StepError(
+      `#${own[0].number} from ${head} into ${base} is at ${own[0].headRefOid}, not at ${sha}, the commit this step ` +
+        `merges: if ${head} was pushed just now, rerun in a moment; otherwise close #${own[0].number} and rerun`,
+    );
+  const out = await ctx.confirm(`Open a pull request ${head} → ${base} titled "${title}"?`, () =>
     ctx.must(ctx.gh("pr", "create", "--base", base, "--head", head, "--title", title, "--body", body), "gh pr create"),
   );
-  const pr = openPr(ctx, head, base);
-  if (!pr) throw new StepError(`the pull request ${head} → ${base} is not listed yet; rerun in a moment`);
-  ctx.log(`opened ${pr.url}`);
-  return pr;
+  const url = out.stdout.trim().split("\n").at(-1);
+  const number = Number(/\/pull\/(\d+)$/.exec(url)?.[1]);
+  if (!number) throw new StepError(`gh pr create printed no pull request URL ("${url}"); find the PR and rerun`);
+  ctx.log(`opened ${url}`);
+  return { number, url, headRefOid: sha };
+}
+
+/** Merge PR `number` as a merge commit, only while its head is `sha`, the commit the step means to merge. */
+function mergeAt(ctx, number, sha) {
+  const view = ctx.must(ctx.gh("pr", "view", String(number), "--json", "headRefOid"), "gh pr view").stdout;
+  const reported = JSON.parse(view).headRefOid;
+  if (reported !== sha)
+    throw new StepError(`#${number}'s head is ${reported}, not ${sha}, the commit this step merges; nothing is merged`);
+  return ctx.gh("pr", "merge", String(number), "--merge", "--match-head-commit", sha);
 }
 
 steps["pr-main"] = async (ctx, s) => {
@@ -491,16 +515,10 @@ steps["pr-main"] = async (ctx, s) => {
     await ctx.confirm(`Push ${ctx.branch} to origin?`, () =>
       ctx.must(ctx.git("push", "-u", "origin", `${ctx.branch}:${ctx.branch}`), "git push"),
     );
-  const pr =
-    openPr(ctx, ctx.branch, "main") ??
-    (await createPr(ctx, ctx.branch, "main", `chore(release): ${ctx.tag}`, `Release ${ctx.tag}.`));
+  const pr = await ownPr(ctx, ctx.branch, "main", head, `chore(release): ${ctx.tag}`, `Release ${ctx.tag}.`);
   await watchChecks(ctx, pr.number);
-  const sha = ctx.must(ctx.gh("pr", "view", String(pr.number), "--json", "headRefOid"), "gh pr view").stdout;
   await ctx.confirm(`Merge #${pr.number} into main as a merge commit? This publishes ${ctx.tag}'s signed state`, () =>
-    ctx.must(
-      ctx.gh("pr", "merge", String(pr.number), "--merge", "--match-head-commit", JSON.parse(sha).headRefOid),
-      "gh pr merge",
-    ),
+    ctx.must(mergeAt(ctx, pr.number, head), "gh pr merge"),
   );
   ctx.git("fetch", "origin", "--prune");
 };
@@ -545,13 +563,17 @@ steps["sync-dev"] = async (ctx, s) => {
     );
   } else {
     ctx.log("dev has moved on since the release branch was cut: main comes in through a pull request");
-    const pr =
-      openPr(ctx, "main", "dev") ??
-      (await createPr(ctx, "main", "dev", `chore(release): merge ${ctx.tag} into dev`, `Brings ${ctx.tag} into dev.`));
+    const pr = await ownPr(
+      ctx,
+      "main",
+      "dev",
+      main,
+      `chore(release): merge ${ctx.tag} into dev`,
+      `Brings ${ctx.tag} into dev.`,
+    );
     await watchChecks(ctx, pr.number);
-    const sha = ctx.must(ctx.gh("pr", "view", String(pr.number), "--json", "headRefOid"), "gh pr view").stdout;
     await ctx.confirm(`Merge #${pr.number} into dev as a merge commit?`, () => {
-      const r = ctx.gh("pr", "merge", String(pr.number), "--merge", "--match-head-commit", JSON.parse(sha).headRefOid);
+      const r = mergeAt(ctx, pr.number, main);
       if (r.status !== 0)
         throw new StepError(
           `#${pr.number} does not merge (a conflict, most likely in CHANGELOG.md): resolve it on a branch from dev, ` +
@@ -591,7 +613,7 @@ const PLAN = {
     `git switch --no-track -c ${ctx.branch} ${ctx.from} (or switch to it)`,
     "pnpm install --frozen-lockfile --ignore-scripts; fetch-libs --source <APRScaching>; build --check",
   ],
-  sign: () => ["sign-all with the author and authority key files, then verify --strict"],
+  sign: () => ["the maintainer types the key passphrases for sign-all, at a terminal; then verify --strict"],
   changelog: (ctx) => [`## [Unreleased] → ## [${ctx.version}] - ${ctx.today}; package.json version`],
   "pr-main": (ctx) => [`commit -s, push ${ctx.branch}, PR into main, watch the strict checks, merge as a merge commit`],
   tag: (ctx) => [`git tag -a ${ctx.tag} origin/main, push it, watch the Release workflow`],
