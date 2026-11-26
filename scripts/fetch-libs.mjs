@@ -112,5 +112,5 @@ for (const f of files) {
 }
 fs.writeFileSync(path.join(dest, ".lib-ref"), `${lock.ref}\n`);
 console.log(
-  `fetch-libs: ${files.length} MIT files from ${source ?? REPOSITORY} at ${lock.ref.slice(0, 12)} in vendor/aprscaching`,
+  `fetch-libs: ${files.length} MIT files from ${source || REPOSITORY} at ${lock.ref.slice(0, 12)} in vendor/aprscaching`,
 );

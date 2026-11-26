@@ -77,6 +77,7 @@ describe("fetch-libs.mjs", () => {
     const r = fetchLibs({ ref: onBranch, paths });
     expect(r.stderr).toBe("");
     expect(r.status).toBe(0);
+    expect(r.stdout).toContain(`from ${REPOSITORY} at ${onBranch.slice(0, 12)}`);
     expect(r.lib).toContain("export const a = 1;");
   });
 
