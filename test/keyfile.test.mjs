@@ -10,7 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { main as genkey } from "../scripts/genkey.mjs";
-import { KeyError, loadKey, readKeyText, readPassphrase } from "../scripts/keyfile.mjs";
+import { KeyError, decryptKey, loadKey, readKeyText, readPassphrase } from "../scripts/keyfile.mjs";
 import { repoRoot } from "./harness.mjs";
 import { PASS, answers, makeKey } from "./keys.mjs";
 
@@ -98,6 +98,20 @@ describe("genkey.mjs", () => {
     await expect(loadKey(file, { ask: answers("not the passphrase") })).rejects.toThrow(
       new KeyError(`${file} does not open: a wrong passphrase, or the file changed after it was written`),
     );
+  });
+
+  it("does not open with its authentication tag cut short, even to a prefix of the right one", async () => {
+    const k = await makeKey();
+    const doc = JSON.parse(k.file);
+    expect(Buffer.from(doc.cipher.tag, "base64")).toHaveLength(16);
+    expect((await decryptKey(k.file, PASS)).pub).toBe(k.pub);
+    for (const n of [12, 8, 4]) {
+      const tag = Buffer.from(doc.cipher.tag, "base64").subarray(0, n).toString("base64");
+      const cut = JSON.stringify({ ...doc, cipher: { ...doc.cipher, tag } });
+      await expect(decryptKey(cut, PASS, "a.key"), `${n} bytes`).rejects.toThrow(
+        new KeyError("a.key does not open: a wrong passphrase, or the file changed after it was written"),
+      );
+    }
   });
 
   it("does not open without the passphrase typed at a terminal, and says so", async () => {

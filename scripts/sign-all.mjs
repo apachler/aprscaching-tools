@@ -55,6 +55,26 @@ class Stop extends Error {
 }
 
 /**
+ * The one way sign-all starts a child process: `child(args)` calls `run(args)` only while no key is open, and throws
+ * between `open()` and `close()`, so no other program runs while a key is held in this process.
+ */
+export function keyGuard(run) {
+  let open = false;
+  return {
+    open: () => {
+      open = true;
+    },
+    close: () => {
+      open = false;
+    },
+    child: (a) => {
+      if (open) throw new Error("a child process was about to start while a key is open");
+      run(a);
+    },
+  };
+}
+
+/**
  * Sign the repository at `root`. `run(args)` runs a script of the repository with node (default: a child process
  * with this terminal); `ask(prompt)` reads a passphrase (default: the terminal). Returns an exit code.
  */
@@ -67,11 +87,8 @@ export async function signAll({
   log = (m) => console.log(m),
   error = (m) => console.error(m),
 } = {}) {
-  let open = false;
-  const child = (a) => {
-    if (open) throw new Error("a child process was about to start while a key is open");
-    run(a);
-  };
+  const guard = keyGuard(run);
+  const child = guard.child;
   const step = (msg) => log(`\n== ${msg}`);
   const keys = {};
   try {
@@ -134,7 +151,7 @@ export async function signAll({
     }
 
     step("opening the keys: type each passphrase");
-    open = true;
+    guard.open();
     keys.author = await loadKey(files.author, { label: "author key", ask, expectedPub: author.pub });
     keys.authority = await loadKey(files.authority, { label: "authority key", ask, expectedPub: authority.pub });
 
@@ -155,7 +172,8 @@ export async function signAll({
     step(`signing the registry with the authority key ${authority.pub}`);
     await signRegistry(regPath, keys.authority);
     keys.author = keys.authority = undefined;
-    open = false;
+    guard.close();
+    log("the keys are let go");
 
     step("verifying");
     child(["scripts/verify.mjs", "--strict"]);

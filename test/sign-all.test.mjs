@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { decryptKey } from "../scripts/keyfile.mjs";
-import { signAll } from "../scripts/sign-all.mjs";
+import { keyGuard, signAll } from "../scripts/sign-all.mjs";
 import { signManifest } from "../scripts/sign.mjs";
 import { repoRoot } from "./harness.mjs";
 import { PASS, answers, makeKey } from "./keys.mjs";
@@ -43,7 +43,10 @@ async function copyRepo({ plainAuthor = false } = {}) {
   return { base, dir, keys, author, authority, authorFile, env };
 }
 
-/** signAll on a copy, its output collected; `events` records each child process and each passphrase prompt. */
+/**
+ * signAll on a copy, its output collected; `events` records each child process, each passphrase prompt and the
+ * moment the keys are let go.
+ */
 async function runSignAll(c, o = {}) {
   const out = [];
   const events = [];
@@ -60,7 +63,10 @@ async function runSignAll(c, o = {}) {
       events.push(`run ${a.join(" ")}`);
       execFileSync(process.execPath, a, { cwd: c.dir, env: c.env, stdio: "pipe" });
     },
-    log: (m) => out.push(m),
+    log: (m) => {
+      if (m === "the keys are let go") events.push("let go");
+      out.push(m);
+    },
     error: (m) => out.push(m),
   });
   return { code, events, text: out.join("\n") };
@@ -75,6 +81,7 @@ describe("sign-all.mjs", () => {
       "run scripts/build.mjs --check",
       `ask passphrase for the author key ${c.author.pub}: `,
       `ask passphrase for the authority key ${c.authority.pub}: `,
+      "let go",
       "run scripts/verify.mjs --strict",
     ]);
     const reg = JSON.parse(fs.readFileSync(path.join(c.dir, "registry.json"), "utf8"));
@@ -83,6 +90,19 @@ describe("sign-all.mjs", () => {
     for (const k of [c.author, c.authority]) expect(r.text).not.toContain(k.secret);
     fs.rmSync(c.base, { recursive: true, force: true });
   }, 120_000);
+
+  it("starts no child process between opening a key and letting it go", () => {
+    const ran = [];
+    const g = keyGuard((a) => ran.push(a.join(" ")));
+    g.child(["scripts/build.mjs", "--check"]);
+    g.open();
+    expect(() => g.child(["scripts/verify.mjs", "--strict"])).toThrow(
+      "a child process was about to start while a key is open",
+    );
+    g.close();
+    g.child(["scripts/verify.mjs", "--strict"]);
+    expect(ran).toEqual(["scripts/build.mjs --check", "scripts/verify.mjs --strict"]);
+  });
 
   it("opens no key and signs nothing when a passphrase is wrong", async () => {
     const c = await copyRepo();

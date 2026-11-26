@@ -152,7 +152,8 @@ export async function decryptKey(text, passphrase, file = "the key file") {
   const dk = await derive(passphrase, doc.kdf);
   let der;
   try {
-    const d = createDecipheriv("aes-256-gcm", dk, Buffer.from(doc.cipher.iv, "base64"));
+    // the full 16-byte tag, pinned: GCM otherwise accepts a tag cut short, and a shorter tag is easier to forge
+    const d = createDecipheriv("aes-256-gcm", dk, Buffer.from(doc.cipher.iv, "base64"), { authTagLength: 16 });
     d.setAAD(aad(doc.pub, doc.kdf));
     d.setAuthTag(Buffer.from(doc.cipher.tag, "base64"));
     der = Buffer.concat([d.update(Buffer.from(doc.data, "base64")), d.final()]);

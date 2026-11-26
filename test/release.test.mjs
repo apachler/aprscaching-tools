@@ -385,9 +385,13 @@ describe("release.mjs steps", () => {
         .map((c) => c.line),
     ).toEqual(["node scripts/verify.mjs --strict"]);
     for (const c of w.calls) {
-      const env = JSON.stringify(c.env ?? {});
+      const values = Object.values(c.env ?? {}).map(String);
       for (const k of [fx.author, fx.authority])
-        for (const v of [k.secret, k.plain, k.file]) expect(env).not.toContain(v);
+        for (const v of [k.secret, k.plain, k.file])
+          expect(
+            values.filter((x) => x.includes(v.trim())),
+            c.line,
+          ).toEqual([]);
       expect(Object.keys(c.env ?? {})).not.toEqual(expect.arrayContaining(["AUTHOR_KEY"]));
     }
     expect(h.text()).toMatch(/sign every listed tool with the author key {4}/);
