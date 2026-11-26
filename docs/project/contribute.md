@@ -57,11 +57,11 @@ checks.
     [Write your first tool](../write/first-tool.md) has all of this already; bring its files onto the branch and go
     on with the next step.
 
-4. Sign the manifest with your author key. The signature covers the script through `entrySha256`; sign again after
-   every change:
+4. Sign the manifest with your author key, in a terminal, which asks for its passphrase. The signature covers the
+   script through `entrySha256`; sign again after every change:
 
     ```bash
-    TOOL_PRIVATE_KEY="$(cat ~/my-tool-author.key)" node scripts/sign.mjs manifest tools/<name>/tool.json
+    node scripts/sign.mjs manifest tools/<name>/tool.json --key ~/my-tool-author.key
     ```
 
 5. Run the checks:

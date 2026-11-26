@@ -62,11 +62,12 @@ permissions.
     node scripts/fetch-mermaid.mjs && /tmp/tools-docs-venv/bin/mkdocs build --strict -d /tmp/tools-site
     ```
 
-9. **Sign (optional, the author's step).** A contributor signs with their own author key; ask the user to run it
-   themselves, then rerun `verify`:
+9. **Sign (optional, the author's step).** A contributor signs with their own author key, whose passphrase only they
+   type: give the user this command to run in a terminal of their own (not through you), wait until they say it is
+   done, then rerun `verify`. Never read their key file or ask for the passphrase:
 
     ```text
-    ! TOOL_PRIVATE_KEY="$(cat <their key file>)" node scripts/sign.mjs manifest tools/<name>/tool.json
+    node scripts/sign.mjs manifest tools/<name>/tool.json --key <their key file>
     ```
 
     The project's own tools are signed by the maintainer at the next release, so this step is skipped for them.

@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
-// Shared by scripts/release.mjs and scripts/doctor.mjs: running git, gh and node, finding and checking the signing
-// key files, and keeping their values out of every line printed.
+// Shared by scripts/release.mjs, scripts/sign-all.mjs and scripts/doctor.mjs: running git, gh and node, and finding
+// and checking the signing key files without opening them.
 //
-// A key file holds the private value `genkey.mjs --raw` printed: base64 of JSON { pkcs8, pub }. Only `pub`, the
-// public key, and its fingerprint are ever printed. `loadKey()` is the one function that returns a private value,
-// for the environment of the sign-all child process alone.
+// A key file is the encrypted form scripts/keyfile.mjs writes; its public key is readable without the passphrase,
+// and only that public key and its fingerprint are ever printed. Opening a key is sign-all's alone (keyfile.mjs
+// `loadKey`), with the passphrase typed at the terminal.
 import { spawnSync } from "node:child_process";
-import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { convertCommand, readKeyText } from "./keyfile.mjs";
 
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -112,31 +113,10 @@ export function fingerprint(pub) {
   return hex.match(/.{4}/g).join(" ");
 }
 
-/** Parse a private value without ever putting any of it into an error message. Returns { pub } or { error }. */
-function parsePrivate(value) {
-  let doc;
-  try {
-    doc = JSON.parse(Buffer.from(value, "base64").toString("utf8"));
-  } catch {
-    return { error: "is not a private value from genkey.mjs (not base64 JSON)" };
-  }
-  if (!doc || typeof doc.pkcs8 !== "string" || typeof doc.pub !== "string")
-    return { error: "is not a private value from genkey.mjs (no pkcs8 and pub)" };
-  let derived;
-  try {
-    const priv = createPrivateKey({ key: Buffer.from(doc.pkcs8, "base64"), format: "der", type: "pkcs8" });
-    if (priv.asymmetricKeyType !== "ed25519") return { error: "holds a key that is not Ed25519" };
-    derived = createPublicKey(priv).export({ format: "jwk" }).x;
-  } catch {
-    return { error: "holds a private key that does not load" };
-  }
-  if (derived !== doc.pub) return { error: "holds a public key that is not its private key's" };
-  return { pub: doc.pub };
-}
-
 /**
- * Check a key file without returning its value: { state, pub?, detail? } where state is "missing", "mode" (readable
- * by others), "unreadable", "invalid" or "ok". `pub` is the public key, set when the file parses.
+ * Check a key file without opening it: { state, pub?, detail? } where state is "missing", "unreadable", "invalid",
+ * "plain" (the private key unencrypted; the detail names the command that encrypts it), "mode" (readable by others)
+ * or "ok". `pub` is the public key, set when the file parses.
  */
 export function inspectKey(file) {
   let st;
@@ -153,33 +133,17 @@ export function inspectKey(file) {
   } catch {
     return { state: "unreadable", detail: `${file} can't be read` };
   }
-  const p = parsePrivate(value);
+  const p = readKeyText(value);
   if (p.error) return { state: "invalid", detail: `${file} ${p.error}` };
+  if (p.form === "plain")
+    return {
+      state: "plain",
+      pub: p.pub,
+      detail: `${file} holds its private key unencrypted; encrypt it, keeping the key: ${convertCommand(file)}`,
+    };
   if (mode & 0o077)
     return { state: "mode", pub: p.pub, detail: `${file} has mode ${mode.toString(8)}; run chmod 600 ${file}` };
   return { state: "ok", pub: p.pub };
-}
-
-/** The private value of a key file that `inspectKey` passed, for one child process's environment. */
-export function loadKey(file) {
-  return fs.readFileSync(file, "utf8").trim();
-}
-
-/** Replace every occurrence of a secret (and its decoded parts) in text that is about to be printed. */
-export function redact(text, secrets) {
-  let out = String(text ?? "");
-  for (const s of secrets) {
-    if (!s) continue;
-    const parts = [s];
-    try {
-      const doc = JSON.parse(Buffer.from(s, "base64").toString("utf8"));
-      if (typeof doc?.pkcs8 === "string") parts.push(doc.pkcs8, Buffer.from(s, "base64").toString("utf8"));
-    } catch {
-      /* not a private value: the string itself is redacted */
-    }
-    for (const p of parts) if (p.length >= 8) out = out.split(p).join("[redacted]");
-  }
-  return out;
 }
 
 /** owner/repo from a GitHub remote URL (https or ssh), or null. */

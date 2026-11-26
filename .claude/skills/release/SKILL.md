@@ -1,6 +1,6 @@
 ---
 name: release
-description: Release a signed registry tag vX.Y.Z of aprscaching-tools with scripts/release.mjs. Use for "/release", "/release <version>", "release the registry", "cut v1.2.0", "tag a new tools release", "hotfix v1.2.1". Asking for the release is the go-ahead for the whole run, signing and the merge into main included; it stops for the user only when a CHANGELOG line needs writing, a check fails, or something unexpected turns up. The agent never reads the key files.
+description: Release a signed registry tag vX.Y.Z of aprscaching-tools with scripts/release.mjs. Use for "/release", "/release <version>", "release the registry", "cut v1.2.0", "tag a new tools release", "hotfix v1.2.1". Asking for the release is the go-ahead for the whole run, the merge into main included; it stops for the user at the sign step, which the user runs in their own terminal, and otherwise only when a CHANGELOG line needs writing, a check fails, or something unexpected turns up. The agent never reads the key files or a passphrase.
 ---
 
 # Release the registry
@@ -11,9 +11,10 @@ does the work; this skill runs it from start to end.
 
 ## The go-ahead
 
-The user asking for the release is the go-ahead for every step: prepare, sign, date the CHANGELOG, the PR into
-`main` and its merge, the tag, and bringing `dev` up to `main`. Report each step's result as it finishes, in a line or
-two. **Stop and ask the user** only when one of these happens:
+The user asking for the release is the go-ahead for every step: prepare, date the CHANGELOG, the PR into `main` and
+its merge, the tag, and bringing `dev` up to `main`. Signing is the one step you never run: the keys open only with
+the passphrases the user types at a terminal, so you hand it to them (step 6). Report each step's result as it
+finishes, in a line or two. **Stop and ask the user** only when one of these happens:
 
 - the doctor or the `check` step reports a `FAIL`;
 - the Unreleased section misses a merged PR, so you write a line for it: show the lines you wrote and wait for an
@@ -27,10 +28,11 @@ After an answer, go on from where you stopped.
 
 ## Hard rules
 
-- **Never read, `cat`, print, copy or pass the key files or their contents**, nor set `AUTHOR_KEY`, `AUTHORITY_KEY`
-  or `TOOL_PRIVATE_KEY`. Do not list or open the key folder (`TOOL_KEYS_DIR`, by default
-  `~/.config/aprscaching-tools/keys/`). The `sign` step reads the keys itself and prints public keys and fingerprints
-  only; run it, never sign any other way.
+- **Never read, `cat`, print, copy or pass the key files or their contents, and never ask for, read or pass a
+  passphrase.** Do not list or open the key folder (`TOOL_KEYS_DIR`, by default `~/.config/aprscaching-tools/keys/`).
+  Never run `sign-all.mjs`, `sign.mjs` or `genkey.mjs`, and never sign any other way: the `sign` step is the user's,
+  in a terminal of their own. A key file the doctor reports in the plain form is converted by the user too, with the
+  command the doctor names.
 - **Merge into `main` only after its checks have passed**, shown in this conversation. Never with `--admin`, and never
   past a failing or missing check.
 - Never force-push `dev` or `main`, move or delete a tag, or edit a published release.
@@ -72,9 +74,18 @@ written on the release branch after step 4.
 4. **Prepare.** `node scripts/release.mjs $V --step prepare --yes` creates `release/v$V`, installs, fetches the
    libraries and runs `build --check`.
 5. **Write the entry** on `release/v$V`, then `node scripts/release.mjs $V --step check`.
-6. **Sign**, unless the dry run shows `sign` as `done`: `node scripts/release.mjs $V --step sign --yes`. Then
-   `node scripts/verify.mjs --strict` must end in `0 failure(s)`, `0 unsigned`; otherwise stop and show the failing
-   lines.
+6. **Sign: the user's step**, unless the dry run shows `sign` as `done`. Stop, and give the user this command to run
+   in a terminal of their own, not through you (a `!` command has no terminal to type into), in the repository root
+   on `release/v$V`:
+
+    ```bash
+    node scripts/release.mjs $V --step sign
+    ```
+
+   It asks for each key's passphrase, signs, and ends in `verify --strict`. Wait until the user says it is done; do
+   not run it, `sign-all.mjs` or anything that opens a key yourself. Then `node scripts/verify.mjs --strict` must end
+   in `0 failure(s)`, `0 unsigned`; otherwise stop and show the failing lines. Run from here without a terminal,
+   `release.mjs --step sign` refuses with the same command, and that refusal is the hand-over, not a failure.
 7. **Date the CHANGELOG.** `node scripts/release.mjs $V --step changelog --yes`.
 8. **The PR into main.** Commit, push, open it and watch its checks, so they are in front of the user before the
    merge:

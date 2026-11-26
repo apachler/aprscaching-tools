@@ -7,7 +7,7 @@ and players can add your registry by address and pin its key.
 ## Before you start
 
 - A GitHub repository for the registry, public.
-- Node 22 or newer, and the signing scripts: `genkey.mjs`, `sign.mjs` and `verify.mjs` from
+- Node 22 or newer, and the signing scripts: `genkey.mjs`, `keyfile.mjs`, `sign.mjs` and `verify.mjs` from
   [`scripts/`](https://github.com/apachler/aprscaching-tools/tree/main/scripts) in apachler/aprscaching-tools. They
   are MIT and need no dependencies; copy them into your repository.
 - Each tool's signed `tool.json` and script, or the address its author hosts them at
@@ -22,20 +22,23 @@ and players can add your registry by address and pin its key.
     registry.json
     authority.pub
     scripts/genkey.mjs
+    scripts/keyfile.mjs
     scripts/sign.mjs
     scripts/verify.mjs
     tools/hello/tool.json
     tools/hello/tool.js
     ```
 
-2. Make the registry's authority key once, on the trusted computer, and keep its private value offline:
+2. Make the registry's authority key once, on the trusted computer. `genkey.mjs` asks twice for a passphrase and
+   writes the key file encrypted with it; `--pub` prints the public key:
 
     ```bash
-    node scripts/genkey.mjs --raw > ~/my-registry-authority.key && chmod 600 ~/my-registry-authority.key
-    node -e "console.log(JSON.parse(Buffer.from(require('fs').readFileSync(process.argv[1], 'utf8'), 'base64')).pub)" ~/my-registry-authority.key > authority.pub
+    node scripts/genkey.mjs ~/my-registry-authority.key
+    node scripts/genkey.mjs --pub ~/my-registry-authority.key > authority.pub
     ```
 
-    `authority.pub` holds the public key; commit it. Never commit the key file.
+    `authority.pub` holds the public key; commit it. Never commit the key file, and keep the passphrase apart from
+    it.
 
 3. Write `registry.json` with one entry per tool. Use a relative `entry` for a tool in the repository and an absolute
    `https://` address for one its author hosts:
@@ -60,10 +63,10 @@ and players can add your registry by address and pin its key.
     Keep `name`, `title`, `author` and `version` equal to the manifest. [The registry file](registry-file.md) lists
     every field.
 
-4. Sign the registry with the authority key:
+4. Sign the registry with the authority key, in a terminal, which asks for its passphrase:
 
     ```bash
-    TOOL_PRIVATE_KEY="$(cat ~/my-registry-authority.key)" node scripts/sign.mjs registry registry.json
+    node scripts/sign.mjs registry registry.json --key ~/my-registry-authority.key
     ```
 
     It writes `format`, `authority` and `sig`. Sign again after every change to an entry.

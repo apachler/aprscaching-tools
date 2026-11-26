@@ -22,10 +22,16 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
 - Dependency PRs that touch `pnpm-lock.yaml` are merged one at a time, each rebased onto `dev` first.
 
 ## Signing
-- Private keys never enter the repository, CI or a log. Only the maintainer signs, offline, with `scripts/sign-all.mjs`.
+- Private keys never enter the repository, CI, a log or an environment variable. Only the maintainer signs, offline,
+  with `scripts/sign-all.mjs`, typing each key's passphrase at its terminal prompt.
 - The key files live in the key folder, outside every repository: `TOOL_KEYS_DIR`, by default
   `$XDG_CONFIG_HOME/aprscaching-tools/keys` (`~/.config/aprscaching-tools/keys`); the doctor and the release `check`
   fail a key folder inside a git working tree.
+- A key file holds its key encrypted with a passphrase (`scripts/keyfile.mjs`; `genkey.mjs <file>` makes one,
+  `genkey.mjs --convert <file>` encrypts a plain one in place, keeping the key). A signer opens a key only in its own
+  process, after every build and check, from the passphrase typed at a terminal, never from an argument, the
+  environment or a file, and starts no other process while it is open. The doctor and the release `check` fail a key
+  file in the plain form.
 - On `dev` a changed tool is unsigned until the next release: PR CI runs `verify.mjs` without `--strict`. PRs into
   `main` and release tags run `verify.mjs --strict`.
 - A release: on the `release/vX.Y.Z` branch the maintainer runs `sign-all` and dates CHANGELOG.md; after the PR
@@ -33,10 +39,12 @@ signing scripts. Tools run sandboxed in the player's browser; the app is https:/
   bundles a tag with its `tools/toolkey/bundle-registry.mjs`.
 - `scripts/release.mjs [X.Y.Z]` runs that flow step by step and resumes where it stopped; without a version, the
   Conventional Commits since the newest tag choose it (breaking → major, `feat` → minor, else patch). `/release`
-  (`.claude/skills/release/`) drives it: asking for the release is the go-ahead for the whole run, signing and the
-  merge into `main` included, and it stops for the user only on a failure, a CHANGELOG line it had to write, or
-  something unexpected. An agent never reads, prints or passes the key files (the `sign` step reads them itself), and
-  merges into `main` only after the PR's checks have passed.
+  (`.claude/skills/release/`) drives it: asking for the release is the go-ahead for the whole run, the merge into
+  `main` included, and it stops for the user only at the `sign` step, on a failure, a CHANGELOG line it had to write,
+  or something unexpected. The `sign` step is the maintainer's: the agent hands over
+  `node scripts/release.mjs X.Y.Z --step sign` for the maintainer to run in a terminal of their own, and goes on once
+  they say it is done. An agent never reads, prints or passes the key files or a passphrase, and merges into `main`
+  only after the PR's checks have passed.
 - `scripts/doctor.mjs` checks the computer (Node, pnpm, gh, remote, vendor/, lockfile, key files by public key only).
 
 ## Tools and checks
